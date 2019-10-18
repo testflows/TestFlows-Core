@@ -279,6 +279,8 @@ class Test(object):
             if current_test.main is not None:
                 raise RuntimeError("only one top level test is allowed")
             current_test.main = self
+            # flag to indicate if main test called init
+            self._init= False
             frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
             if main(frame):
                 cli_args, xflags, only, skip, start, end = self.parse_cli_args(xflags, only, skip, start, end)
@@ -370,12 +372,16 @@ class Test(object):
             raise ResultException(Skip(self.name, "skip flag set"))
         else:
             if current_test.main is self:
-                init()
+                self._init = init()
             self.run(**{name: arg.value for name, arg in self.args.items()})
             return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         global current_test
+
+        if current_test.main is self and not self._init:
+            return False
+
         current_test.object = self.caller_test
 
         try:
@@ -692,17 +698,15 @@ class _testdecorator(object):
         self.func = func
         functools.update_wrapper(self, func)
 
-    def __call__(self, args=None, **kwargs):
-        if args is None:
-            args = {}
+    def __call__(self, **kwargs):
         frame = kwargs.pop("_frame", inspect.currentframe().f_back)
         _kwargs = dict(vars(self.func))
         _name = kwargs.pop("name", None)
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
-        with self.type(**_kwargs, args=args, _frame=frame) as testcase:
-            self.func(**args)
+        with self.type(**_kwargs, _frame=frame) as testcase:
+            self.func(**{name: arg.value for name, arg in testcase.args.items()})
         return testcase
 
 class testcase(_testdecorator):

@@ -55,7 +55,7 @@ class TestObject(object):
         """
         args = ",".join([repr(arg) for arg in self.initargs.args])
         kwargs = ",".join([name + "=" + repr(value) for name, value in self.initargs.kwargs.items()])
-        name = self.__class__.__name__ 
+        name = self.__class__.__name__
         if args and kwargs:
             args += ","
         return "%s(%s%s)" % (name, args, kwargs)

@@ -114,3 +114,4 @@ def init():
     handler = threading.Thread(target=output_handler_map[settings.output_format])
     handler.name = "tfs-output"
     handler.start()
+    return True

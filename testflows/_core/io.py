@@ -120,7 +120,7 @@ class TestOutput(object):
             self.test.description,
             [rstrip_list(object_fields(attr)) for attr in self.test.attributes],
             [rstrip_list(object_fields(req)) for req in self.test.requirements],
-            [rstrip_list(object_fields(arg)) for arg in self.test.args.values()],
+            [[repr(a) for a in rstrip_list(object_fields(arg))] for arg in self.test.args.values()],
             [rstrip_list(object_fields(Tag(tag))) for tag in self.test.tags],
             [rstrip_list(object_fields(user)) for user in self.test.users],
             [rstrip_list(object_fields(ticket)) for ticket in self.test.tickets],
