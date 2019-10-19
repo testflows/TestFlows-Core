@@ -13,18 +13,19 @@
 # limitations under the License.
 class TestType(object):
     """Test type."""
-    Module = 4
-    Suite = 3
-    Test = 2
-    Step = 1
+    Module = 40
+    Suite = 30
+    Test = 20
+    Step = 10
 
 class TestSubType(object):
     """Test behaviour subtype."""
-    Feature = 6
-    Scenario = 5
-    Background = 4
-    Given = 3
-    When = 2
-    Then = 1
+    Feature = 70
+    Scenario = 60
+    Background = 50
+    Given = 40
+    When = 30
+    Then = 20
+    And = 10
     Empty = 0
 

@@ -380,6 +380,7 @@ class TestBase(object):
             return False
 
         current_test.object = self.caller_test
+        current_test.previous = self
 
         try:
             if exception_value:
@@ -562,8 +563,22 @@ class _test(object):
         :param kwargs: test's kwargs
         """
         type = kwargs.pop("type", TestType.Test)
+        subtype = kwargs.pop("subtype", TestSubType.Empty)
+
         if int(parent.type) < int(type):
             type = parent.type
+
+        # convert back-to-back Given, When, Then to And
+        and_subtypes = [TestSubType.When, TestSubType.Then, TestSubType.Given]
+        if subtype in and_subtypes:
+            # if the same subtype as previously executed test
+            if current_test.previous and current_test.previous.subtype == subtype:
+                subtype = TestSubType.And
+            # or the same subtype as parent test
+            elif current_test.object and current_test.object.subtype == subtype:
+                subtype = TestSubType.And
+
+        kwargs["subtype"] = subtype
         kwargs["type"] = type
 
     def __enter__(self):

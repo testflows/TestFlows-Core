@@ -26,10 +26,23 @@ from .testtype import TestSubType
 #: current test handle
 current_test = threading.local()
 current_test.object = None
+current_test.previous = None
 current_test.main = None
 
+def top():
+    """Highest level test.
+    """
+    return current_test.main
+
 def current():
+    """Currently executing test.
+    """
     return current_test.object
+
+def previous():
+    """Last executed test.
+    """
+    return current_test.previous
 
 def load(module, test=None):
     """Load test from module path.

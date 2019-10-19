@@ -118,6 +118,8 @@ def format_test(msg, keyword):
             keyword += "When"
         elif msg.p_subtype == TestSubType.Then:
             keyword += "Then"
+        elif msg.p_subtype == TestSubType.And:
+            keyword += "And"
         else:
             keyword += "Step"
     else:
