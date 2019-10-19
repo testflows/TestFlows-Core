@@ -90,12 +90,12 @@ class Tag(TestObject):
 
 class Argument(TestObject):
     _fields = ("name", "value", "group", "type", "uid")
-    _defaults = (None,) * 3
+    _defaults = (None,) * 4
     uid = None
     type = None
     group = None
 
-    def __init__(self, name, value, type=None, group=None, uid=None):
+    def __init__(self, name, value=None, type=None, group=None, uid=None):
         self.name = name
         self.value = value
         self.type = get(type, self.type)

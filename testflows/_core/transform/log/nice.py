@@ -59,7 +59,7 @@ def format_description(msg, indent):
     first = first.strip()
     if first:
         first += "\n"
-    desc = f"{first}{textwrap.dedent(rest.rstrip())}"
+    desc = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
     desc = textwrap.indent(desc, indent + "  ")
     desc = color(desc, "white", attrs=["dim"])
     return desc + "\n"
