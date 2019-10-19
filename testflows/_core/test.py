@@ -97,7 +97,7 @@ class DummyTest(object):
             return True
 
 
-class Test(object):
+class TestBase(object):
     """Base class for all the tests.
 
     :param name: name
@@ -456,7 +456,7 @@ class _test(object):
         parent = kwargs.pop("parent", None) or current_test.object
         test = kwargs.pop("test", None)
 
-        test = test if test is not None else Test
+        test = test if test is not None else TestBase
 
         if parent:
             name = test.make_name(name, parent.name)
@@ -620,78 +620,78 @@ class _test(object):
                     pass
         return True
 
-class module(_test):
+class Module(_test):
     """Module definition."""
     def __init__(self, name, **kwargs):
         kwargs["type"] = TestType.Module
-        return super(module, self).__init__(name, **kwargs)
+        return super(Module, self).__init__(name, **kwargs)
 
-class suite(_test):
+class Suite(_test):
     """Suite definition."""
     def __init__(self, name, **kwargs):
         kwargs["type"] = TestType.Suite
-        return super(suite, self).__init__(name, **kwargs)
+        return super(Suite, self).__init__(name, **kwargs)
 
-class test(_test):
+class Test(_test):
     """Test definition."""
     def __init__(self, name, **kwargs):
         kwargs["type"] = TestType.Test
-        return super(test, self).__init__(name, **kwargs)
+        return super(Test, self).__init__(name, **kwargs)
 
-class step(_test):
+class Step(_test):
     """Step definition."""
     def __init__(self, name, **kwargs):
         kwargs["type"] = TestType.Step
-        return super(step, self).__init__(name, **kwargs)
+        return super(Step, self).__init__(name, **kwargs)
 
 # support for BDD
-class feature(test):
+class Feature(Test):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Feature
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(feature, self).__init__(name, **kwargs)
+        return super(Feature, self).__init__(name, **kwargs)
 
-class scenario(test):
+class Scenario(Test):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Scenario
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(scenario, self).__init__(name, **kwargs)
+        return super(Scenario, self).__init__(name, **kwargs)
 
 
-class _background(test):
+class _background(Test):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Background
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back.f_back)
         return super(_background, self).__init__(name, **kwargs)
 
 @contextmanager
-def background(name, **kwargs):
+def Background(name, **kwargs):
     with _background(name, **kwargs) as bg:
         with ExitStack() as stack:
             bg.stack = stack
             yield bg
 
-class given(step):
+class Given(Step):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Given
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(given, self).__init__(name, **kwargs)
+        return super(Given, self).__init__(name, **kwargs)
 
-class when(step):
+class When(Step):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.When
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(when, self).__init__(name, **kwargs)
+        return super(When, self).__init__(name, **kwargs)
 
-class then(step):
+class Then(Step):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Then
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(then, self).__init__(name, **kwargs)
+        return super(Then, self).__init__(name, **kwargs)
 
 # decorators
 class _testdecorator(object):
-    type = test
+    type = Test
     def __init__(self, func):
         func.name = getattr(func, "name", func.__name__.replace("_", " "))
         func.description = getattr(func, "description", func.__doc__)
@@ -705,26 +705,26 @@ class _testdecorator(object):
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
-        with self.type(**_kwargs, _frame=frame) as testcase:
-            self.func(**{name: arg.value for name, arg in testcase.args.items()})
-        return testcase
+        with self.type(**_kwargs, _frame=frame) as test:
+            self.func(**{name: arg.value for name, arg in test.args.items()})
+        return test
 
-class testcase(_testdecorator):
-    type = test
+class TestCase(_testdecorator):
+    type = Test
 
-class testscenario(testcase):
-    type = scenario
+class TestScenario(TestCase):
+    type = Scenario
 
-class testsuite(_testdecorator):
-    type = suite
+class TestSuite(_testdecorator):
+    type = Suite
 
-class testfeature(testsuite):
-    type = feature
+class TestFeature(TestSuite):
+    type = Feature
 
-class testmodule(_testdecorator):
-    type = module
+class TestModule(_testdecorator):
+    type = Module
 
-class name(object):
+class Name(object):
     def __init__(self, name):
         self.name = name
 
@@ -732,7 +732,7 @@ class name(object):
         func.name = self.name
         return func
 
-class description(object):
+class Description(object):
     def __init__(self, description):
         self.description = description
 
@@ -740,7 +740,7 @@ class description(object):
         func.description = self.description
         return func
 
-class attributes(object):
+class Attributes(object):
     def __init__(self, *attributes):
         self.attributes = attributes
 
@@ -748,7 +748,7 @@ class attributes(object):
         func.attributes = self.attributes
         return func
 
-class requirements(object):
+class Requirements(object):
     def __init__(self, *requirements):
         self.requirements = requirements
 
@@ -756,7 +756,7 @@ class requirements(object):
         func.requirements = self.requirements
         return func
 
-class tags(object):
+class Tags(object):
     def __init__(self, *tags):
         self.tags = tags
 
@@ -764,7 +764,7 @@ class tags(object):
         func.tags = self.tags
         return func
 
-class uid(object):
+class Uid(object):
     def __init__(self, uid):
         self.uid = uid
 
@@ -772,7 +772,7 @@ class uid(object):
         func.uid = self.uid
         return func
 
-class users(object):
+class Users(object):
     def __init__(self, *users):
         self.users = users
 
@@ -780,7 +780,7 @@ class users(object):
         func.users = self.users
         return func
 
-class tickets(object):
+class Tickets(object):
     def __init__(self, *tickets):
         self.tickets = tickets
 
@@ -791,18 +791,12 @@ class tickets(object):
 def run(test, **kwargs):
     """Run a test.
 
-    :param test: test class, test function or test module path
-    :param cls: if test is a module path, cls can
-       specify test definition to load (optional)
+    :param test: test
     """
-    cls = kwargs.pop("cls", None)
-
-    if inspect.isclass(test) and issubclass(test, Test):
+    if inspect.isclass(test) and issubclass(test, TestBase):
         test = test
     elif issubclass(type(test), _testdecorator):
         return test(**kwargs, _frame=inspect.currentframe().f_back)
-    elif type(test) is str:
-        return run(load(test, cls), **kwargs)
     elif inspect.isfunction(test):
         return test(**kwargs)
     elif inspect.ismethod(test):
@@ -810,7 +804,7 @@ def run(test, **kwargs):
     else:
         raise TypeError(f"invalid test type '{type(test)}'")
 
-    with globals()["test"](test=test, name=kwargs.pop("name", None), **kwargs) as test:
+    with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs) as test:
         pass
 
     return test.result

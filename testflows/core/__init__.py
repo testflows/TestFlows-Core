@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from testflows._core.test import Test, module, suite, test, step, run
-from testflows._core.test import testcase, testsuite, testmodule
-from testflows._core.test import attributes, requirements, users, tickets
-from testflows._core.test import name, description, uid, tags
-from testflows._core.test import feature, background, scenario, given, when, then
-from testflows._core.test import testfeature, testscenario
+from testflows._core.test import Module, Suite, Test, Step, run
+from testflows._core.test import TestCase, TestSuite, TestModule
+from testflows._core.test import Attributes, Requirements, Users, Tickets
+from testflows._core.test import Name, Description, Uid, Tags
+from testflows._core.test import Feature, Background, Scenario, Given, When, Then
+from testflows._core.test import TestFeature, TestScenario
 from testflows._core.funcs import *
 from testflows._core.filters import the
 from testflows._core.objects import *

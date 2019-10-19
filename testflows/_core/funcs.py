@@ -28,7 +28,7 @@ current_test = threading.local()
 current_test.object = None
 current_test.main = None
 
-def thetest():
+def current():
     return current_test.object
 
 def load(module, test=None):
