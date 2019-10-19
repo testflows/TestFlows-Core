@@ -335,14 +335,11 @@ class TestBase(object):
         """
         args = []
         try:
-            try:
-                for name in dict(self.args):
-                    value = self.args.get(name)
-                    if not isinstance(value, Argument):
-                        value = Argument(name=name, value=value)
-                    args.append(value)
-            except TypeError:
-                args = self.args
+            for name in dict(self.args):
+                value = self.args.get(name)
+                if not isinstance(value, Argument):
+                    value = Argument(name=name, value=value)
+                args.append(value)
 
             self.args = {}
 

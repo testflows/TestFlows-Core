@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import copy
-
 from hashlib import sha1
 from collections import namedtuple
 
@@ -42,8 +40,8 @@ class TestObject(object):
     def __new__(cls, *args, **kwargs):
         obj = super(TestObject, cls).__new__(cls)
         obj.initargs=InitArgs(
-            args=[copy.deepcopy(a) for a in args],
-            kwargs={k: copy.deepcopy(v) for k,v in kwargs.items()})
+            args=[a for a in args],
+            kwargs={k: v for k,v in kwargs.items()})
         return obj
 
     @property
