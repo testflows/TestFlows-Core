@@ -20,12 +20,14 @@ class TestType(object):
 
 class TestSubType(object):
     """Test behaviour subtype."""
-    Feature = 70
-    Scenario = 60
-    Background = 50
-    Given = 40
-    When = 30
-    Then = 20
-    And = 10
+    Feature = 60
+    Scenario = 50
+    Background = 40
+    AndGiven = 31
+    Given = 30
+    AndWhen = 21
+    When = 20
+    AndThen = 11
+    Then = 10
     Empty = 0
 

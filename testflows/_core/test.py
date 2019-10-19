@@ -572,11 +572,22 @@ class _test(object):
         and_subtypes = [TestSubType.When, TestSubType.Then, TestSubType.Given]
         if subtype in and_subtypes:
             # if the same subtype as previously executed test
-            if current_test.previous and current_test.previous.subtype == subtype:
-                subtype = TestSubType.And
+            if current_test.previous:
+                if subtype == TestSubType.Given and current_test.previous.subtype in (TestSubType.Given, TestSubType.AndGiven):
+                    subtype = TestSubType.AndGiven
+                elif subtype == TestSubType.When and current_test.previous.subtype in (TestSubType.When, TestSubType.AndWhen):
+                    subtype = TestSubType.AndWhen
+                elif subtype == TestSubType.Then and current_test.previous.subtype in (TestSubType.Then, TestSubType.AndThen):
+                    subtype = TestSubType.AndThen
+        if subtype in and_subtypes:
             # or the same subtype as parent test
-            elif current_test.object and current_test.object.subtype == subtype:
-                subtype = TestSubType.And
+            if current_test.object:
+                if subtype == TestSubType.Given and current_test.object.subtype in (TestSubType.Given, TestSubType.AndGiven):
+                    subtype = TestSubType.AndGiven
+                elif subtype == TestSubType.When and current_test.object.subtype in (TestSubType.When, TestSubType.AndWhen):
+                    subtype = TestSubType.AndWhen
+                elif subtype == TestSubType.Then and current_test.object.subtype in (TestSubType.Then, TestSubType.AndThen):
+                    subtype = TestSubType.AndThen
 
         kwargs["subtype"] = subtype
         kwargs["type"] = type
