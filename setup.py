@@ -13,12 +13,17 @@
 # limitations under the License.
 from setuptools import setup
 
+with open("README.md", "r") as fd:
+    long_description = fd.read()
+
 setup(
     name="testflows.core",
     version="__VERSION__",
     description="TestFlows - Core",
     author="Vitaliy Zakaznikov",
     author_email="vzakaznikov@testflows.com",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     url="https://github.com/testflows/testflows-core",
     classifiers=[
         "Development Status :: 2 - Pre-Alpha",

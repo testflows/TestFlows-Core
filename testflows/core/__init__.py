@@ -22,6 +22,6 @@ from testflows._core.filters import the
 from testflows._core.objects import *
 from testflows._core.name import *
 from testflows._core.flags import *
-from testflows._core import __version__
+from testflows._core import __author__, __version__, __license__
 
 import testflows._core.utils as utils
