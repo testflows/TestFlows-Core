@@ -51,7 +51,7 @@ def format_input(msg, keyword):
     return out
 
 def format_description(msg, indent):
-    first, rest = msg.description.description.split("\n", 1)
+    first, rest = (msg.description.description.rstrip() + "\n").split("\n", 1)
     first = first.strip()
     if first:
         first += "\n"
