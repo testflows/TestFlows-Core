@@ -570,15 +570,17 @@ class _test(object):
 
         # convert back-to-back Given, When, Then to And
         and_subtypes = [TestSubType.When, TestSubType.Then, TestSubType.Given]
+
         if subtype in and_subtypes:
             # if the same subtype as previously executed test
-            if current_test.previous:
+            if current_test.previous and parent.name == current_test.previous.parent:
                 if subtype == TestSubType.Given and current_test.previous.subtype in (TestSubType.Given, TestSubType.AndGiven):
                     subtype = TestSubType.AndGiven
                 elif subtype == TestSubType.When and current_test.previous.subtype in (TestSubType.When, TestSubType.AndWhen):
                     subtype = TestSubType.AndWhen
                 elif subtype == TestSubType.Then and current_test.previous.subtype in (TestSubType.Then, TestSubType.AndThen):
                     subtype = TestSubType.AndThen
+
         if subtype in and_subtypes:
             # or the same subtype as parent test
             if current_test.object:
