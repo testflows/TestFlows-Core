@@ -79,7 +79,7 @@ def generate(results):
         xfails += _color('\u2718') + f" [ { _color(result) } ] {msg.test}\n"
 
     if xfails:
-        xfails = color("\nKnown failing tests\n\n", "white", attrs=["bold"]) + xfails
+        xfails = color("\nKnown fails\n\n", "white", attrs=["bold"]) + xfails
 
     for entry in results:
         msg, result = results[entry]
