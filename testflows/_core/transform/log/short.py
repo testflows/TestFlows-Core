@@ -107,11 +107,11 @@ def given_when_then_keyword(msg, parent_name, keyword, subtype):
     """Handle processing of Given, When and Then keywords
     and convert them to And when necessary.
     """
-    prev = tests_by_parent[parent_name][-2] if len(tests_by_parent[parent_name]) > 1 else None
+    prev = tests_by_parent[parent_name][-2] if len(tests_by_parent.get(parent_name, [])) > 1 else None
     if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_name) is None:
         keyword = "And"
-    parent =  tests_by_name[parent_name]
-    if parent.p_subtype == subtype and len(tests_by_parent[parent_name]) == 1:
+    parent = tests_by_name.get(parent_name)
+    if parent and parent.p_subtype == subtype and len(tests_by_parent.get(parent_name, [])) == 1:
         keyword = "And"
     return keyword
 
