@@ -21,11 +21,15 @@ from testflows._core.testtype import TestType, TestSubType
 from testflows._core.transform.log import message
 from testflows._core.utils.timefuncs import strftime, strftimedelta
 from testflows._core.utils.timefuncs import localfromtimestamp
-from testflows._core.name import split, basename
+from testflows._core.name import split, basename, parentname
 from testflows._core.cli.colors import color, cursor_up
 
 strip_nones = re.compile(r'( None)+$')
 indent = " " * 2
+#: map of tests by name
+tests_by_name = {}
+#: map of tests by parent
+tests_by_parent = {}
 
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold"])
@@ -103,23 +107,41 @@ def format_tickets(msg, indent):
         out.append(color(f"{indent}{' ' * 4}{ticket.name}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
+def given_when_then_keyword(msg, parent_name, keyword, subtype):
+    """Handle processing of Given, When and Then keywords
+    and convert them to And when necessary.
+    """
+    prev = tests_by_parent[parent_name][-2] if len(tests_by_parent[parent_name]) > 1 else None
+    if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_name) is None:
+        keyword = "And"
+    parent =  tests_by_name[parent_name]
+    if parent.p_subtype == subtype and len(tests_by_parent[parent_name]) == 1:
+        keyword = "And"
+    return keyword
+
 def format_test(msg, keyword):
     flags = Flags(msg.p_flags)
     if flags & SKIP and settings.show_skipped is False:
         return
+
+    # add test to the tests map
+    parent = parentname(msg.p_name)
+    if tests_by_parent.get(parent) is None:
+        tests_by_parent[parent] = []
+    tests_by_parent[parent].append(msg)
+    tests_by_name[msg.p_name] = msg
+
     if msg.p_type == TestType.Module:
         keyword += "Module"
     elif msg.p_type == TestType.Suite:
         keyword += "Suite"
     elif msg.p_type == TestType.Step:
         if msg.p_subtype == TestSubType.Given:
-            keyword += "Given"
+            keyword += given_when_then_keyword(msg, parent, "Given", TestSubType.Given)
         elif msg.p_subtype == TestSubType.When:
-            keyword += "When"
+            keyword += given_when_then_keyword(msg, parent, "When", TestSubType.When)
         elif msg.p_subtype == TestSubType.Then:
-            keyword += "Then"
-        elif msg.p_subtype in (TestSubType.AndGiven, TestSubType.AndWhen, TestSubType.AndThen):
-            keyword += "And"
+            keyword += given_when_then_keyword(msg, parent, "Then", TestSubType.Then)
         else:
             keyword += "Step"
     else:

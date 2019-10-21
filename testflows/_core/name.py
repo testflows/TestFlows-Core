@@ -250,7 +250,7 @@ def basename(name):
     return name[i:]
 
 # Return the head (dirname) part of a name, same as split(name)[0].
-def suitename(name):
+def parentname(name):
     """Returns the directory component of a name.
     """
     i = name.rfind(sep) + 1

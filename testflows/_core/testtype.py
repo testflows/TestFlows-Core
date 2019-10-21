@@ -23,11 +23,8 @@ class TestSubType(object):
     Feature = 60
     Scenario = 50
     Background = 40
-    AndGiven = 31
     Given = 30
-    AndWhen = 21
     When = 20
-    AndThen = 11
     Then = 10
     Empty = 0
 
