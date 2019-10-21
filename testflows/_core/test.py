@@ -321,7 +321,9 @@ class TestBase(object):
         :param parent: parent name
         """
         name = name % {"name": cls.name} if name is not None else cls.name
-        name = name.replace(name_sep, "\\" + name_sep)
+        # '/' is not allowed just like in Unix file names
+        # so convert any '/' to U+2215 division slash
+        name = name.replace(name_sep, "\u2215")
         return join(get(parent, name_sep), name)
 
     @classmethod
