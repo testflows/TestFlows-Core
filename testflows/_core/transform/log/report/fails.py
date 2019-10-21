@@ -43,7 +43,8 @@ def color_result(result, attrs=None):
 
 def add_result(msg, results, result):
     if msg.p_type < TestType.Test:
-        return
+        if not result.startswith("X"):
+            return
     flags = Flags(msg.p_flags)
     if flags & SKIP and settings.show_skipped is False:
         return
