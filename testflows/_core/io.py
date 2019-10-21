@@ -112,6 +112,12 @@ class TestOutput(object):
                 break
             return l
 
+        def str_or_repr(v):
+            try:
+                return str(v)
+            except:
+                return repr(v)
+
         msg = dumps(rstrip_list([
             self.test.name,
             round(self.test.start_time, settings.time_resolution),
@@ -120,7 +126,7 @@ class TestOutput(object):
             self.test.description,
             [rstrip_list(object_fields(attr)) for attr in self.test.attributes],
             [rstrip_list(object_fields(req)) for req in self.test.requirements],
-            [[repr(a) for a in rstrip_list(object_fields(arg))] for arg in self.test.args.values()],
+            [[str_or_repr(a) for a in rstrip_list(object_fields(arg))] for arg in self.test.args.values()],
             [rstrip_list(object_fields(Tag(tag))) for tag in self.test.tags],
             [rstrip_list(object_fields(user)) for user in self.test.users],
             [rstrip_list(object_fields(ticket)) for ticket in self.test.tickets],

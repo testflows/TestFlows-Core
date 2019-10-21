@@ -792,11 +792,15 @@ class Tickets(object):
         func.tickets = self.tickets
         return func
 
-def run(test, **kwargs):
+def run(comment=None, test=None, **kwargs):
     """Run a test.
 
+    :param comment: comment
     :param test: test
+    :param **kwargs: other test arguments
     """
+    if test is None:
+        raise TypeError("run() test argument must be specified")
     if inspect.isclass(test) and issubclass(test, TestBase):
         test = test
     elif issubclass(type(test), _testdecorator):
