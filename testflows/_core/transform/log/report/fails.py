@@ -42,6 +42,8 @@ def color_result(result, attrs=None):
         raise ValueError(f"unknown result {result}")
 
 def add_result(msg, results, result):
+    if msg.p_type < TestType.Test:
+        return
     flags = Flags(msg.p_flags)
     if flags & SKIP and settings.show_skipped is False:
         return
