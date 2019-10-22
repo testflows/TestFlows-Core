@@ -68,13 +68,13 @@ class TestOutput(object):
         """Output protocol version message.
         """
         msg = dumps(str(self.protocol_version))
-        self.message(Message.PROTOCOL, msg)
+        self.message(Message.PROTOCOL, msg, rtime=round(self.test.start_time, settings.time_resolution))
 
     def version(self):
         """Output framework version message.
         """
         msg = dumps(str(__version__))
-        self.message(Message.VERSION, msg)
+        self.message(Message.VERSION, msg, rtime=round(self.test.start_time, settings.time_resolution))
 
     def input(self, message):
         """Output input message.
