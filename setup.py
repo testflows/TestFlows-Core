@@ -13,7 +13,7 @@
 # limitations under the License.
 from setuptools import setup
 
-with open("README.md", "r") as fd:
+with open("README.md", "r", encoding="utf-8") as fd:
     long_description = fd.read()
 
 setup(
