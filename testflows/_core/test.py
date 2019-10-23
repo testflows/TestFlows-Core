@@ -693,6 +693,30 @@ class Then(Step):
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Then, self).__init__(name, **kwargs)
 
+class And(Step):
+    def __init__(self, name, **kwargs):
+        kwargs["subtype"] = TestSubType.And
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(And, self).__init__(name, **kwargs)
+
+class But(Step):
+    def __init__(self, name, **kwargs):
+        kwargs["subtype"] = TestSubType.But
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(But, self).__init__(name, **kwargs)
+
+class By(Step):
+    def __init__(self, name, **kwargs):
+        kwargs["subtype"] = TestSubType.By
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(By, self).__init__(name, **kwargs)
+
+class Finally(Step):
+    def __init__(self, name, **kwargs):
+        kwargs["subtype"] = TestSubType.Finally
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(Finally, self).__init__(name, **kwargs)
+
 # decorators
 class _testdecorator(object):
     type = Test

@@ -26,5 +26,9 @@ class TestSubType(object):
     Given = 30
     When = 20
     Then = 10
+    And = 8
+    But = 7
+    By = 6
+    Finally = 5
     Empty = 0
 

@@ -107,9 +107,9 @@ def format_tickets(msg, indent):
         out.append(color(f"{indent}{' ' * 4}{ticket.name}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
-def given_when_then_keyword(msg, parent_name, keyword, subtype):
-    """Handle processing of Given, When and Then keywords
-    and convert them to And when necessary.
+def and_keyword(msg, parent_name, keyword, subtype):
+    """Handle processing of Given, When, Then, But, By and Finally
+    keywords and convert them to And when necessary.
     """
     prev = tests_by_parent[parent_name][-2] if len(tests_by_parent.get(parent_name, [])) > 1 else None
     if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_name) is None:
@@ -136,12 +136,20 @@ def format_test(msg, keyword):
     elif msg.p_type == TestType.Suite:
         keyword += "Suite"
     elif msg.p_type == TestType.Step:
-        if msg.p_subtype == TestSubType.Given:
-            keyword += given_when_then_keyword(msg, parent, "Given", TestSubType.Given)
+        if msg.p_subtype == TestSubType.And:
+            keyword += "And"
+        elif msg.p_subtype == TestSubType.Given:
+            keyword += and_keyword(msg, parent, "Given", TestSubType.Given)
         elif msg.p_subtype == TestSubType.When:
-            keyword += given_when_then_keyword(msg, parent, "When", TestSubType.When)
+            keyword += and_keyword(msg, parent, "When", TestSubType.When)
         elif msg.p_subtype == TestSubType.Then:
-            keyword += given_when_then_keyword(msg, parent, "Then", TestSubType.Then)
+            keyword += and_keyword(msg, parent, "Then", TestSubType.Then)
+        elif msg.p_subtype == TestSubType.By:
+            keyword += and_keyword(msg, parent, "By", TestSubType.By)
+        elif msg.p_subtype == TestSubType.But:
+            keyword += and_keyword(msg, parent, "But", TestSubType.But)
+        elif msg.p_subtype == TestSubType.Finally:
+            keyword += and_keyword(msg, parent, "Finally", TestSubType.Finally)
         else:
             keyword += "Step"
     else:
