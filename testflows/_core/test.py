@@ -851,7 +851,7 @@ def run(comment=None, test=None, **kwargs):
     else:
         raise TypeError(f"invalid test type '{type(test)}'")
 
-    with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs) as test:
+    with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs, _frame=inspect.currentframe().f_back) as test:
         pass
 
     return test.result
