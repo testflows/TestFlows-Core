@@ -63,3 +63,39 @@ class TestArg(TestObject):
     """Base class for all test argument object.
     """
     pass
+
+class Table(TestObject, tuple):
+    _fields = ("header", "rows", "row_format")
+    _defaults = (None, ) * 3
+    _row_type_name = "Row"
+
+    def __new__(cls, header=None, rows=None, row_format=None):
+        if rows is None:
+            rows = []
+        if header is None:
+            header = ""
+        row_type = namedtuple(cls._row_type_name, header)
+        obj = tuple.__new__(Table, [row_type(*row) for row in rows])
+        obj.initargs=InitArgs(
+            args=[header, rows, row_format],
+            kwargs={})
+        obj.header = header
+        obj.row_format = row_format
+        obj.rows = obj
+        obj.row_type = row_type
+        # if no row_formatter is given then use the header as an example
+        # or first row, whichever is longer
+        if obj.row_format is None:
+            sample_row = row_type._fields
+            if len(obj) > 0 and len(str(row_type._fields)) < len(str(tuple(obj[0]))):
+                sample_row = obj[0]
+            obj.row_format = " | ".join([f"%-{max(len(str(c)), 3)}s" for c in sample_row])
+        return obj
+
+    def __str__(self):
+        """Return markdown-styled table representation.
+        """
+        s = [self.row_format % self.row_type._fields]
+        s.append(self.row_format % tuple(["-" * len(field) for field in self.row_type._fields]))
+        s += [self.row_format % row for row in self]
+        return "\n".join(s)

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from .exceptions import RequirementError
-from .baseobject import TestObject, TestArg
+from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
 
 class Result(TestObject):
@@ -350,3 +350,12 @@ class Job(TestObject):
         self.requirements = get(requirements, self.requirements)
         self.uid = get(uid, self.uid)
         return super(Software, self).__init__()
+
+class ExamplesTable(Table):
+    _row_type_name = "Example"
+
+    @classmethod
+    def from_table(cls, table):
+        """Create examples table from a table.
+        """
+        return cls(header=" ".join(table.row_type._fields), rows=table, row_format=table.row_format)

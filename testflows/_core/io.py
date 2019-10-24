@@ -130,6 +130,7 @@ class TestOutput(object):
             [rstrip_list(object_fields(Tag(tag))) for tag in self.test.tags],
             [rstrip_list(object_fields(user)) for user in self.test.users],
             [rstrip_list(object_fields(ticket)) for ticket in self.test.tickets],
+            rstrip_list(object_fields(self.test.examples)) if self.test.examples else None,
         ]))[1:-1]
         self.message(Message.TEST, msg, rtime=0)
 

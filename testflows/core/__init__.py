@@ -13,7 +13,7 @@
 # limitations under the License.
 from testflows._core.test import Module, Suite, Test, Step, run
 from testflows._core.test import TestCase, TestSuite, TestModule
-from testflows._core.test import Attributes, Requirements, Users, Tickets
+from testflows._core.test import Attributes, Requirements, Users, Tickets, Examples
 from testflows._core.test import Name, Description, Uid, Tags
 from testflows._core.test import Feature, Background, Scenario
 from testflows._core.test import Given, When, Then, And, But, By, Finally

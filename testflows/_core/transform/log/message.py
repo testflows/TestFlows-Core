@@ -110,8 +110,8 @@ class RawException(RawFormat, ExceptionMessage, namedtuple_with_defaults(
 class RawTest(RawFormat, TestMessage, namedtuple_with_defaults(
         "RawTestMessage",
         RawFormat.prefix.fields + "name started flags uid description attributes requirements " +
-            "args tags users tickets",
-        defaults=(None, None, None, [], [], [], [], [], []))):
+            "args tags users tickets examples",
+        defaults=(None, None, None, [], [], [], [], [], [], None))):
 
     def __new__(cls, *args):
         args = list(args)
@@ -130,6 +130,8 @@ class RawTest(RawFormat, TestMessage, namedtuple_with_defaults(
             args[20] = [RawUser(*user) for user in args[20]]
         if l > 21 and args[21]:  # tickets
             args[21] = [RawTicket(*ticket) for ticket in args[21]]
+        if l > 22 and args[22]:  # examples
+            args[22] = RawExamples(*args[22])
         return super(RawTest, cls).__new__(cls, *args)
 
 class RawDescription(namedtuple_with_defaults(
@@ -153,6 +155,12 @@ class RawTicket(namedtuple_with_defaults(
         "RawTicket",
         " ".join(objects.Ticket._fields),
         defaults=objects.Ticket._defaults)):
+    pass
+
+class RawExamples(namedtuple_with_defaults(
+        "RawExamples",
+        " ".join(objects.ExamplesTable._fields),
+        defaults=objects.ExamplesTable._defaults)):
     pass
 
 class RawArgument(namedtuple_with_defaults(

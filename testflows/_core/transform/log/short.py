@@ -18,6 +18,7 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.transform.log import message
+from testflows._core.objects import ExamplesTable
 from testflows._core.name import split, parentname
 from testflows._core.cli.colors import color, cursor_up
 
@@ -84,11 +85,17 @@ def format_tags(msg, indent):
         out.append(color(f"{indent}{' ' * 4}{tag.value}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
+def format_examples(msg, indent):
+    examples = ExamplesTable(*msg.examples)
+    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Examples')}"]
+    out.append(color(textwrap.indent(f"{examples}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+    return "\n".join(out) + "\n"
+
 def format_arguments(msg, indent):
     out = [f"{indent}{' ' * 2}{color_secondary_keyword('Arguments')}"]
     for arg in msg.args:
         out.append(color(f"{indent}{' ' * 4}{arg.name}", "white", attrs=["dim"]))
-        out.append(color(f"{indent}{' ' * 6}{arg.value}", "white", attrs=["dim"]))
+        out.append(color(textwrap.indent(f"{arg.value}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
 def format_users(msg, indent):
@@ -176,6 +183,8 @@ def format_test(msg, keyword):
         out += format_tickets(msg, _indent)
     if msg.args:
         out += format_arguments(msg, _indent)
+    if msg.examples:
+        out += format_examples(msg, indent)
     return out
 
 def format_result(msg, result):

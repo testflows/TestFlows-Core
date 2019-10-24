@@ -26,7 +26,7 @@ from .exceptions import DummyTestException, ArgumentError, ResultException
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, Argument
+from .objects import get, Null, OK, Fail, Skip, Error, Argument, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
@@ -113,6 +113,7 @@ class TestBase(object):
     requirements = []
     users = []
     tickets = []
+    examples = None
     name = None
     description = None
     flags = Flags()
@@ -265,7 +266,7 @@ class TestBase(object):
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
-                 users=None, tickets=None, description=None, parent=None,
+                 users=None, tickets=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, _frame=None):
         global current_test
@@ -295,6 +296,7 @@ class TestBase(object):
         self.users = get(users, self.users)
         self.tickets = get(tickets, self.tickets)
         self.description = get(description, self.description)
+        self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.args = get(args, {})
         self.args.update({k:v for k, v in cli_args.items() if not k.startswith("_")})
         self._process_args()
@@ -455,6 +457,7 @@ class _test(object):
     def __init__(self, name, **kwargs):
         parent = kwargs.pop("parent", None) or current_test.object
         test = kwargs.pop("test", None)
+        keep_type = kwargs.pop("keep_type", None)
 
         test = test if test is not None else TestBase
 
@@ -475,7 +478,8 @@ class _test(object):
             kwargs["start"] = parent.start or kwargs.get("start")
             kwargs["end"] = parent.end or kwargs.get("end")
             # handle parent test type propagation
-            self._parent_type_propagation(parent, kwargs)
+            if keep_type is None:
+                self._parent_type_propagation(parent, kwargs)
             parent.child_count += 1
         else:
             name = test.make_name(name)
@@ -569,6 +573,7 @@ class _test(object):
 
         if int(parent.type) < int(type):
             type = parent.type
+            subtype = parent.subtype
 
         kwargs["subtype"] = subtype
         kwargs["type"] = type
@@ -730,6 +735,8 @@ class _testdecorator(object):
         frame = kwargs.pop("_frame", inspect.currentframe().f_back)
         _kwargs = dict(vars(self.func))
         _name = kwargs.pop("name", None)
+        if kwargs.get("args") is None:
+            kwargs["args"] = inspect.getcallargs(self.func)
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
@@ -766,6 +773,14 @@ class Description(object):
 
     def __call__(self, func):
         func.description = self.description
+        return func
+
+class Examples(object):
+    def __init__(self, header, rows, row_format=None):
+        self.examples = ExamplesTable(header, rows=rows, row_format=row_format)
+
+    def __call__(self, func):
+        func.examples = self.examples
         return func
 
 class Attributes(object):
