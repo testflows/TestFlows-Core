@@ -736,7 +736,10 @@ class _testdecorator(object):
         _kwargs = dict(vars(self.func))
         _name = kwargs.pop("name", None)
         if kwargs.get("args") is None:
-            kwargs["args"] = inspect.getcallargs(self.func)
+            # use function signature to get default argument values
+            # and set them as args
+            signature = inspect.signature(self.func)
+            kwargs["args"] = { p.name:p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty }
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
@@ -758,6 +761,14 @@ class TestFeature(TestSuite):
 
 class TestModule(_testdecorator):
     type = Module
+
+class TestClass(object):
+    def __init__(self, test):
+        self.test = test
+
+    def __call__(self, func):
+        func.test = self.test
+        return func
 
 class Name(object):
     def __init__(self, name):
