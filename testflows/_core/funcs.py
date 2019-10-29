@@ -23,26 +23,41 @@ from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .testtype import TestSubType
 
-#: current test handle
-current_test = threading.local()
-current_test.object = None
-current_test.previous = None
-current_test.main = None
+#: thread local values
+_current_test = {}
 
-def top():
+def top(value=None, thread=None):
     """Highest level test.
     """
-    return current_test.main
+    if thread is None:
+        thread = threading.current_thread()
+    if _current_test.get(thread.ident) is None:
+        _current_test[thread.ident] = {}
+    if value is not None:
+        _current_test[thread.ident]["main"] = value
+    return _current_test[thread.ident].get("main")     
 
-def current():
+def current(value=None, thread=None):
     """Currently executing test.
     """
-    return current_test.object
+    if thread is None:
+        thread = threading.current_thread()
+    if _current_test.get(thread.ident) is None:
+        _current_test[thread.ident] = {}
+    if value is not None:
+        _current_test[thread.ident]["object"] = value
+    return _current_test[thread.ident].get("object")  
 
-def previous():
+def previous(value=None, thread=None):
     """Last executed test.
     """
-    return current_test.previous
+    if thread is None:
+        thread = threading.current_thread()
+    if _current_test.get(thread.ident) is None:
+        _current_test[thread.ident] = {}
+    if value is not None:
+        _current_test[thread.ident]["previous"] = value
+    return _current_test[thread.ident].get("previous")  
 
 def load(module, test=None):
     """Load test from module path.
@@ -95,98 +110,98 @@ class args(dict):
 
 def note(message, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.note(message)
 
 def debug(message, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.debug(message)
 
 def trace(message, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.trace(message)
 
 def message(message, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.message(Message.NONE, dumps(str(message)))
 
 def value(name, value, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.value(name, value)
     return value
 
 def exception(test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.exception()
 
 def ok(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = OK(test.name, message)
     raise ResultException(test.result)
 
 def fail(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = Fail(test.name, message)
     raise ResultException(test.result)
 
 def skip(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = Skip(test.name, message)
     raise ResultException(test.result)
 
 def error(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = Error(test.name, message)
     raise ResultException(test.result)
 
 def null(test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = Null(test.name)
     raise ResultException(test.result)
 
 def xok(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = XOK(test.name, message)
     raise ResultException(test.result)
 
 def xfail(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = XFail(test.name, message)
     raise ResultException(test.result)
 
 def xerror(message=None, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = XError(test.name, message)
     raise ResultException(test.result)
 
 def xnull(test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.result = XNull(test.name)
     raise ResultException(test.result)
 
 def pause(test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     test.io.output.input("Paused, enter any key to continue...")
     input()
 
 def enter_context(cm, test=None):
     if test is None:
-        test = current_test.object
+        test = current()
     if not test.caller_test or test.caller_test.subtype != TestSubType.Background:
         raise TypeError("not inside a background test")
     return test.caller_test.stack.enter_context(cm)

@@ -17,6 +17,7 @@ import time
 import inspect
 import functools
 import tempfile
+import threading
 
 from contextlib import ExitStack, contextmanager
 
@@ -30,7 +31,7 @@ from .objects import get, Null, OK, Fail, Skip, Error, Argument, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
-from .funcs import current_test, main, skip, ok, fail, error, exception, pause, load
+from .funcs import current, top, previous, main, skip, ok, fail, error, exception, pause, load
 from .init import init
 from .cli.arg.parser import ArgumentParser
 from .cli.arg.exit import ExitWithError, ExitException
@@ -269,17 +270,17 @@ class TestBase(object):
                  users=None, tickets=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, _frame=None):
-        global current_test
 
+        self.lock = threading.Lock()
         self.name = name
         if self.name is None:
             raise TypeError("name must be specified")
 
         cli_args = {}
-        if current_test.object is None:
-            if current_test.main is not None:
+        if current() is None:
+            if top() is not None:
                 raise RuntimeError("only one top level test is allowed")
-            current_test.main = self
+            top(self)
             # flag to indicate if main test called init
             self._init= False
             frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
@@ -358,7 +359,7 @@ class TestBase(object):
 
     def __enter__(self):
         self.io = TestIO(self)
-        if current_test.main is self:
+        if top() is self:
             self.io.output.protocol()
             self.io.output.version()
         self.io.output.test_message()
@@ -366,25 +367,23 @@ class TestBase(object):
         if self.flags & PAUSE_BEFORE:
             pause()
 
-        self.caller_test = current_test.object
-        current_test.object = self
+        self.caller_test = current()
+        current(self)
 
         if self.flags & SKIP:
             raise ResultException(Skip(self.name, "skip flag set"))
         else:
-            if current_test.main is self:
+            if top() is self:
                 self._init = init()
             self.run(**{name: arg.value for name, arg in self.args.items()})
             return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        global current_test
-
-        if current_test.main is self and not self._init:
+        if top() is self and not self._init:
             return False
 
-        current_test.object = self.caller_test
-        current_test.previous = self
+        current(self.caller_test)
+        previous(self)
 
         try:
             if exception_value:
@@ -455,7 +454,17 @@ class _test(object):
     :param **kwargs: test class arguments
     """
     def __init__(self, name, **kwargs):
-        parent = kwargs.pop("parent", None) or current_test.object
+        current_thread = threading.current_thread()
+        if getattr(current_thread, "_parent", None):
+            parent_current = current(thread=current_thread._parent)
+            parent_top = top(thread=current_thread._parent)
+            parent_previous = previous(thread=current_thread._parent)
+            if parent_current and not current():
+                current(value=parent_current)
+                top(value=parent_top)
+                previous(value=parent_previous)
+
+        parent = kwargs.pop("parent", None) or current()
         test = kwargs.pop("test", None)
         keep_type = kwargs.pop("keep_type", None)
 
@@ -480,7 +489,8 @@ class _test(object):
             # handle parent test type propagation
             if keep_type is None:
                 self._parent_type_propagation(parent, kwargs)
-            parent.child_count += 1
+            with parent.lock:
+                parent.child_count += 1
         else:
             name = test.make_name(name)
         tags = test.make_tags(kwargs.pop("tags", None))
@@ -512,8 +522,9 @@ class _test(object):
 
         if end.match(name, tags):
             if parent:
-                parent.end = None
-                parent.skip = [the("/*")]
+                with parent.lock:
+                    parent.end = None
+                    parent.skip = [the("/*")]
 
     def _apply_start(self, name, tags, parent, kwargs):
         start = kwargs.get("start")
@@ -525,7 +536,8 @@ class _test(object):
         else:
             kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
             if parent:
-                parent.start = None
+                with parent.lock:
+                    parent.start = None
 
     def _apply_only(self, name, tags, kwargs):
         only = kwargs.get("only")
@@ -615,18 +627,19 @@ class _test(object):
             if TE not in self.test.flags:
                 raise ResultException(result)
             else:
-                if isinstance(self.parent.result, Error):
-                    pass
-                elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
-                    self.parent.result = result
-                elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
-                    self.parent.result = result
-                elif isinstance(self.parent.result, Fail):
-                    pass
-                elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
-                    self.parent.result = result
-                else:
-                    pass
+                with self.parent.lock:
+                    if isinstance(self.parent.result, Error):
+                        pass
+                    elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
+                    elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
+                    elif isinstance(self.parent.result, Fail):
+                        pass
+                    elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
+                    else:
+                        pass
         return True
 
 class Module(_test):
@@ -721,6 +734,13 @@ class Finally(Step):
         kwargs["subtype"] = TestSubType.Finally
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Finally, self).__init__(name, **kwargs)
+
+class NullStep():
+    def __enter__(self):
+        return None
+
+    def __exit__(self, *args, **kwargs):
+        return False
 
 # decorators
 class _testdecorator(object):
