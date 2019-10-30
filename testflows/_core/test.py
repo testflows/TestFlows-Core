@@ -544,6 +544,10 @@ class _test(object):
         if not only:
             return
 
+        # only should not skip Given steps
+        if kwargs.get("subtype") == TestSubType.Given:
+            only.append(the(join(name, "*")))
+
         found = False
         for item in only:
             if item.match(name, tags):
