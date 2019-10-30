@@ -19,5 +19,5 @@ def transform(stop):
     line = None
     while True:
         if stop.is_set():
-            raise StopIteration
+            return
         line = yield line
