@@ -74,7 +74,7 @@ def generate(results):
         _color = color_result(result)
         passing += _color("\u2714") + f" [ {_color(result)} ] {msg.test}\n"
     if passing:
-        passing = color("\nPassing tests\n\n", "white", attrs=["bold"]) + passing
+        passing = color("\nPassing\n\n", "white", attrs=["bold"]) + passing
 
     report = f"{passing}"
 

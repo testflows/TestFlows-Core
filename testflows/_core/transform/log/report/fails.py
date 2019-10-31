@@ -79,7 +79,7 @@ def generate(results):
         xfails += _color('\u2718') + f" [ { _color(result) } ] {msg.test}\n"
 
     if xfails:
-        xfails = color("\nKnown fails\n\n", "white", attrs=["bold"]) + xfails
+        xfails = color("\nKnown\n\n", "white", attrs=["bold"]) + xfails
 
     for entry in results:
         msg, result = results[entry]
@@ -88,7 +88,7 @@ def generate(results):
             continue
         fails += _color("\u2718") + f" [ {_color(result)} ] {msg.test}\n"
     if fails:
-        fails = color("\nFailing tests\n\n", "white", attrs=["bold"]) + fails
+        fails = color("\nFailing\n\n", "white", attrs=["bold"]) + fails
 
     report = f"{xfails}{fails}"
 
