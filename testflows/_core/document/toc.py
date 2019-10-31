@@ -22,6 +22,10 @@ class Visitor(PTNodeVisitor):
     # FIXME: add support for alternative headers H2 "-" and H1 "="
     def __init__(self, *args, **kwargs):
         self.header_ids = {}
+        self.start_at = kwargs.pop("start_at", None)
+        self.started = True
+        if self.start_at is not None:
+            self.started = False
         self.levels = []
         self.current_level = 0
         self.output = []
@@ -31,6 +35,11 @@ class Visitor(PTNodeVisitor):
         level = node[0].value.count("#")
         # only include in TOC levels 2 and higher
         if level < 2:
+            return None
+        if not self.started:
+            if self.start_at in node.heading_name.value:
+                self.started = True
+        if not self.started:
             return None
         # normalize header level
         level -= 1
@@ -94,6 +103,6 @@ def generate(source, destination):
     parser = Parser()
     source_data = source.read()
     tree = parser.parse(source_data)
-    destination_data = visit_parse_tree(tree, Visitor())
+    destination_data = visit_parse_tree(tree, Visitor(start_at="Revision History"))
     if destination_data:
         destination.write(destination_data)

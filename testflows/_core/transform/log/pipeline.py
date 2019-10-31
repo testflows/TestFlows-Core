@@ -21,6 +21,7 @@ from .write import transform as write_transform
 from .stop import transform as stop_transform
 from .raw import transform as raw_transform
 from .short import transform as short_transform
+from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
@@ -98,6 +99,7 @@ class ShortLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 short_transform(),
+                passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -119,6 +121,7 @@ class NiceLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 nice_transform(stop_event),
+                passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -140,6 +143,7 @@ class DotsLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 dots_transform(stop_event),
+                passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
