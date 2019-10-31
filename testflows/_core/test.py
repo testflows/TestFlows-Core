@@ -514,6 +514,8 @@ class _test(object):
         self._apply_start(name, tags, parent, kwargs)
         self._apply_end(name, tags, parent, kwargs)
         self.test = test(name, tags=tags, **kwargs)
+        if getattr(self, "parent_type", None):
+            self.test.parent_type = self.parent_type
 
     def _apply_end(self, name, tags, parent, kwargs):
         end = kwargs.get("end")
@@ -587,7 +589,12 @@ class _test(object):
         type = kwargs.pop("type", TestType.Test)
         subtype = kwargs.pop("subtype", TestSubType.Empty)
 
-        if int(parent.type) < int(type):
+        parent_type = parent.type
+
+        if parent_type == TestType.Iteration:
+            parent_type = parent.parent_type
+
+        if int(parent_type) < int(type):
             type = parent.type
             subtype = parent.subtype
 
@@ -664,11 +671,12 @@ class Test(_test):
         kwargs["type"] = TestType.Test
         return super(Test, self).__init__(name, **kwargs)
 
-class Run(_test):
+class Iteration(_test):
     """Test iteration definition."""
     def __init__(self, name, **kwargs):
-        kwargs["type"] = TestType.Run
-        return super(Run, self).__init__(name, **kwargs)
+        kwargs["type"] = TestType.Iteration
+        self.parent_type = kwargs.pop("parent_type", TestType.Test)
+        return super(Iteration, self).__init__(name, **kwargs)
 
 class Step(_test):
     """Step definition."""
@@ -677,7 +685,7 @@ class Step(_test):
         return super(Step, self).__init__(name, **kwargs)
 
 # support for BDD
-class Feature(Test):
+class Feature(Suite):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Feature
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
@@ -775,9 +783,13 @@ class _testdecorator(object):
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
         if _repeat is not None:
-            with self.type(**_kwargs, _frame=frame) as test:
+            with self.type(**_kwargs, _frame=frame) as parent_test:
+                __kwargs = dict(_kwargs)
+                __kwargs.pop("name")
+                __kwargs["type"] = TestType.Iteration
+                __kwargs["subtype"] = TestSubType.Empty
                 for i in range(_repeat):
-                    with Run(f"iteration {i}"):
+                    with Iteration(name=f"{i}", parent_type=parent_test.type, **__kwargs) as test:
                         self.func(**{name: arg.value for name, arg in test.args.items()})
         else:
             with self.type(**_kwargs, _frame=frame) as test:

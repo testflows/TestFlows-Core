@@ -16,7 +16,7 @@ class TestType(object):
     Module = 40
     Suite = 30
     Test = 20
-    Run = 15
+    Iteration = 15
     Step = 10
 
 class TestSubType(object):

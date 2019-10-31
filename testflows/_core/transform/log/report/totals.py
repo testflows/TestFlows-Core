@@ -90,8 +90,8 @@ def format_test(msg, counts):
         counts["module"].units += 1
     elif msg.p_type == TestType.Suite:
         counts["suite"].units += 1
-    elif msg.p_type == TestType.Run:
-        counts["run"].units += 1
+    elif msg.p_type == TestType.Iteration:
+        counts["iteration"].units += 1
     elif msg.p_type == TestType.Step:
         counts["step"].units += 1
     else:
@@ -124,8 +124,8 @@ def format_result(msg, counts):
         setattr(counts["module"], _name, getattr(counts["module"], _name) + 1)
     elif msg.p_type == TestType.Suite:
         setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
-    elif msg.p_type == TestType.Run:
-        setattr(counts["run"], _name, getattr(counts["run"], _name) + 1)
+    elif msg.p_type == TestType.Iteration:
+        setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
     elif msg.p_type == TestType.Step:
         setattr(counts["step"], _name, getattr(counts["step"], _name) + 1)
     else:
@@ -158,7 +158,7 @@ def transform(stop):
         "module": Counts("modules", *([0] * 10)),
         "suite": Counts("suites", *([0] * 10)),
         "test": Counts("tests", *([0] * 10)),
-        "run": Counts("runs", *([0] * 10)),
+        "iteration": Counts("iterations", *([0] * 10)),
         "step": Counts("steps", *([0] * 10)),
         "feature": Counts("features", *([0] * 10)),
         "scenario": Counts("scenarios", *([0] * 10))
@@ -188,8 +188,8 @@ def transform(stop):
                     line += line_icon + str(counts["feature"])
                 if counts["scenario"]:
                     line += line_icon + str(counts["scenario"])
-                if counts["run"]:
-                    line += line_icon + str(counts["run"])
+                if counts["iteration"]:
+                    line += line_icon + str(counts["iteration"])
                 if counts["step"]:
                     line += line_icon + str(counts["step"])
                 line += color_line(f"\nTotal time {strftimedelta(msg.p_time)}\n")
