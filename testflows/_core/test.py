@@ -664,6 +664,12 @@ class Test(_test):
         kwargs["type"] = TestType.Test
         return super(Test, self).__init__(name, **kwargs)
 
+class Run(_test):
+    """Test iteration definition."""
+    def __init__(self, name, **kwargs):
+        kwargs["type"] = TestType.Run
+        return super(Run, self).__init__(name, **kwargs)
+
 class Step(_test):
     """Step definition."""
     def __init__(self, name, **kwargs):
@@ -759,6 +765,7 @@ class _testdecorator(object):
         frame = kwargs.pop("_frame", inspect.currentframe().f_back)
         _kwargs = dict(vars(self.func))
         _name = kwargs.pop("name", None)
+        _repeat = kwargs.pop("repeat", None)
         if kwargs.get("args") is None:
             # use function signature to get default argument values
             # and set them as args
@@ -767,8 +774,14 @@ class _testdecorator(object):
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
-        with self.type(**_kwargs, _frame=frame) as test:
-            self.func(**{name: arg.value for name, arg in test.args.items()})
+        if _repeat is not None:
+            with self.type(**_kwargs, _frame=frame) as test:
+                for i in range(_repeat):
+                    with Run(f"iteration {i}"):
+                        self.func(**{name: arg.value for name, arg in test.args.items()})
+        else:
+            with self.type(**_kwargs, _frame=frame) as test:
+                self.func(**{name: arg.value for name, arg in test.args.items()})
         return test
 
 class TestCase(_testdecorator):

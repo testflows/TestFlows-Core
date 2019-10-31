@@ -142,6 +142,8 @@ def format_test(msg, keyword):
         keyword += "Module"
     elif msg.p_type == TestType.Suite:
         keyword += "Suite"
+    elif msg.p_type == TestType.Run:
+        keyword += "Run"
     elif msg.p_type == TestType.Step:
         if msg.p_subtype == TestSubType.And:
             keyword += "And"
