@@ -18,12 +18,13 @@ import inspect
 import functools
 import tempfile
 import threading
+import textwrap
 
 from contextlib import ExitStack, contextmanager
 
 import testflows.settings as settings
 
-from .exceptions import DummyTestException, ArgumentError, ResultException
+from .exceptions import DummyTestException, ArgumentError, ResultException, RepeatTestException
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
@@ -399,7 +400,7 @@ class TestBase(object):
                     self.result = Error(self.name,
                         "unexpected %s: %s" % (exception_type.__name__, str(exception_value).split('\n', 1)[0]))
                     if isinstance(exception_value, KeyboardInterrupt):
-                        raise self.result
+                        raise ResultException(self.result)
             else:
                 if isinstance(self.result, Null):
                     self.result = OK(self.name)
@@ -515,6 +516,9 @@ class _test(object):
         self._apply_skip(name, tags, kwargs)
         self._apply_start(name, tags, parent, kwargs)
         self._apply_end(name, tags, parent, kwargs)
+        self._repeat = kwargs.pop("repeat", None)
+        self._tags = tags
+        self._kwargs = dict(kwargs)
         self.test = test(name, tags=tags, **kwargs)
         if getattr(self, "parent_type", None):
             self.test.parent_type = self.parent_type
@@ -607,21 +611,66 @@ class _test(object):
         def dummy(*args, **kwargs):
             pass
         try:
-            return self.test.__enter__()
+            if self._repeat is not None:
+                self._with_frame = inspect.currentframe().f_back
+                self._with_block_start_lineno = self._with_frame.f_lineno
+                self._with_source = inspect.getsourcelines(self._with_frame)
+                self.trace = sys.gettrace()
+                sys.settrace(dummy)
+                sys._getframe(1).f_trace = functools.partial(self.__repeat__, None, None, None)
+            else:
+                return self.test.__enter__()
         except (KeyboardInterrupt, Exception):
             self.trace = sys.gettrace()
             sys.settrace(dummy)
             sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
+
+    def __repeat__(self, *args):
+        sys.settrace(self.trace)
+        raise RepeatTestException()
 
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
         sys.settrace(self.trace)
         raise exc_value.with_traceback(exc_tb)
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
-        try:
-            test__exit__ = self.test.__exit__(exception_type, exception_value, exception_traceback)
-        except (KeyboardInterrupt, Exception):
-            raise
+        frame = inspect.currentframe().f_back
+
+        if isinstance(exception_value, RepeatTestException) and not frame.f_locals.get("_repeat") and top() != self.test:
+            try:
+                self.test.__enter__()
+                self._with_block_end = frame.f_lasti
+                self._with_block_end_lineno = self._with_frame.f_lineno
+                lines, index = self._with_source
+                index = max(1, index)
+                source = textwrap.dedent("".join(
+                    lines[(self._with_block_start_lineno - index)+1:(self._with_block_end_lineno - index) + 1]))
+                code = compile(source, self._with_frame.f_code.co_filename, mode="exec")
+                frame.f_locals["_repeat"] = True
+                __kwargs = dict(self._kwargs)
+                __kwargs.pop("name", None)
+                __kwargs.pop("parent", None)
+                __kwargs["type"] = TestType.Iteration
+                __kwargs["subtype"] = TestSubType.Empty
+                for i in range(self._repeat):
+                    with Iteration(name=f"{i}", tags=self._tags, **__kwargs, parent_type=self.test.type):
+                        exec(code, frame.f_globals, frame.f_locals)
+                frame.f_locals.pop("_repeat")
+            except:
+                try:
+                    test__exit__ = self.test.__exit__(*sys.exc_info())
+                except(KeyboardInterrupt, Exception):
+                    raise
+            else:
+                try:
+                    test__exit__ = self.test.__exit__(None, None, None)
+                except(KeyboardInterrupt, Exception):
+                    raise
+        else:
+            try:
+                test__exit__ = self.test.__exit__(exception_type, exception_value, exception_traceback)
+            except (KeyboardInterrupt, Exception):
+                raise
 
         # if test did not handle the exception in __exit__ then re-raise it
         if exception_value and not test__exit__:
@@ -914,7 +963,19 @@ def run(comment=None, test=None, **kwargs):
     else:
         raise TypeError(f"invalid test type '{type(test)}'")
 
-    with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs, _frame=inspect.currentframe().f_back) as test:
-        pass
-
-    return test.result
+    _frame = inspect.currentframe().f_back
+    _repeat = kwargs.pop("repeat", None)
+    if _repeat is not None:
+        with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs,
+                               _frame=_frame, _run=False) as parent_test:
+            _kwargs = dict(kwargs)
+            _kwargs["type"] = TestType.Iteration
+            _kwargs["subtype"] = TestSubType.Empty
+            for i in range(_repeat):
+                with Iteration(test=test, name=f"{i}", **kwargs, _frame=_frame, parent_type=parent_test.type):
+                    pass
+        return parent_test.result
+    else:
+        with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs, _frame=frame) as test:
+            pass
+        return test.result

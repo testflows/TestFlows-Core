@@ -24,6 +24,11 @@ class DummyTestException(TestFlowsException):
     """
     pass
 
+class RepeatTestException(TestFlowsException):
+    """Repeat test exception.
+    """
+    pass
+
 class TestFlowsError(TestFlowsException):
     """Base error exception class.
     """
