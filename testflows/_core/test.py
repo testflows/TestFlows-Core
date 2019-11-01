@@ -843,10 +843,11 @@ class _testdecorator(object):
                 for i in range(_repeat):
                     with Iteration(name=f"{i}", parent_type=parent_test.type, **__kwargs) as test:
                         self.func(**{name: arg.value for name, arg in test.args.items()})
+            return parent_test
         else:
             with self.type(**_kwargs, _frame=frame) as test:
                 self.func(**{name: arg.value for name, arg in test.args.items()})
-        return test
+            return test
 
 class TestCase(_testdecorator):
     type = Test
