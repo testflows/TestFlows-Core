@@ -269,10 +269,11 @@ class TestBase(object):
                  uid=None, tags=None, attributes=None, requirements=None,
                  users=None, tickets=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
-                 start=None, end=None, args=None, id=None, _frame=None):
+                 start=None, end=None, args=None, id=None, _frame=None, _run=True):
 
         self.lock = threading.Lock()
         self.name = name
+        self._run = _run
         if self.name is None:
             raise TypeError("name must be specified")
 
@@ -375,7 +376,8 @@ class TestBase(object):
         else:
             if top() is self:
                 self._init = init()
-            self.run(**{name: arg.value for name, arg in self.args.items()})
+            if self._run:
+                self.run(**{name: arg.value for name, arg in self.args.items()})
             return self
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
@@ -782,8 +784,9 @@ class _testdecorator(object):
         if _name is not None:
             kwargs["name"] = _name % (_kwargs)
         _kwargs.update(kwargs)
+        # handle repeats
         if _repeat is not None:
-            with self.type(**_kwargs, _frame=frame) as parent_test:
+            with self.type(**_kwargs, _frame=frame, _run=False) as parent_test:
                 __kwargs = dict(_kwargs)
                 __kwargs.pop("name")
                 __kwargs["type"] = TestType.Iteration
