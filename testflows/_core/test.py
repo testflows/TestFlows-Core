@@ -552,8 +552,8 @@ class _test(object):
         if not only:
             return
 
-        # only should not skip Given steps
-        if kwargs.get("subtype") == TestSubType.Given:
+        # only should not skip Given and Finally steps
+        if kwargs.get("subtype") in (TestSubType.Given, TestSubType.Finally):
             only.append(the(join(name, "*")))
 
         found = False
