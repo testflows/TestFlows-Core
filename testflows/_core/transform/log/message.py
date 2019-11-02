@@ -16,6 +16,8 @@ import inspect
 import testflows._core.objects as objects
 from collections import namedtuple as namedtuple
 
+from testflows._core.message import MessageMap
+
 def namedtuple_with_defaults(*args, defaults=()):
     nt = namedtuple(*args)
     nt.__new__.__defaults__ = defaults
@@ -86,8 +88,8 @@ class XNullMessage(ResultMessage):
 
 class Prefix(object):
     __slots__ = ()
-    fields = "p_keyword p_hash p_num p_type p_subtype, p_id p_name p_flags p_cflags p_stream p_time "
-    keyword, hash, num, type, subtype, id, name, flags, cflags, stream, time = list(range(0, 11))
+    fields = "p_keyword p_hash p_num p_type p_subtype p_id p_flags p_cflags p_stream p_time "
+    keyword, hash, num, type, subtype, id, flags, cflags, stream, time = list(range(0, 10))
 
 class RawFormat():
     prefix = Prefix
@@ -116,22 +118,22 @@ class RawTest(RawFormat, TestMessage, namedtuple_with_defaults(
     def __new__(cls, *args):
         args = list(args)
         l = len(args)
-        if l > 15 and args[15]: # description
-            args[15] = RawDescription(args[15])
-        if l > 16 and args[16]: # attributes
-            args[16] = [RawAttribute(*attr) for attr in args[16]]
-        if l > 17 and args[17]: # requirements
-            args[17] = [RawRequirement(*req) for req in args[17]]
-        if l > 18 and args[18]: # args
-            args[18] = [RawArgument(*arg) for arg in args[18]]
-        if l > 19 and args[19]: # tags
-            args[19] = [RawTag(*tag) for tag in args[19]]
-        if l > 20 and args[20]: # users
-            args[20] = [RawUser(*user) for user in args[20]]
-        if l > 21 and args[21]:  # tickets
-            args[21] = [RawTicket(*ticket) for ticket in args[21]]
-        if l > 22 and args[22]:  # examples
-            args[22] = RawExamples(*args[22])
+        if l > 14 and args[14]: # description
+            args[14] = RawDescription(args[14])
+        if l > 15 and args[15]: # attributes
+            args[15] = [RawAttribute(*attr) for attr in args[15]]
+        if l > 16 and args[16]: # requirements
+            args[16] = [RawRequirement(*req) for req in args[16]]
+        if l > 17 and args[17]: # args
+            args[17] = [RawArgument(*arg) for arg in args[17]]
+        if l > 18 and args[18]: # tags
+            args[18] = [RawTag(*tag) for tag in args[18]]
+        if l > 19 and args[19]: # users
+            args[19] = [RawUser(*user) for user in args[19]]
+        if l > 20 and args[20]:  # tickets
+            args[20] = [RawTicket(*ticket) for ticket in args[20]]
+        if l > 21 and args[21]:  # examples
+            args[21] = RawExamples(*args[21])
         return super(RawTest, cls).__new__(cls, *args)
 
 class RawDescription(namedtuple_with_defaults(
@@ -264,3 +266,25 @@ class RawVersion(RawFormat, VersionMessage, namedtuple_with_defaults(
         "RawVersionMessage",
         RawFormat.prefix.fields + "version")):
     pass
+
+message_map = MessageMap(
+    RawNone, # NONE
+    RawTest, # TEST
+    RawResultNull, # NULL
+    RawResultOK, # OK
+    RawResultFail, # FAIL
+    RawResultSkip, # SKIP
+    RawResultError, # ERROR
+    RawException, # EXCEPTION
+    RawValue, # VALUE
+    RawNote, # NOTE
+    RawDebug, # DEBUG
+    RawTrace, # TRACE
+    RawResultXOK, #XOK
+    RawResultXFail, # XFAIL
+    RawResultXError, # XERROR
+    RawResultXNull, # XNULL
+    RawProtocol, # PROTOCOL
+    RawInput, # INPUT
+    RawVersion, # VERSION
+)

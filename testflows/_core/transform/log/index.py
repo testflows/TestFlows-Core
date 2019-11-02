@@ -15,11 +15,13 @@ import json
 
 import testflows.settings as settings
 
+from testflows._core.message import MessageMap
 from testflows._core.transform.log import message
 from testflows._core.constants import id_sep
+from testflows._core.baseobject import hash
 
 def transform(stop=None):
-    """Transform log line into parsed list.
+    """Transform log line into an index file entry.
 
     :param stop: stop event, default: None
     """
@@ -27,19 +29,24 @@ def transform(stop=None):
     message_map = message.message_map
 
     msg = None
+    offset = None
     stop_id = None
-
+    top_id = None
     while True:
         if msg is not None:
             try:
                 fields = json.loads(f"[{msg}]")
                 keyword = fields[prefix.keyword]
-                msg = message_map[keyword](*fields)
+                msg = ""
+                if top_id is None:
+                    top_id = fields[prefix.id]
+                    msg = f"{top_id}\n"
+                msg += f"{fields[prefix.id].split(top_id,1)[-1]},{offset}\n"
                 if stop_id is None:
-                    stop_id = f"{msg.p_id}"
-                if isinstance(msg, message.ResultMessage):
-                    if stop and msg.p_id == stop_id:
+                    stop_id = f"{fields[prefix.id]}"
+                if issubclass(message_map[keyword], message.ResultMessage):
+                    if stop and fields[prefix.id] == stop_id:
                         stop.set()
             except (IndexError, Exception):
                 raise Exception(f"invalid message: {msg}\n")
-        msg = yield msg
+        msg, offset = yield msg

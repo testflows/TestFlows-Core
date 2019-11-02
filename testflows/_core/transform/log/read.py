@@ -11,20 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-def transform(file, tail=False):
+def transform(file, tail=False, offset=False):
     """Read lines from a file-like object.
 
     :param file: open file handle
     :param tail: tail mode, default: False
+    :param offset: include offset with the message, default: False
     """
     yield None
-    if not tail:
-        for line in file:
-            yield line
-    else:
-        line = ""
-        while True:
-            line += file.readline()
-            if line.endswith("\n"):
+    line = ""
+    pos = 0
+    while True:
+        line += file.readline()
+        if line.endswith("\n"):
+            if offset:
+                yield (line, pos)
+                pos += len(line.encode("utf-8"))
+            else:
                 yield line
-                line = ""
+            line = ""

@@ -21,6 +21,7 @@ from .write import transform as write_transform
 from .stop import transform as stop_transform
 from .raw import transform as raw_transform
 from .short import transform as short_transform
+from .index import transform as index_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
@@ -221,3 +222,15 @@ class ResultsLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(ResultsLogPipeline, self).__init__(steps)
+
+class IndexLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, offset=True),
+            index_transform(stop_event),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(IndexLogPipeline, self).__init__(steps)

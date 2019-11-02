@@ -115,7 +115,7 @@ def and_keyword(msg, parent_name, keyword, subtype):
     keywords and convert them to And when necessary.
     """
     prev = tests_by_parent[parent_name][-2] if len(tests_by_parent.get(parent_name, [])) > 1 else None
-    if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_name) is None:
+    if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_id) is None:
         keyword = "And"
     parent = tests_by_name.get(parent_name)
     if parent and parent.p_subtype == subtype and len(tests_by_parent.get(parent_name, [])) == 1:
@@ -128,11 +128,11 @@ def format_test(msg, keyword):
         return
 
     # add test to the tests map
-    parent = parentname(msg.p_name)
+    parent = parentname(msg.p_id)
     if tests_by_parent.get(parent) is None:
         tests_by_parent[parent] = []
     tests_by_parent[parent].append(msg)
-    tests_by_name[msg.p_name] = msg
+    tests_by_name[msg.p_id] = msg
 
     if msg.p_type == TestType.Module:
         keyword += "Module"
