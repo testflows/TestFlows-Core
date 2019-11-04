@@ -40,7 +40,10 @@ try:
 except (ExitException, KeyboardInterrupt, Exception) as exc:
     if settings.debug:
         sys.stderr.write(warning(exception(), eol='\n'))
-    sys.stderr.write(danger("error: " + str(exc).strip()))
+    if not isinstance(exc, KeyboardInterrupt):
+        sys.stderr.write(danger("error: " + str(exc).strip()))
+    else:
+        sys.stderr.write("\n")
     if isinstance(exc, ExitException):
         sys.exit(exc.exitcode)
     else:
