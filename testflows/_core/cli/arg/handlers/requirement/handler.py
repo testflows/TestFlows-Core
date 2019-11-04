@@ -19,7 +19,7 @@ from testflows._core.cli.arg.handlers.requirement.generate import Handler as gen
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("requirement", help="requirement processing", epilog=epilog(),
+        parser = commands.add_parser("requirements", help="requirement processing", epilog=epilog(),
             description="Work with requirements.",
             formatter_class=HelpFormatter)
 
