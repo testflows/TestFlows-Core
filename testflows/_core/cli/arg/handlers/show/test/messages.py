@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import threading
+import subprocess
+import tempfile
+
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core.cli.arg.common import epilog
@@ -51,5 +54,26 @@ class Handler(HandlerBase):
             ]
             super(Handler.Pipeline, self).__init__(steps)
 
+    def convert_name_to_id(self, name, input):
+        command = f"grep  --byte-offset -E '^1,.*,\"{name}[^/]*\",' -m 1"
+        process = subprocess.Popen(command, stdin=input, stdout=subprocess.PIPE, shell=True)
+        process.wait()
+        parse_generator = parse_transform(None)
+        parse_generator.send(None)
+        line = process.stdout.readline().decode("utf-8")
+        if not line:
+            raise ValueError("test not found")
+        offset, msg = line.split(":", 1)
+        return (parse_generator.send(msg).p_id, offset)
+
     def handle(self, args):
-        self.Pipeline(args.name, args.log, args.output).run()
+        try:
+            with tempfile.NamedTemporaryFile("w+") as saved_input:
+                saved_input.write(args.log.read())
+                saved_input.seek(0)
+                id, offset = self.convert_name_to_id(args.name, saved_input)
+                saved_input.seek(int(offset))
+                self.Pipeline(id, saved_input, args.output).run()
+        except ValueError as exc:
+            if "test not found" in str(exc):
+                return

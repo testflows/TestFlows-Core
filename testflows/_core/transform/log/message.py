@@ -17,6 +17,7 @@ import testflows._core.objects as objects
 from collections import namedtuple as namedtuple
 
 from testflows._core.message import MessageMap
+from testflows._core.exceptions import TestFlowsError
 
 def namedtuple_with_defaults(*args, defaults=()):
     nt = namedtuple(*args)
@@ -25,6 +26,9 @@ def namedtuple_with_defaults(*args, defaults=()):
 
 class Message(object):
     __slots__ = ()
+
+class InvalidMessageError(TestFlowsError):
+    pass
 
 class ProtocolMessage(Message):
     pass

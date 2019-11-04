@@ -38,7 +38,8 @@ try:
     args.func(args)
 
 except (ExitException, KeyboardInterrupt, Exception) as exc:
-    sys.stderr.write(warning(exception(), eol='\n'))
+    if settings.debug:
+        sys.stderr.write(warning(exception(), eol='\n'))
     sys.stderr.write(danger("error: " + str(exc).strip()))
     if isinstance(exc, ExitException):
         sys.exit(exc.exitcode)
