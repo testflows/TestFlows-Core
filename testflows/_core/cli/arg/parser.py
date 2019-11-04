@@ -22,6 +22,7 @@ from .handlers.transform.handler import Handler as transform_handler
 from .handlers.document.handler import Handler as document_handler
 from .handlers.requirement.handler import Handler as requirement_handler
 from .handlers.report.handler import Handler as report_handler
+from .handlers.show.handler import Handler as show_handler
 
 from testflows._core import __version__, __license__
 
@@ -50,3 +51,4 @@ report_handler.add_command(commands)
 transform_handler.add_command(commands)
 requirement_handler.add_command(commands)
 document_handler.add_command(commands)
+show_handler.add_command(commands)

@@ -50,7 +50,9 @@ setup(
         "testflows._core.cli.arg.handlers.report",
         "testflows._core.cli.arg.handlers.transform",
         "testflows._core.cli.arg.handlers.document",
-        "testflows._core.cli.arg.handlers.requirement"
+        "testflows._core.cli.arg.handlers.requirement",
+        "testflows._core.cli.arg.handlers.show",
+        "testflows._core.cli.arg.handlers.show.test"
         ],
     scripts=[
         "testflows/_core/bin/tfs",
