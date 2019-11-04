@@ -14,6 +14,7 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.cli.arg.handlers.show.test.details import Handler as details_handler
 from testflows._core.cli.arg.handlers.show.test.procedure import Handler as procedure_handler
 from testflows._core.cli.arg.handlers.show.test.messages import Handler as messages_handler
 
@@ -27,5 +28,6 @@ class Handler(HandlerBase):
         test_commands = parser.add_subparsers(title="commands", metavar="command",
             description=None, help=None)
         test_commands.required = True
+        details_handler.add_command(test_commands)
         procedure_handler.add_command(test_commands)
         messages_handler.add_command(test_commands)

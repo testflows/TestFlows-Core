@@ -88,7 +88,7 @@ def format_tags(msg, indent):
 def format_examples(msg, indent):
     examples = ExamplesTable(*msg.examples)
     out = [f"{indent}{' ' * 2}{color_secondary_keyword('Examples')}"]
-    out.append(color(textwrap.indent(f"{examples}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+    out.append(color(textwrap.indent(f"{examples}", prefix=f"{indent}{' ' * 4}"), "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
 def format_arguments(msg, indent):
@@ -186,7 +186,7 @@ def format_test(msg, keyword):
     if msg.args:
         out += format_arguments(msg, _indent)
     if msg.examples:
-        out += format_examples(msg, indent)
+        out += format_examples(msg, _indent)
     return out
 
 def format_result(msg, result):
