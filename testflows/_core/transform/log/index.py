@@ -17,8 +17,6 @@ import testflows.settings as settings
 
 from testflows._core.message import MessageMap
 from testflows._core.transform.log import message
-from testflows._core.constants import id_sep
-from testflows._core.baseobject import hash
 
 def transform(stop=None):
     """Transform log line into an index file entry.
@@ -29,24 +27,16 @@ def transform(stop=None):
     message_map = message.message_map
 
     msg = None
-    offset = None
-    stop_id = None
-    top_id = None
     while True:
         if msg is not None:
             try:
                 fields = json.loads(f"[{msg}]")
                 keyword = fields[prefix.keyword]
-                msg = ""
-                if top_id is None:
-                    top_id = fields[prefix.id]
-                    msg = f"{top_id}\n"
-                msg += f"{fields[prefix.id].split(top_id,1)[-1]},{offset}\n"
-                if stop_id is None:
-                    stop_id = f"{fields[prefix.id]}"
-                if issubclass(message_map[keyword], message.ResultMessage):
-                    if stop and fields[prefix.id] == stop_id:
-                        stop.set()
+                if issubclass(message_map[keyword], message.RawTest):
+                    test = message_map[keyword](*fields)
+                    msg = f"\"{test.name}\",{test.p_id}\n"
+                else:
+                    msg = None
             except (IndexError, Exception):
                 raise Exception(f"invalid message: {msg}\n")
-        msg, offset = yield msg
+        msg = yield msg

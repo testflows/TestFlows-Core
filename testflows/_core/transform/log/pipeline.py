@@ -22,6 +22,7 @@ from .stop import transform as stop_transform
 from .raw import transform as raw_transform
 from .short import transform as short_transform
 from .index import transform as index_transform
+from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
@@ -228,7 +229,7 @@ class IndexLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail, offset=True),
+            read_and_filter_transform(input, command="grep -E '^1,'", tail=tail),
             index_transform(stop_event),
             write_transform(output),
             stop_transform(stop_event)
