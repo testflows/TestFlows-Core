@@ -35,6 +35,18 @@ class Message(IntEnum):
     INPUT = 17
     VERSION = 18
 
+ResultMessages = [
+    Message.OK,
+    Message.FAIL,
+    Message.SKIP,
+    Message.NULL,
+    Message.ERROR,
+    Message.XOK,
+    Message.XFAIL,
+    Message.XERROR,
+    Message.XNULL
+]
+
 MessageMap = namedtuple(
         "MessageMap",
         "NONE TEST NULL OK FAIL SKIP ERROR "
