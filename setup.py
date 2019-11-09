@@ -39,6 +39,7 @@ setup(
         "testflows._core",
         "testflows._core.contrib",
         "testflows._core.contrib.arpeggio",
+        "testflows._core.contrib.markdown2",
         "testflows._core.utils",
         "testflows._core.transform",
         "testflows._core.transform.log",
@@ -55,6 +56,9 @@ setup(
         "testflows._core.cli.arg.handlers.show.test",
         "testflows._core.cli.arg.handlers.show.tests"
         ],
+    package_data={
+        'testflows._core.document': ['*.css'],
+    },
     scripts=[
         "testflows/_core/bin/tfs",
     ],

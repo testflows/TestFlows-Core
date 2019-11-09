@@ -228,7 +228,7 @@ class TestBase(object):
 
             if args.get("_pause_after"):
                 if not xflags:
-                    xflags = globals()["xflags"](xflags)
+                    xflags = globals()["xflags"]()
                 for pattern in args.get("_pause_after"):
                     pattern = absname(pattern, self.name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])

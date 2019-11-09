@@ -14,6 +14,7 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.cli.arg.handlers.document.convert import Handler as convert_handler
 from testflows._core.cli.arg.handlers.document.toc import Handler as toc_handler
 
 class Handler(HandlerBase):
@@ -26,4 +27,5 @@ class Handler(HandlerBase):
         document_commands = parser.add_subparsers(title="commands", metavar="command",
             description=None, help=None)
         document_commands.required = True
+        convert_handler.add_command(document_commands)
         toc_handler.add_command(document_commands)
