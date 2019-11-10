@@ -12,8 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 
 from testflows._core.contrib.markdown2 import Markdown
+
+link_patterns = [
+    (re.compile(r'(http[s]?://[^\s]+)'), r"\1")
+]
 
 md = Markdown(extras={
     "header-ids":None,
@@ -23,8 +28,10 @@ md = Markdown(extras={
     "target-blank-links": None,
     "nofollow": None,
     "noopener": None,
-    "noreferrer": None
-})
+    "link-patterns": None,
+    "noreferrer": None,
+    "code-friendly": None
+}, link_patterns=link_patterns)
 
 template = """
 <head>
