@@ -20,8 +20,8 @@ from testflows._core.cli.arg.handlers.document.toc import Handler as toc_handler
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("documents", help="document processing", epilog=epilog(),
-            description="Work with documents.",
+        parser = commands.add_parser("document", help="document processing", epilog=epilog(),
+            description="Work with a document.",
             formatter_class=HelpFormatter)
 
         document_commands = parser.add_subparsers(title="commands", metavar="command",

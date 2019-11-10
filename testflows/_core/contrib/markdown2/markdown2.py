@@ -385,8 +385,15 @@ class Markdown(object):
         if self.safe_mode:
             text = self._unhash_html_spans(text)
 
-        if "nofollow" in self.extras:
-            text = self._a_nofollow.sub(r'<\1 rel="nofollow"\2', text)
+        if "nofollow" in self.extras or "noopener" in self.extras or "noreferrer" in self.extras:
+            rel = []
+            if "nofollow" in self.extras:
+                rel.append("nofollow")
+            if "noopener" in self.extras:
+                rel.append("noopener")
+            if "noreferrer" in self.extras:
+                rel.append("noreferrer")
+            text = self._a_nofollow.sub(r'<\1 rel="%s"\2' % ' '.join(rel), text)
 
         if "target-blank-links" in self.extras:
             text = self._a_blank.sub(r'<\1 target="_blank"\2', text)
@@ -1364,6 +1371,28 @@ class Markdown(object):
                     # This id isn't defined, leave the markup alone.
                     curr_pos = p+1
                 continue
+
+            # Possibly a github/gitlab style link ref?
+            if "references" in self.extras and text[p+1] != '(':
+                normed_id = None
+                # leave it empty and use the [link text itself][]
+                if text[p+1:p+3] == "[]":
+                    normed_id = link_text.lower()
+                    p += 2
+                # This is a [reference-style link, see below][Arbitrary case-insensitive reference text]
+                elif text[p+1] == '[':
+                    idx = self._find_non_whitespace(text, p + 1)
+                    if idx != len(text):
+                        end_idx = idx
+                        end_idx = self._find_balanced(text, end_idx, "[", "]")
+                        normed_id = text[idx:end_idx]
+                # without any reference text [reference-style link]
+                else:
+                    normed_id = link_text.lower()
+                if normed_id in self.urls:
+                    result = '<a href="%s">%s</a>' % (self.urls[normed_id], link_text)
+                    text = text[:start_idx] + result + text[p+1:]
+                    continue
 
             # Now determine what this is by the remainder.
             p += 1

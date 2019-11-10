@@ -15,7 +15,16 @@ import os
 
 from testflows._core.contrib.markdown2 import Markdown
 
-md = Markdown(extras={"header-ids":None, "fenced-code-blocks":{"cssclass":"highlight"}, "footnotes":None})
+md = Markdown(extras={
+    "header-ids":None,
+    "fenced-code-blocks":{"cssclass":"highlight"},
+    "footnotes":None,
+    "references": None,
+    "target-blank-links": None,
+    "nofollow": None,
+    "noopener": None,
+    "noreferrer": None
+})
 
 template = """
 <head>
