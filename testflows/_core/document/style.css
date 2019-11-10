@@ -6,7 +6,7 @@ h1, h2 { color: #6594d0; border-bottom: 1px solid #eaeaea; padding-bottom: 0.3em
 h3 { color: #202020 }
 h4, h5. h6 { color: #3e3d3d; }
 .highlight .hll { background-color: #ffffcc }
-.highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px}
+.highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
 .highlight .c { color: #a8a8a8; font-style: italic } /* Comment */
 .highlight .err { background-color: #ffeaee; } /* Error */
 .highlight .k { color: #6594d0; font-weight: bold } /* Keyword */
