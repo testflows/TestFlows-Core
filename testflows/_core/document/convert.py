@@ -19,7 +19,7 @@ md = Markdown(extras={
     "header-ids":None,
     "fenced-code-blocks":{"cssclass":"highlight"},
     "footnotes":None,
-    "references": None,
+    "reference-style-links": None,
     "target-blank-links": None,
     "nofollow": None,
     "noopener": None,

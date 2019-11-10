@@ -1372,8 +1372,8 @@ class Markdown(object):
                     curr_pos = p+1
                 continue
 
-            # Possibly a github/gitlab style link ref?
-            if "references" in self.extras and text[p+1] != '(':
+            # Possibly a github/gitlab style links ref?
+            if "reference-style-links" in self.extras and text[p+1] != '(':
                 normed_id = None
                 # leave it empty and use the [link text itself][]
                 if text[p+1:p+3] == "[]":
