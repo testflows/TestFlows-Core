@@ -13,6 +13,7 @@
 # limitations under the License.
 import threading
 
+from testflows._core.message import Message, ResultMessages
 from .read import transform as read_transform
 from .parse import transform as parse_transform
 from .nice import transform as nice_transform
@@ -159,11 +160,14 @@ class DotsLogPipeline(Pipeline):
         super(DotsLogPipeline, self).__init__(steps)
 
 class TotalsReportLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output):
         stop_event = threading.Event()
 
+        message_types = [Message.TEST] + ResultMessages
+        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
         steps = [
-            read_transform(input, tail=tail),
+            read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
                 totals_report_transform(stop_event),
@@ -177,11 +181,14 @@ class TotalsReportLogPipeline(Pipeline):
         super(TotalsReportLogPipeline, self).__init__(steps)
 
 class FailsReportLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output):
         stop_event = threading.Event()
 
+        message_types = [Message.TEST] + ResultMessages
+        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
         steps = [
-            read_transform(input, tail=tail),
+            read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
                 fails_report_transform(stop_event),
@@ -194,12 +201,36 @@ class FailsReportLogPipeline(Pipeline):
         ]
         super(FailsReportLogPipeline, self).__init__(steps)
 
-class VersionReportLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+class PassingReportLogPipeline(Pipeline):
+    def __init__(self, input, output):
         stop_event = threading.Event()
 
+        message_types = [Message.TEST] + ResultMessages
+        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
         steps = [
-            read_transform(input, tail=tail),
+            read_and_filter_transform(input, command=command),
+            parse_transform(stop_event),
+            fanout(
+                passing_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(PassingReportLogPipeline, self).__init__(steps)
+
+class VersionReportLogPipeline(Pipeline):
+    def __init__(self, input, output):
+        stop_event = threading.Event()
+
+        message_types = [Message.VERSION] + ResultMessages
+        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
+        steps = [
+            read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
                 version_report_transform(stop_event),
@@ -225,11 +256,11 @@ class ResultsLogPipeline(Pipeline):
         super(ResultsLogPipeline, self).__init__(steps)
 
 class IndexLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output):
         stop_event = threading.Event()
 
         steps = [
-            read_and_filter_transform(input, command="grep -E '^1,'", tail=tail),
+            read_and_filter_transform(input, command=f"grep -E '^{Message.TEST},'"),
             index_transform(stop_event),
             write_transform(output),
             stop_transform(stop_event)
