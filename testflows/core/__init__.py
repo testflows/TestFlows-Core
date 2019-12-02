@@ -18,6 +18,7 @@ from testflows._core.test import Attributes, Requirements, Users, Tickets, Examp
 from testflows._core.test import Name, Description, Uid, Tags, TestClass
 from testflows._core.test import Feature, Background, Scenario
 from testflows._core.test import Given, When, Then, And, But, By, Finally
+from testflows._core.test import Steps
 from testflows._core.test import TestFeature, TestScenario
 from testflows._core.funcs import *
 from testflows._core.filters import the

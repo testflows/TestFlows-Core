@@ -755,6 +755,16 @@ class _background(Test):
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back.f_back)
         return super(_background, self).__init__(name, **kwargs)
 
+class Steps(ExitStack):
+    def __init__(self, *args, **kwargs):
+        self.values = []
+        super(Steps, self).__init__(*args, **kwargs)
+
+    def __call__(self, ctx):
+        step = self.enter_context(ctx)
+        self.values.append(step)
+        return step
+
 @contextmanager
 def Background(name, **kwargs):
     with _background(name, **kwargs) as bg:
