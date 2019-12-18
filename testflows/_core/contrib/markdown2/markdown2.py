@@ -1373,7 +1373,7 @@ class Markdown(object):
                 continue
 
             # Possibly a github/gitlab style links ref?
-            if "reference-style-links" in self.extras and text[p+1] != '(':
+            if "reference-style-links" in self.extras and len(text) > p + 1 and text[p + 1] != '(':
                 normed_id = None
                 # leave it empty and use the [link text itself][]
                 if text[p+1:p+3] == "[]":
