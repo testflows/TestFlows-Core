@@ -4,7 +4,14 @@ a:hover { text-decoration-line: underline}
 strong { color: #329f7b }
 h1, h2 { color: #6594d0; border-bottom: 1px solid #eaeaea; padding-bottom: 0.3em; }
 h3 { color: #202020 }
-h4, h5. h6 { color: #3e3d3d; }
+h4, h5. h6 { color: #3e3d3d }
+th, td { padding-left: 15px; padding-right: 15px; color: #313335 }
+thead th { padding-top: 20px; padding-bottom: 20px }
+.result { font-weight: normal }
+.result-ok { color: #0dad55 }
+.result-xout { color: #3636bf }
+.result-fail { color: #e61d60; font-weight: bold }
+.result-error { color: #ffa400; font-weight: bold; }
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
 .highlight .c { color: #a8a8a8; font-style: italic } /* Comment */

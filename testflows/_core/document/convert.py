@@ -30,7 +30,8 @@ md = Markdown(extras={
     "noopener": None,
     "link-patterns": None,
     "noreferrer": None,
-    "code-friendly": None
+    "code-friendly": None,
+    "tables": None
 }, link_patterns=link_patterns)
 
 template = """
