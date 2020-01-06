@@ -14,12 +14,17 @@
 from testflows._core.transform.log import message
 
 def process_test(msg, results):
-    results[msg.name] = {"test": msg}
+    results["tests"][msg.name] = {"test": msg}
 
 def process_result(msg, results):
-    results[msg.test]["result"] = msg
+    results["tests"][msg.test]["result"] = msg
+
+def process_version(msg, results):
+    results["version"] = msg.version
+    results["started"] = msg.p_time
 
 processors = {
+    message.RawVersion: process_version,
     message.RawTest: process_test,
     message.RawResultOK: process_result,
     message.RawResultFail: process_result,
@@ -35,10 +40,14 @@ processors = {
 def transform(results, stop_event):
     """Transform parsed log line into a short format.
     """
+    if results.get("tests") is None:
+        results["tests"] = {}
+
     line = None
     while True:
         if line is not None:
             processor = processors.get(type(line), None)
             if processor:
                 processor(line, results)
+
         line = yield line
