@@ -246,9 +246,11 @@ class VersionReportLogPipeline(Pipeline):
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results):
         stop_event = threading.Event()
+        message_types = [Message.TEST] + ResultMessages
+        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
-            read_transform(input),
+            read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             results_transform(results, stop_event),
             stop_transform(stop_event)
