@@ -13,6 +13,7 @@ thead th { padding-top: 20px; padding-bottom: 20px }
 .result-xout { background-color: #3636bf; color: white; }
 .result-fail { background-color: #f02323; color: white; }
 .result-error { background-color: #ffa400; color: white; }
+.result-skip {background-color: #aeaeae; color: white; }
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
 .highlight .c { color: #a8a8a8; font-style: italic } /* Comment */
