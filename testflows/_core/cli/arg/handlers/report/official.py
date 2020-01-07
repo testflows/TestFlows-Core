@@ -71,7 +71,8 @@ class Handler(HandlerBase):
             flags = Flags(result.p_flags)
             if flags & SKIP and settings.show_skipped is False:
                 continue
-            s += " | ".join([result.test, result.name, strftimedelta(result.p_time)]) + "\n"
+            cls = result.name.lower()
+            s += " | ".join([result.test, f'<span class="result result-{cls}">{result.name}</span>', strftimedelta(result.p_time)]) + "\n"
         return s
 
     def generate(self, results, output):

@@ -7,11 +7,11 @@ h3 { color: #202020 }
 h4, h5. h6 { color: #3e3d3d }
 th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #313335 }
 thead th { padding-top: 20px; padding-bottom: 20px }
-.result { font-weight: normal }
+.result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
 .result-ok { color: #0dad55 }
-.result-xout { color: #3636bf }
-.result-fail { color: #e61d60; font-weight: bold }
-.result-error { color: #ffa400; font-weight: bold; }
+.result-xout { background-color: #3636bf; color: white; }
+.result-fail { background-color: #f02323; color: white; }
+.result-error { background-color: #ffa400; color: white; }
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
 .highlight .c { color: #a8a8a8; font-style: italic } /* Comment */
