@@ -2,6 +2,7 @@ body { padding: 7vw 20vw 7vw 20vw; color: #2e2e2e; font-family: 'Open Sans', Ari
 a { color: #3a6cac; text-decoration-line: None; }
 a:hover { text-decoration-line: underline}
 strong { color: #329f7b }
+hr { border-top: 1px solid #eaeaea; }
 h1, h2 { color: #6594d0; border-bottom: 1px solid #eaeaea; padding-bottom: 0.3em; }
 h3 { color: #202020 }
 h4, h5. h6 { color: #3e3d3d }
