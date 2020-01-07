@@ -203,8 +203,9 @@ class Handler(HandlerBase):
         ResultsLogPipeline(args.input, results).run()
         # map result requirements to tests
         tested = {}
-        for result in results:
-            test, result = results[result].values()
+
+        for result in results["tests"]:
+            test, result = results["tests"][result].values()
             for req in test.requirements:
                 if tested.get(req.name) is None:
                     tested[req.name] = []
