@@ -15,6 +15,7 @@ import json
 
 from datetime import datetime
 
+import testflows.settings as settings
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core.flags import Flags, SKIP
