@@ -35,6 +35,9 @@ try:
     if args.no_colors:
         settings.no_colors = True
 
+    if args.show_skipped:
+        settings.show_skipped = True
+
     args.func(args)
 
 except (ExitException, KeyboardInterrupt, Exception) as exc:

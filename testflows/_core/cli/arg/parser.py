@@ -42,6 +42,8 @@ parser.add_argument("--debug", dest="debug", action="store_true",
                     help="enable debugging mode", default=False)
 parser.add_argument("--no-colors", dest="no_colors", action="store_true",
                     help="disable terminal color highlighting", default=False)
+parser.add_argument("--show-skipped", dest="show_skipped", action="store_true",
+                    help="show skipped tests, default: False", default=False)
 parser.add_argument("-v", "--version", action="version", version=f"{__version__}")
 parser.add_argument("--license", action="version", help="show program's license and exit", version=f"{__license__}")
 
