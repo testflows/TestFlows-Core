@@ -15,6 +15,7 @@ thead th { padding-top: 20px; padding-bottom: 20px }
 .result-fail { background-color: #f02323; color: white; }
 .result-error { background-color: #ffa400; color: white; }
 .result-skip {background-color: #aeaeae; color: white; }
+.result-null {background-color: purple; color: white; }
 /* Code Highlighting */
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
@@ -1113,9 +1114,17 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 .c100.red .fill {
   border-color: red !important;
 }
+.c100.gray .bar,
+.c100.gray .fill {
+  border-color: gray !important;
+}
+.c100.purple .bar,
+.c100.purple .fill {
+  border-color: purple !important;
+}
 .c100.orange .bar,
 .c100.orange .fill {
-  border-color: #dd9d22 !important;
+  border-color: orange !important;
 }
 .c100.green > span {
   color: green;
@@ -1125,6 +1134,12 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 }
 .c100.red > span {
   color: red;
+}
+.c100.gray > span {
+  color: gray;
+}
+.c100.purple > span {
+  color: purple;
 }
 .c100 > span.title {
   top: 1em;

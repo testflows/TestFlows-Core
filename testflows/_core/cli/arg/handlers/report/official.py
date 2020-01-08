@@ -72,10 +72,12 @@ class Handler(HandlerBase):
             + xout_counts("feature") + xout_counts("scenario"))
         failed = (counts["module"].fail + counts["suite"].fail + counts["test"].fail
             + counts["feature"].fail + counts["scenario"].fail)
-        failed += (counts["module"].null + counts["suite"].null + counts["test"].null
+        nulled = (counts["module"].null + counts["suite"].null + counts["test"].null
             + counts["feature"].null + counts["scenario"].null)
         errored = (counts["module"].error + counts["suite"].error + counts["test"].error
             + counts["feature"].error + counts["scenario"].error)
+        skipped = (counts["module"].skip + counts["suite"].skip + counts["test"].skip
+            + counts["feature"].skip + counts["scenario"].skip)
 
         def template(value, title, color):
             return (
@@ -92,6 +94,9 @@ class Handler(HandlerBase):
             s += "No tests"
         else:
             s += '<div class="chart">'
+            if settings.show_skipped:
+                if skipped > 0:
+                    s += template(f"{skipped / float(units) * 100:.0f}", "Skip", "gray")
             if passed > 0:
                 s += template(f"{passed / float(units) * 100:.0f}", "OK", "green")
             if xout > 0:
@@ -100,6 +105,8 @@ class Handler(HandlerBase):
                 s += template(f"{failed / float(units) * 100:.0f}", "Fail", "red")
             if errored > 0:
                 s += template(f"{errored / float(units) * 100:.0f}", "Error", "orange")
+            if nulled > 0:
+                s += template(f"{nulled / float(units) * 100:.0f}", "Null", "purple")
             s += '</div>'
         return s
 
