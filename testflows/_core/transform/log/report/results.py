@@ -12,12 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from testflows._core.transform.log import message
+from testflows._core.transform.log.report.totals import Counts, all_counts
+from testflows._core.transform.log.report.totals import format_test as process_test_counts
+from testflows._core.transform.log.report.totals import format_result as process_result_counts
 
 def process_test(msg, results):
     results["tests"][msg.name] = {"test": msg}
+    process_test_counts(msg, results["counts"])
 
 def process_result(msg, results):
     results["tests"][msg.test]["result"] = msg
+    process_result_counts(msg, results["counts"])
 
 def process_version(msg, results):
     results["version"] = msg.version
@@ -42,6 +47,9 @@ def transform(results, stop_event):
     """
     if results.get("tests") is None:
         results["tests"] = {}
+
+    if results.get("counts") is None:
+        results["counts"] = all_counts()
 
     line = None
     while True:

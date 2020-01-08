@@ -59,6 +59,50 @@ class Handler(HandlerBase):
         )
         return s
 
+    def summary_chart_section(self, results):
+        counts = results["counts"]
+
+        units = (counts["module"].units + counts["suite"].units + counts["test"].units
+            + counts["feature"].units + counts["scenario"].units)
+        passed = (counts["module"].ok + counts["suite"].ok + counts["test"].ok
+            + counts["feature"].ok + counts["scenario"].ok)
+        def xout_counts(testtype):
+            return counts[testtype].xok + counts[testtype].xfail + counts[testtype].xerror + counts[testtype].xnull
+        xout = (xout_counts("module") + xout_counts("suite") + xout_counts("test")
+            + xout_counts("feature") + xout_counts("scenario"))
+        failed = (counts["module"].fail + counts["suite"].fail + counts["test"].fail
+            + counts["feature"].fail + counts["scenario"].fail)
+        failed += (counts["module"].null + counts["suite"].null + counts["test"].null
+            + counts["feature"].null + counts["scenario"].null)
+        errored = (counts["module"].error + counts["suite"].error + counts["test"].error
+            + counts["feature"].error + counts["scenario"].error)
+
+        def template(value, title, color):
+            return (
+                f'<div class="c100 p{value} {color}">'
+                    f'<span>{value}%</span>'
+                    f'<span class="title">{title}</span>'
+                    '<div class="slice">'
+                        '<div class="bar"></div>'
+                        '<div class="fill"></div>'
+                    '</div>'
+                '</div>\n')
+        s = "\n## Summary\n"
+        if units <= 0:
+            s += "No tests"
+        else:
+            s += '<div class="chart">'
+            if passed > 0:
+                s += template(f"{passed / float(units) * 100:.0f}", "OK", "green")
+            if xout > 0:
+                s += template(f"{xout / float(units) * 100:.0f}", "XOut", "")
+            if failed > 0:
+                s += template(f"{failed / float(units) * 100:.0f}", "Fail", "red")
+            if errored > 0:
+                s += template(f"{errored / float(units) * 100:.0f}", "Error", "orange")
+            s += '</div>'
+        return s
+
     def results_section(self, results):
         s = "\n## Results\n"
         s += (
@@ -79,6 +123,7 @@ class Handler(HandlerBase):
     def generate(self, results, output):
         body = ""
         body += self.version_section(results)
+        body += self.summary_chart_section(results)
         body += self.results_section(results)
         output.write(template.strip() % {"body": body})
         output.write("\n")

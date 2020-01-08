@@ -149,12 +149,8 @@ formatters = {
     message.RawResultXNull: (format_result,)
 }
 
-def transform(stop):
-    """Totals report.
-
-    :param stop: stop event
-    """
-    counts = {
+def all_counts():
+    return {
         "module": Counts("modules", *([0] * 10)),
         "suite": Counts("suites", *([0] * 10)),
         "test": Counts("tests", *([0] * 10)),
@@ -163,6 +159,13 @@ def transform(stop):
         "feature": Counts("features", *([0] * 10)),
         "scenario": Counts("scenarios", *([0] * 10))
     }
+
+def transform(stop):
+    """Totals report.
+
+    :param stop: stop event
+    """
+    counts = all_counts()
     line = None
 
     while True:
