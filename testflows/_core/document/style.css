@@ -11,7 +11,7 @@ thead th { padding-top: 20px; padding-bottom: 20px }
 /* Result color classes */
 .result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
 .result-ok { color: #0dad55 }
-.result-xout { background-color: #3636bf; color: white; }
+.result-xout, .result-xok, .result-xfail, .result-xerror, .result-xnull { background-color: #307bbb; color: white; }
 .result-fail { background-color: #f02323; color: white; }
 .result-error { background-color: #ffa400; color: white; }
 .result-skip {background-color: #aeaeae; color: white; }
