@@ -1145,6 +1145,8 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
   top: 1em;
 }
 /* Embedded images */
+.logo-test { color: #4e4e4e; font-weight: bold; }
+.logo-flows { color: deepskyblue; font-weight: bold; }
 .testflows-logo {
     padding-left: 24px;
     padding-right: 0.2em;
