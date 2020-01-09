@@ -56,6 +56,32 @@ class Counts(object):
     def __bool__(self):
         return self.units > 0
 
+    def __data__(self):
+        data = {}
+        counts = {}
+        data["units"] = self.units
+        data["name"] = self.name if self.units != 1 else self.name.rstrip('s')
+        data["counts"] = counts
+        if self.ok > 0:
+            counts["OK"] = self.ok
+        if self.fail > 0:
+            counts["Fail"] = self.fail
+        if self.skip > 0:
+            counts["Skip"] = self.skip
+        if self.error > 0:
+            counts["Error"] = self.error
+        if self.null > 0:
+            counts["Null"] = self.null
+        if self.xok > 0:
+            counts["XOK"] = self.xok
+        if self.xfail > 0:
+            counts["XFail"] = self.xfail
+        if self.xerror > 0:
+            counts["XError"] = self.xerror
+        if self.xnull > 0:
+            counts["XNull"] = self.xnull
+        return data
+
     def __str__(self):
         s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s')} ("
         s = color(s, "white", attrs=["bold"])
