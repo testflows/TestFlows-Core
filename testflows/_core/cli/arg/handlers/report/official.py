@@ -50,6 +50,7 @@ class Handler(HandlerBase):
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
+        parser.add_argument("-a", "--artifacts", metavar="link", type=str, help='link to the artifacts')
 
         parser.set_defaults(func=cls())
 
@@ -172,9 +173,23 @@ class Handler(HandlerBase):
             s += " | ".join([result.test, f'<span class="result result-{cls}">{result.name}</span>', strftimedelta(result.p_time)]) + "\n"
         return s
 
-    def generate(self, results, output):
+    def artifacts_section(self, link):
+        s = "\n## Artifacts\n"
+        name = link.lstrip("./")
+        s += f"Test artifacts can be found at "
+        if link.startswith("http"):
+            s += f"{link}\n"
+        else:
+            s += f"[{name}]({link})\n"
+        return s
+
+    def generate(self, results, args):
+        output = args.output
+        artifacts = args.artifacts
+
         body = ""
         body += self.version_section(results)
+        body += self.artifacts_section(artifacts)
         body += self.summary_chart_section(results)
         body += self.statistics_section(results)
         body += self.results_section(results)
@@ -184,4 +199,4 @@ class Handler(HandlerBase):
     def handle(self, args):
         results = {}
         ResultsLogPipeline(args.input, results).run()
-        self.generate(results, args.output)
+        self.generate(results, args)
