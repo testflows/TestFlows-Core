@@ -193,6 +193,12 @@ class TestBase(object):
             args, unknown = parser.parse_known_args()
             args = vars(args)
 
+            if args.get("_name"):
+                name = args.pop("_name")
+
+            if self.name is None:
+                raise TypeError("name must be specified")
+
             if args.get("_debug"):
                 settings.debug = True
                 args.pop("_debug")
@@ -229,7 +235,7 @@ class TestBase(object):
                 if not xflags:
                     xflags = globals()["xflags"]()
                 for pattern in args.get("_pause_before"):
-                    pattern = absname(pattern, self.name)
+                    pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_BEFORE
                 args.pop("_pause_before")
@@ -238,7 +244,7 @@ class TestBase(object):
                 if not xflags:
                     xflags = globals()["xflags"]()
                 for pattern in args.get("_pause_after"):
-                    pattern = absname(pattern, self.name)
+                    pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_AFTER
                 args.pop("_pause_after")
@@ -246,25 +252,22 @@ class TestBase(object):
             if args.get("_only"):
                 only = [] # clear whatever was passed
                 for pattern in args.get("_only"):
-                    only.append(the(pattern).at(self.name))
+                    only.append(the(pattern).at(name))
                 args.pop("_only")
 
             if args.get("_skip"):
                 skip = [] # clear whatever was passed
                 for pattern in args.get("_skip"):
-                    only.append(the(pattern).at(self.name))
+                    only.append(the(pattern).at(name))
                 args.pop("_skip")
 
             if args.get("_start"):
-                start = the(args.get("_start")[0]).at(self.name)
+                start = the(args.get("_start")[0]).at(name)
                 args.pop("_start")
 
             if args.get("_end"):
-                end = the(args.get("_end")[0]).at(self.name)
+                end = the(args.get("_end")[0]).at(name)
                 args.pop("_end")
-
-            if args.get("_name"):
-                name = args.pop("_name")
 
             if args.get("_tags"):
                 tags = [value for value in args.pop("_tags")]
