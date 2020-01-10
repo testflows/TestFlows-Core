@@ -28,7 +28,7 @@ from .exceptions import DummyTestException, ArgumentError, ResultException, Repe
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, Argument, ExamplesTable
+from .objects import get, Null, OK, Fail, Skip, Error, Argument, Attribute, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
@@ -36,6 +36,7 @@ from .funcs import current, top, previous, main, skip, ok, fail, error, exceptio
 from .init import init
 from .cli.arg.parser import ArgumentParser
 from .cli.arg.exit import ExitWithError, ExitException
+from .cli.arg.type import key_value as key_value_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import the
@@ -148,6 +149,12 @@ class TestBase(object):
                 description=((cls.description or "") + definitions_description),
                 description_prog="Test - Framework"
             )
+        parser.add_argument("--name", dest="_name", metavar="name",
+            help="test run name", type=str, required=False)
+        parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
+            help="test run tags", type=str, required=False)
+        parser.add_argument("--attr", dest="_attrs", metavar="name=value", nargs="+",
+            help="test run attributes", type=key_value_type, required=False)
         parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
             help="run only selected tests", type=str, required=False)
         parser.add_argument("--skip", dest="_skip", metavar="pattern", nargs="+",
@@ -175,7 +182,8 @@ class TestBase(object):
             help="show skipped tests, default: False", default=False)
         return parser
 
-    def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None):
+    def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None,
+            name=None, tags=None, attributes=None):
         """Parse command line arguments.
 
         :return: parsed known arguments
@@ -255,6 +263,15 @@ class TestBase(object):
                 end = the(args.get("_end")[0]).at(self.name)
                 args.pop("_end")
 
+            if args.get("_name"):
+                name = args.pop("_name")
+
+            if args.get("_tags"):
+                tags = [value for value in args.pop("_tags")]
+
+            if args.get("_attrs"):
+                attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
+
         except (ExitException, KeyboardInterrupt, Exception) as exc:
             #if settings.debug:
             sys.stderr.write(warning(get_exception(), eol='\n'))
@@ -264,7 +281,7 @@ class TestBase(object):
             else:
                 sys.exit(1)
 
-        return args, xflags, only, skip, start, end
+        return args, xflags, only, skip, start, end, name, tags, attributes
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
@@ -273,10 +290,7 @@ class TestBase(object):
                  start=None, end=None, args=None, id=None, _frame=None, _run=True):
 
         self.lock = threading.Lock()
-        self.name = name
         self._run = _run
-        if self.name is None:
-            raise TypeError("name must be specified")
 
         cli_args = {}
         if current() is None:
@@ -287,8 +301,12 @@ class TestBase(object):
             self._init= False
             frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
             if main(frame):
-                cli_args, xflags, only, skip, start, end = self.parse_cli_args(xflags, only, skip, start, end)
+                cli_args, xflags, only, skip, start, end, name, tags, attributes = self.parse_cli_args(
+                    xflags, only, skip, start, end, name, tags, attributes)
 
+        self.name = name
+        if self.name is None:
+            raise TypeError("name must be specified")
         self.child_count = 0
         self.start_time = time.time()
         self.parent = parent
