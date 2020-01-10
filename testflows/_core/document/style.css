@@ -4,10 +4,12 @@ a:hover { text-decoration-line: underline}
 strong { color: #329f7b }
 hr { border-top: 1px solid #eaeaea; }
 h1, h2 { color: #6594d0; border-bottom: 1px solid #eaeaea; padding-bottom: 0.3em; }
-h3 { color: #202020 }
-h4, h5. h6 { color: #3e3d3d }
+h3 { color: #6594d0; }
+h4, h5, h6 { color: #6594d0; }
 th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #313335 }
 thead th { padding-top: 20px; padding-bottom: 20px }
+/* Tag style */
+.tag {border: 1px solid #cccccc; padding: 5px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
 /* Result color classes */
 .result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
 .result-ok { color: #0dad55 }

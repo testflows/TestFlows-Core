@@ -183,13 +183,35 @@ class Handler(HandlerBase):
             s += f"[{name}]({link})\n"
         return s
 
+    def attributes_and_tags_section(self, results):
+        s = ""
+        if not results["tests"]:
+            return s
+        test = next(iter(results["tests"].values()), None)["test"]
+
+        if test.attributes:
+            s += "\n\n### Attributes\n"
+            s += "<table>\n"
+            for attr in test.attributes:
+                s += f'<tr><td><strong>{attr.name}</strong></td><td>{attr.value}</td></tr>\n'
+            s += "</table>\n"
+        if test.tags:
+            s += "\n\n### Tags\n"
+            s += "<table>\n<tr>"
+            for tag in test.tags:
+                s += f'<td><strong class="tag">{tag.value}</strong></td>'
+            s += "</tr>\n</table>\n"
+        return s
+
     def generate(self, results, args):
         output = args.output
         artifacts = args.artifacts
 
         body = ""
         body += self.version_section(results)
-        body += self.artifacts_section(artifacts)
+        body += self.attributes_and_tags_section(results)
+        if artifacts:
+            body += self.artifacts_section(artifacts)
         body += self.summary_chart_section(results)
         body += self.statistics_section(results)
         body += self.results_section(results)
