@@ -8,8 +8,13 @@ h3 { color: #6594d0; }
 h4, h5, h6 { color: #6594d0; }
 th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #313335 }
 thead th { padding-top: 20px; padding-bottom: 20px }
-/* Tag style */
-.tag {border: 1px solid #cccccc; padding: 5px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
+/* Tag styles */
+.tag {color: white; padding: 1px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
+.tag-0 { background: #19177c;}
+.tag-1 { background: #800080;}
+.tag-2 { background: #006f80;}
+.tag-3 { background: #008033;}
+.tag-4 { background: #f87d00;}
 /* Result color classes */
 .result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
 .result-ok { color: #0dad55 }

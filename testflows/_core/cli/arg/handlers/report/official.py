@@ -198,8 +198,10 @@ class Handler(HandlerBase):
         if test.tags:
             s += "\n\n### Tags\n"
             s += "<table>\n<tr>"
-            for tag in test.tags:
-                s += f'<td><strong class="tag">{tag.value}</strong></td>'
+            for i, tag in enumerate(test.tags):
+                if i > 0 and i % 5 == 0:
+                    s += "</tr><tr>"
+                s += f'<td><strong class="tag tag-{i % 5}">{tag.value}</strong></td>'
             s += "</tr>\n</table>\n"
         return s
 
