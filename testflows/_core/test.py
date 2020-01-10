@@ -196,7 +196,7 @@ class TestBase(object):
             if args.get("_name"):
                 name = args.pop("_name")
 
-            if self.name is None:
+            if name is None:
                 raise TypeError("name must be specified")
 
             if args.get("_debug"):
