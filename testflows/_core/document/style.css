@@ -8,6 +8,9 @@ h3 { color: #6594d0; }
 h4, h5, h6 { color: #6594d0; }
 th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #313335 }
 thead th { padding-top: 20px; padding-bottom: 20px }
+table.stripped.danger tr:nth-child(even) {
+  background-color: #f023231f;
+}
 /* Tag styles */
 .tag {color: white; padding: 1px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
 .tag-0 { background: #19177c;}

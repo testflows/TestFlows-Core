@@ -25,6 +25,7 @@ from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
+from testflows._core.transform.log.message import FailResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 
 template = """
@@ -205,6 +206,29 @@ class Handler(HandlerBase):
             s += "</tr>\n</table>\n"
         return s
 
+    def fails_section(self, results):
+        s = "\n\n## Fails\n"
+        s += '<table class="stripped danger">\n'
+        s += '<thead><tr><th><span style="display: block; min-width: 20vw;">Test Name</span></th><th><span style="display: block; min-width: 90px;">Result</span></th><th>Message</th></tr></thead>\n'
+        s += "<tbody>\n"
+        for test in results["tests"].values():
+            result = test["result"]
+            if result.p_type < TestType.Test:
+                continue
+            flags = Flags(result.p_flags)
+            if flags & SKIP and settings.show_skipped is False:
+                continue
+            if type(result) in FailResults:
+                cls = result.name.lower()
+                s += ("<tr>" +
+                    f'<td>{result.test}</td>' +
+                    f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
+                    '<td>' + str(result.message).replace("|", "\|") + '</td>'
+                ) + "</tr>\n"
+        s += '<tbody>\n'
+        s += '</table>\n'
+        return s
+
     def generate(self, results, args):
         output = args.output
         artifacts = args.artifacts
@@ -216,6 +240,7 @@ class Handler(HandlerBase):
             body += self.artifacts_section(artifacts)
         body += self.summary_chart_section(results)
         body += self.statistics_section(results)
+        body += self.fails_section(results)
         body += self.results_section(results)
         output.write(template.strip() % {"body": body})
         output.write("\n")

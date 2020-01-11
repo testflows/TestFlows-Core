@@ -415,11 +415,11 @@ class TestBase(object):
                     self.result = exception_value.result
                 elif isinstance(exception_value, AssertionError):
                     exception(test=self)
-                    self.result = Fail(self.name, str(exception_value).split('\n', 1)[0])
+                    self.result = Fail(self.name, str(exception_value))
                 else:
                     exception(test=self)
                     self.result = Error(self.name,
-                        "unexpected %s: %s" % (exception_type.__name__, str(exception_value).split('\n', 1)[0]))
+                        "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
                     if isinstance(exception_value, KeyboardInterrupt):
                         raise ResultException(self.result)
             else:

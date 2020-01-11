@@ -241,6 +241,9 @@ class RawResultXNull(RawFormat, XNullMessage, namedtuple_with_defaults(
         defaults=objects.XNull._defaults)):
     name = "XNull"
 
+FailResults = [RawResultFail, RawResultError, RawResultNull]
+XoutResults = [RawResultXFail, RawResultXError, RawResultXOK, RawResultXNull]
+
 class RawNote(RawFormat, NoteMessage, namedtuple_with_defaults(
         "RawNoteMessage",
         RawFormat.prefix.fields + "message")):
