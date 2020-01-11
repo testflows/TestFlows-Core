@@ -25,7 +25,7 @@ from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
-from testflows._core.transform.log.message import FailResults
+from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 
 template = """
@@ -104,7 +104,7 @@ class Handler(HandlerBase):
             if passed > 0:
                 s += template(f"{passed / float(units) * 100:.0f}", "OK", "green")
             if xout > 0:
-                s += template(f"{xout / float(units) * 100:.0f}", "XOut", "")
+                s += template(f"{xout / float(units) * 100:.0f}", "Known", "")
             if failed > 0:
                 s += template(f"{failed / float(units) * 100:.0f}", "Fail", "red")
             if errored > 0:
@@ -211,6 +211,7 @@ class Handler(HandlerBase):
         s += '<table class="stripped danger">\n'
         s += '<thead><tr><th><span style="display: block; min-width: 20vw;">Test Name</span></th><th><span style="display: block; min-width: 90px;">Result</span></th><th>Message</th></tr></thead>\n'
         s += "<tbody>\n"
+        has_fails = False
         for test in results["tests"].values():
             result = test["result"]
             if result.p_type < TestType.Test:
@@ -225,8 +226,39 @@ class Handler(HandlerBase):
                     f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
                     '<td>' + str(result.message).replace("|", "\|") + '</td>'
                 ) + "</tr>\n"
+                has_fails = True
         s += '<tbody>\n'
         s += '</table>\n'
+        if not has_fails:
+            return ""
+        return s
+
+    def xfails_section(self, results):
+        s = "\n\n## Known Fails\n"
+        s += '<table class="stripped primary">\n'
+        s += '<thead><tr><th><span style="display: block; min-width: 20vw;">Test Name</span></th><th><span style="display: block; min-width: 90px;">Result</span></th><th>Reason</th><th>Message</th></tr></thead>\n'
+        s += "<tbody>\n"
+        has_xfails = False
+        for test in results["tests"].values():
+            result = test["result"]
+            if result.p_type < TestType.Test:
+                continue
+            flags = Flags(result.p_flags)
+            if flags & SKIP and settings.show_skipped is False:
+                continue
+            if type(result) in XoutResults:
+                cls = result.name.lower()
+                s += ("<tr>" +
+                    f'<td>{result.test}</td>' +
+                    f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
+                    '<td>' + str(result.reason).replace("|", "\|") + '</td>' +
+                    '<td>' + str(result.message).replace("|", "\|") + '</td>'
+                ) + "</tr>\n"
+                has_xfails = True
+        s += '<tbody>\n'
+        s += '</table>\n'
+        if not has_xfails:
+            return ""
         return s
 
     def generate(self, results, args):
@@ -241,6 +273,7 @@ class Handler(HandlerBase):
         body += self.summary_chart_section(results)
         body += self.statistics_section(results)
         body += self.fails_section(results)
+        body += self.xfails_section(results)
         body += self.results_section(results)
         output.write(template.strip() % {"body": body})
         output.write("\n")
