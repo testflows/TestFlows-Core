@@ -10,6 +10,9 @@ th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #3133
 thead th { padding-top: 20px; padding-bottom: 20px }
 table.stripped.danger tr:nth-child(even) { background-color: #f023231f; }
 table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
+/* Webkit customized scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; background: transparent; }
+::-webkit-scrollbar-thumb { background: #6593d0; }
 /* Tag styles */
 .tag {color: white; padding: 1px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
 .tag-0 { background: #19177c;}

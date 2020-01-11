@@ -224,7 +224,7 @@ class Handler(HandlerBase):
                 s += ("<tr>" +
                     f'<td>{result.test}</td>' +
                     f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
-                    '<td>' + str(result.message).replace("|", "\|") + '</td>'
+                    '<td style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></td>'
                 ) + "</tr>\n"
                 has_fails = True
         s += '<tbody>\n'
@@ -252,7 +252,7 @@ class Handler(HandlerBase):
                     f'<td>{result.test}</td>' +
                     f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
                     '<td>' + str(result.reason).replace("|", "\|") + '</td>' +
-                    '<td>' + str(result.message).replace("|", "\|") + '</td>'
+                    '<td style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></td>'
                 ) + "</tr>\n"
                 has_xfails = True
         s += '<tbody>\n'
