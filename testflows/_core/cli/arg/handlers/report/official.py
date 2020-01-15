@@ -235,7 +235,7 @@ class Handler(HandlerBase):
                 s += ("<tr>" +
                     f'<td>{result.test}</td>' +
                     f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
-                    '<td style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></td>'
+                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></div></td>'
                 ) + "</tr>\n"
                 has_fails = True
         s += '<tbody>\n'
@@ -247,7 +247,7 @@ class Handler(HandlerBase):
     def xfails_section(self, results):
         s = "\n\n## Known Fails\n"
         s += '<table class="stripped primary">\n'
-        s += '<thead><tr><th><span style="display: block; min-width: 20vw;">Test Name</span></th><th><span style="display: block; min-width: 90px;">Result</span></th><th>Reason</th><th>Message</th></tr></thead>\n'
+        s += '<thead><tr><th><span style="display: block; min-width: 20vw;">Test Name</span></th><th><span style="display: block; min-width: 90px;">Result</span></th><th>Message</th></tr></thead>\n'
         s += "<tbody>\n"
         has_xfails = False
         for test in results["tests"].values():
@@ -261,9 +261,8 @@ class Handler(HandlerBase):
                 cls = result.name.lower()
                 s += ("<tr>" +
                     f'<td>{result.test}</td>' +
-                    f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
-                    '<td>' + str(result.reason).replace("|", "\|") + '</td>' +
-                    '<td style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></td>'
+                    f'<td><span class="result result-{cls}">{result.name}</span> ' + strftimedelta(result.p_time) + '<br>' + str(result.reason).replace("|", "\|") + '</td>' +
+                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></div></td>'
                 ) + "</tr>\n"
                 has_xfails = True
         s += '<tbody>\n'
