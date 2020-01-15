@@ -20,6 +20,7 @@ from testflows._core.cli.arg.handlers.report.totals import Handler as totals_han
 from testflows._core.cli.arg.handlers.report.fails import Handler as fails_handler
 from testflows._core.cli.arg.handlers.report.version import Handler as version_handler
 from testflows._core.cli.arg.handlers.report.official import Handler as official_handler
+from testflows._core.cli.arg.handlers.report.compare import Handler as compare_handler
 
 class Handler(HandlerBase):
     @classmethod
@@ -32,6 +33,7 @@ class Handler(HandlerBase):
             description=None, help=None)
         report_commands.required = True
         official_handler.add_command(report_commands)
+        compare_handler.add_command(report_commands)
         totals_handler.add_command(report_commands)
         passing_handler.add_command(report_commands)
         fails_handler.add_command(report_commands)
