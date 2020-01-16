@@ -45,6 +45,14 @@ class Formatter:
     def format_table(self, data):
         table = data["table"]
         s = "\n"
+        # reference table
+        s += " | ".join(table["reference"]["header"]) + "\n"
+        s += " | ".join(["---"] * len(table["reference"]["header"])) + "\n"
+        for row in table["reference"]["rows"]:
+            s += " | ".join(row) + "\n"
+
+        # comparison table
+        s += "\n"
         s += " | ".join(table["header"]) + "\n"
         s += " | ".join(["---"] * len(table["header"])) + "\n"
         span = '<span class="result result-%(cls)s">%(name)s</span>'
@@ -83,7 +91,7 @@ class Handler(HandlerBase):
 
     def tests(self, results):
         tests = []
-        for r in results:
+        for r in results.values():
             for test in r["tests"].values():
                 if test["test"].p_type < TestType.Test:
                     continue
@@ -92,12 +100,16 @@ class Handler(HandlerBase):
 
     def table(self, tests, results):
         table = {
-            "header": ["Test Name"] + [f"{i}" for i, r in enumerate(results)],
-            "rows": []
+            "header": ["Test Name"] + [f'<a href="#ref-{i + 1}">[{i + 1}]</a>' for i, r in enumerate(results)],
+            "rows": [],
+            "reference": {
+                "header": ["Reference", "File"],
+                "rows": [[f'<span id="ref-{i + 1}"><strong>[{i + 1}]</strong></span>', ref] for i, ref in enumerate(results.keys())]
+            },
         }
         for test in tests:
             row = [test]
-            for result in results:
+            for result in results.values():
                 if result["tests"].get(test):
                     row.append(result["tests"].get(test)["result"].name)
                 else:
@@ -117,7 +129,7 @@ class Handler(HandlerBase):
         output.write("\n")
 
     def handle(self, args):
-        results = []
+        results = {}
         threads = []
 
         def thread_worker(log, results):
@@ -128,7 +140,7 @@ class Handler(HandlerBase):
             threads.append(
                 threading.Thread(target=thread_worker, args=(log, log_results))
             )
-            results.append(log_results)
+            results[log.name] = log_results
             threads[-1].start()
 
         for thread in threads:
