@@ -14,6 +14,7 @@
 import threading
 
 from testflows._core.message import Message, ResultMessages
+from testflows._core.testtype import TestType
 from .read import transform as read_transform
 from .parse import transform as parse_transform
 from .nice import transform as nice_transform
@@ -256,6 +257,23 @@ class ResultsLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(ResultsLogPipeline, self).__init__(steps)
+
+class CompactRawLogPipeline(Pipeline):
+    def __init__(self, input, output, steps=True):
+        stop_event = threading.Event()
+        message_types = [Message.VERSION, Message.TEST] + ResultMessages
+        test_types = [TestType.Module, TestType.Suite, TestType.Test]
+        command = (f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),"
+            + (f"\"[^\"]+\",[0-9]+,({'|'.join([str(t) for t in test_types])})," if not steps else "")
+            + "'")
+
+        steps = [
+            read_and_filter_transform(input, command=command),
+            raw_transform(stop_event),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(CompactRawLogPipeline, self).__init__(steps)
 
 class IndexLogPipeline(Pipeline):
     def __init__(self, input, output):
