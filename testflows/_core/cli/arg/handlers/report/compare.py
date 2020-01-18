@@ -111,7 +111,7 @@ class Formatter:
             "ok": ",".join([str(c) for c in data["chart"]["ok"]]),
             "fail": ",".join([str(c) for c in data["chart"]["fail"]]),
             "known": ",".join([str(c) for c in data["chart"]["known"]]),
-            "values": ",".join([f"'[{str(c + 1)}]'" for c in range(len(data["chart"]["ok"]))])
+            "values": ",".join([f"'[{str(len(data['chart']['ok']) - c)}]'" for c in range(len(data["chart"]["ok"]))])
         }
 
         s = (
@@ -160,7 +160,7 @@ class Handler(HandlerBase):
             "fail": [],
             "known": []
         }
-        for r in results.values():
+        for r in reversed(list(results.values())):
             counts = r["counts"]
 
             passed = (counts["module"].ok + counts["suite"].ok + counts["test"].ok
@@ -182,6 +182,15 @@ class Handler(HandlerBase):
             chart["fail"].append(failed + errored + nulled)
             chart["known"].append(xout)
         return chart
+
+    def sort(self, results):
+        _results = {}
+        def by_started(v):
+            return results[v].get("started", 0)
+        key_order = sorted(results, key=by_started, reverse=True)
+        for key in key_order:
+            _results[key] = results[key]
+        return _results
 
     def tests(self, results):
         tests = []
@@ -213,6 +222,7 @@ class Handler(HandlerBase):
 
     def data(self, results):
         d = dict()
+        results = self.sort(results)
         d["list"] = self.tests(results)
         d["table"] = self.table(d["list"], results)
         d["chart"] = self.chart(results)
