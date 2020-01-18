@@ -72,6 +72,18 @@ class Formatter:
         window.onload = function() {
             window.chart = c3.generate({
                 bindto: '#data-chart',
+                legend: {
+                    position: 'inset',
+                    inset: {
+                        anchor: 'top-right',
+                        x: 50,
+                        y: -30,
+                        step: 1
+                    }
+                },
+                padding: {
+                    top: 30
+                },
                 data: {
                     x: 'x',
                     columns: [
@@ -111,7 +123,7 @@ class Formatter:
             "ok": ",".join([str(c) for c in data["chart"]["ok"]]),
             "fail": ",".join([str(c) for c in data["chart"]["fail"]]),
             "known": ",".join([str(c) for c in data["chart"]["known"]]),
-            "values": ",".join([f"'[{str(len(data['chart']['ok']) - c)}]'" for c in range(len(data["chart"]["ok"]))])
+            "values": ",".join([f"'{str(c)}'" for c in data["chart"]["x"]])
         }
 
         s = (
@@ -158,7 +170,8 @@ class Handler(HandlerBase):
         chart = {
             "ok": [],
             "fail": [],
-            "known": []
+            "known": [],
+            "x": []
         }
         for r in reversed(list(results.values())):
             counts = r["counts"]
@@ -181,15 +194,35 @@ class Handler(HandlerBase):
             chart["ok"].append(passed)
             chart["fail"].append(failed + errored + nulled)
             chart["known"].append(xout)
+            chart["x"].append(r["reference"])
         return chart
 
-    def sort(self, results):
+    def sort(self, results, order_by=None):
         _results = {}
-        def by_started(v):
-            return results[v].get("started", 0)
-        key_order = sorted(results, key=by_started, reverse=True)
-        for key in key_order:
+
+        def order_key(v):
+            started = results[v].get("started", 0)
+            if order_by:
+                value = "-"
+                if results[v].get("tests"):
+                    test = list(results[v]["tests"].values())[0]["test"]
+                    for attr in test.attributes:
+                        if attr.name == order_by:
+                            value = attr.value
+                return [value, started]
+            return [started]
+
+        key_order = sorted(results, key=order_key, reverse=True)
+
+        for i, key in enumerate(key_order):
             _results[key] = results[key]
+            ref = order_key(key)
+            ref[-1] = f'{localfromtimestamp(ref[-1]):%b %d, %-H:%M}'
+            if order_by:
+                ref = f'{ref[0]}, {ref[-1]}'
+            else:
+                ref = ref[-1]
+            _results[key]["reference"] = ref
         return _results
 
     def tests(self, results):
@@ -203,11 +236,11 @@ class Handler(HandlerBase):
 
     def table(self, tests, results):
         table = {
-            "header": ["Test Name"] + [f'<a href="#ref-{i + 1}">[{i + 1}]</a>' for i, r in enumerate(results)],
+            "header": ["Test Name"] + [f'<a href="#ref-{results[r]["reference"]}">{results[r]["reference"]}</a>' for r in results],
             "rows": [],
             "reference": {
                 "header": ["Reference", "File"],
-                "rows": [[f'<span id="ref-{i + 1}"><strong>[{i + 1}]</strong></span>', ref] for i, ref in enumerate(results.keys())]
+                "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', r] for r in results]
             },
         }
         for test in tests:
@@ -220,9 +253,9 @@ class Handler(HandlerBase):
             table["rows"].append(row)
         return table
 
-    def data(self, results):
+    def data(self, results, order_by=None):
         d = dict()
-        results = self.sort(results)
+        results = self.sort(results, order_by)
         d["list"] = self.tests(results)
         d["table"] = self.table(d["list"], results)
         d["chart"] = self.chart(results)
@@ -230,7 +263,7 @@ class Handler(HandlerBase):
 
     def generate(self, formatter, results, args):
         output = args.output
-        output.write(formatter.format(self.data(results)))
+        output.write(formatter.format(self.data(results, order_by=args.order_by)))
         output.write("\n")
 
     def handle(self, args):
