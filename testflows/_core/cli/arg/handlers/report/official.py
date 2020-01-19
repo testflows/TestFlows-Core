@@ -65,12 +65,11 @@ class Handler(HandlerBase):
 
         s = (
             "\n\n"
-            "<table>"
-            f"<tr><td><strong>Date</strong></td><td>{localfromtimestamp(results['started']):%b %d, %Y %-H:%M}</td></tr>\n"
-            f'<tr><td><strong>Duration</strong></td><td>{duration}</td></tr>\n'
-            f'<tr><td><strong>Framework</strong></td><td>'
-            f'<a href="https://testflows.com">{testflows_em}</a> {results["version"]}</td></tr>\n'
-            "</table>\n"
+            f"||**Date**||{localfromtimestamp(results['started']):%b %d, %Y %-H:%M}||\n"
+            f'||**Duration**||{duration}||\n'
+            f'||**Framework**||'
+            f'{testflows} {results["version"]}||\n'
+            "\n"
         )
         return s
 
@@ -203,18 +202,17 @@ class Handler(HandlerBase):
 
         if test.attributes:
             s += "\n\n### Attributes\n"
-            s += "<table>\n"
             for attr in test.attributes:
-                s += f'<tr><td><strong>{attr.name}</strong></td><td>{attr.value}</td></tr>\n'
-            s += "</table>\n"
+                s += "||" + "||".join([f"**{attr.name}**", f"{attr.value}"]) + "||\n"
+            s += "\n"
+
         if test.tags:
             s += "\n\n### Tags\n"
-            s += "<table>\n<tr>"
-            for i, tag in enumerate(test.tags):
-                if i > 0 and i % 5 == 0:
-                    s += "</tr><tr>"
-                s += f'<td><strong class="tag tag-{i % 5}">{tag.value}</strong></td>'
-            s += "</tr>\n</table>\n"
+            for i, tag in enumerate(test.tags * 7):
+                if i > 0 and i % 3 == 0:
+                    s += "||\n"
+                s += f'||<strong class="tag tag-{i % 5}">{tag.value}</strong>'
+            s += "||\n"
         return s
 
     def fails_section(self, results):

@@ -17,7 +17,7 @@ import re
 from testflows._core.contrib.markdown2 import Markdown
 
 link_patterns = [
-    (re.compile(r'(http[s]?://[^\s]+)'), r"\1")
+    (re.compile(r'((https?|ftp|file)://[^\s]+)'), r"\1")
 ]
 
 md = Markdown(extras={
@@ -31,7 +31,8 @@ md = Markdown(extras={
     "link-patterns": None,
     "noreferrer": None,
     "code-friendly": None,
-    "tables": None
+    "tables": None,
+    "wiki-tables": None
 }, link_patterns=link_patterns)
 
 template = """

@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import json
 import threading
 
@@ -197,6 +198,20 @@ class Handler(HandlerBase):
             chart["x"].append(r["reference"])
         return chart
 
+    def get_attribute(self, result, name, default=None):
+        tests = list(result["tests"].values())
+
+        if not tests:
+            return default
+
+        test = tests[0]["test"]
+        for attr in test.attributes:
+            if attr.name == name:
+                return attr.value
+
+        return default
+
+
     def sort(self, results, order_by=None):
         _results = {}
 
@@ -205,10 +220,7 @@ class Handler(HandlerBase):
             if order_by:
                 value = "-"
                 if results[v].get("tests"):
-                    test = list(results[v]["tests"].values())[0]["test"]
-                    for attr in test.attributes:
-                        if attr.name == order_by:
-                            value = attr.value
+                    value = self.get_attribute(results[v], order_by, value)
                 return [value, started]
             return [started]
 
@@ -239,8 +251,8 @@ class Handler(HandlerBase):
             "header": ["Test Name"] + [f'<a href="#ref-{results[r]["reference"]}">{results[r]["reference"]}</a>' for r in results],
             "rows": [],
             "reference": {
-                "header": ["Reference", "File"],
-                "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', r] for r in results]
+                "header": ["Reference", "Link"],
+                "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', self.get_attribute(results[r], "job.url", r)] for r in results]
             },
         }
         for test in tests:
