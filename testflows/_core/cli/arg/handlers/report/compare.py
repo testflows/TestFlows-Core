@@ -29,6 +29,8 @@ from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
+from testflows._core.filters import the
+from testflows._core.name import sep
 
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
 testflows_em = testflows.replace("[", "").replace("]", "")
@@ -182,6 +184,7 @@ class Handler(HandlerBase):
 
             def xout_counts(testtype):
                 return counts[testtype].xok + counts[testtype].xfail + counts[testtype].xerror + counts[testtype].xnull
+
             xout = (xout_counts("module") + xout_counts("suite") + xout_counts("test")
                     + xout_counts("feature") + xout_counts("scenario"))
 
@@ -211,8 +214,27 @@ class Handler(HandlerBase):
 
         return default
 
+    def filter(self, tests, only):
+        if not only:
+            return tests
 
-    def sort(self, results, order_by=None):
+        filters = []
+        for pattern in only:
+            filters.append(the(pattern).at(sep))
+
+        _tests = []
+        for test in tests:
+            match = False
+            for filter in filters:
+                if filter.match(test, prefix=False):
+                    match = True
+                    break
+            if match:
+                _tests.append(test)
+        print(_tests)
+        return _tests
+
+    def sort(self, results, order_by=None, direction="asc"):
         _results = {}
 
         def order_key(v):
@@ -225,6 +247,9 @@ class Handler(HandlerBase):
             return [started]
 
         key_order = sorted(results, key=order_key, reverse=True)
+
+        if direction == "desc":
+            key_order = reversed(key_order)
 
         for i, key in enumerate(key_order):
             _results[key] = results[key]
@@ -265,17 +290,17 @@ class Handler(HandlerBase):
             table["rows"].append(row)
         return table
 
-    def data(self, results, order_by=None):
+    def data(self, results, only=None, order_by=None, direction=None):
         d = dict()
-        results = self.sort(results, order_by)
-        d["list"] = self.tests(results)
+        results = self.sort(results, order_by, direction)
+        d["list"] = self.filter(self.tests(results), only)
         d["table"] = self.table(d["list"], results)
         d["chart"] = self.chart(results)
         return d
 
     def generate(self, formatter, results, args):
         output = args.output
-        output.write(formatter.format(self.data(results, order_by=args.order_by)))
+        output.write(formatter.format(self.data(results, only=args.only, order_by=args.order_by, direction=args.sort)))
         output.write("\n")
 
     def handle(self, args):
