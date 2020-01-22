@@ -31,6 +31,7 @@ from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 from testflows._core.filters import the
 from testflows._core.name import sep
+from testflows._core.transform.log.report.totals import Counts
 
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
 testflows_em = testflows.replace("[", "").replace("]", "")
@@ -113,9 +114,11 @@ class Formatter:
                         type: 'category'
                     },
                     y: {
+                        label: "Tests",
                         tick: {
-                            format: d3.format('.0f'),
-                            count: 5
+                            format: function (d) {
+                                return (parseInt(d) == d) ? d : null;
+                            },
                         }
                     }
                 }
@@ -169,36 +172,18 @@ class Handler(HandlerBase):
 
         parser.set_defaults(func=cls())
 
-    def chart(self, results):
+    def chart(self, counts):
         chart = {
             "ok": [],
             "fail": [],
             "known": [],
             "x": []
         }
-        for r in reversed(list(results.values())):
-            counts = r["counts"]
-
-            passed = (counts["module"].ok + counts["suite"].ok + counts["test"].ok
-                + counts["feature"].ok + counts["scenario"].ok)
-
-            def xout_counts(testtype):
-                return counts[testtype].xok + counts[testtype].xfail + counts[testtype].xerror + counts[testtype].xnull
-
-            xout = (xout_counts("module") + xout_counts("suite") + xout_counts("test")
-                    + xout_counts("feature") + xout_counts("scenario"))
-
-            failed = (counts["module"].fail + counts["suite"].fail + counts["test"].fail
-                      + counts["feature"].fail + counts["scenario"].fail)
-            nulled = (counts["module"].null + counts["suite"].null + counts["test"].null
-                      + counts["feature"].null + counts["scenario"].null)
-            errored = (counts["module"].error + counts["suite"].error + counts["test"].error
-                       + counts["feature"].error + counts["scenario"].error)
-
-            chart["ok"].append(passed)
-            chart["fail"].append(failed + errored + nulled)
-            chart["known"].append(xout)
-            chart["x"].append(r["reference"])
+        for counts in reversed(list(counts.values())):
+            chart["ok"].append(counts.ok)
+            chart["fail"].append(counts.fail + counts.error + counts.null)
+            chart["known"].append(counts.xok + counts.xfail + counts.xerror + counts.xnull)
+            chart["x"].append(counts.reference)
         return chart
 
     def get_attribute(self, result, name, default=None):
@@ -231,8 +216,24 @@ class Handler(HandlerBase):
                     break
             if match:
                 _tests.append(test)
-        print(_tests)
+
         return _tests
+
+    def counts(self, tests, results):
+        results_counts = {}
+        for log, result in results.items():
+            results_counts[log] = Counts("tests", *([0] * 10))
+            _counts = results_counts[log]
+            _counts.reference = result["reference"]
+
+            for testname in tests:
+                test = result["tests"].get(testname)
+                if test:
+                    _name = test["result"].name.lower()
+                    setattr(_counts, _name, getattr(_counts, _name) + 1)
+                _counts.units += 1
+
+        return results_counts
 
     def sort(self, results, order_by=None, direction="asc"):
         _results = {}
@@ -280,6 +281,10 @@ class Handler(HandlerBase):
                 "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', self.get_attribute(results[r], "job.url", r)] for r in results]
             },
         }
+
+        if not tests:
+            table["rows"].append([""] * len(results.values()))
+
         for test in tests:
             row = [test]
             for result in results.values():
@@ -293,9 +298,10 @@ class Handler(HandlerBase):
     def data(self, results, only=None, order_by=None, direction=None):
         d = dict()
         results = self.sort(results, order_by, direction)
-        d["list"] = self.filter(self.tests(results), only)
-        d["table"] = self.table(d["list"], results)
-        d["chart"] = self.chart(results)
+        d["tests"] = self.filter(self.tests(results), only)
+        d["table"] = self.table(d["tests"], results)
+        d["counts"] = self.counts(d["tests"], results)
+        d["chart"] = self.chart(d["counts"])
         return d
 
     def generate(self, formatter, results, args):
