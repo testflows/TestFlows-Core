@@ -159,9 +159,12 @@ class Handler(HandlerBase):
 
         parser.add_argument("--log", metavar="pattern", type=argtype.file("r", bufsize=1, encoding="utf-8"),
             nargs="+", help="log file pattern", required=True)
+        parser.add_argument("--log-link", metavar="attribute",
+            help="attribute that is used as a link for the log, default: job.url",
+            type=str, default="job.url")
         parser.add_argument("--only", metavar="pattern", nargs="+",
             help="compare only selected tests", type=str, required=False)
-        parser.add_argument("--order-by", metavar="name", type=str,
+        parser.add_argument("--order-by", metavar="attribute", type=str,
             help="attribute that is used to order the logs")
         parser.add_argument("--sort", metavar="direction", type=str,
             help="sort direction. Either 'asc' or 'desc', default: asc", choices=["asc", "desc"], default="asc")
@@ -272,13 +275,13 @@ class Handler(HandlerBase):
                 tests.append(test["test"].name)
         return sorted(list(set(tests)))
 
-    def table(self, tests, results):
+    def table(self, tests, results, ref_link=None):
         table = {
             "header": ["Test Name"] + [f'<a href="#ref-{results[r]["reference"]}">{results[r]["reference"]}</a>' for r in results],
             "rows": [],
             "reference": {
                 "header": ["Reference", "Link"],
-                "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', self.get_attribute(results[r], "job.url", r)] for r in results]
+                "rows": [[f'<span id="ref-{results[r]["reference"]}"><strong>{results[r]["reference"]}</strong></span>', self.get_attribute(results[r], str(ref_link), r)] for r in results]
             },
         }
 
@@ -295,18 +298,28 @@ class Handler(HandlerBase):
             table["rows"].append(row)
         return table
 
-    def data(self, results, only=None, order_by=None, direction=None):
+    def data(self, results, only=None, order_by=None, direction=None, log_link=None):
         d = dict()
         results = self.sort(results, order_by, direction)
         d["tests"] = self.filter(self.tests(results), only)
-        d["table"] = self.table(d["tests"], results)
+        d["table"] = self.table(d["tests"], results, log_link)
         d["counts"] = self.counts(d["tests"], results)
         d["chart"] = self.chart(d["counts"])
         return d
 
     def generate(self, formatter, results, args):
         output = args.output
-        output.write(formatter.format(self.data(results, only=args.only, order_by=args.order_by, direction=args.sort)))
+        output.write(
+            formatter.format(
+                self.data(
+                    results,
+                    only=args.only,
+                    order_by=args.order_by,
+                    direction=args.sort,
+                    log_link=args.log_link
+                )
+            )
+        )
         output.write("\n")
 
     def handle(self, args):
