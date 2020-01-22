@@ -208,7 +208,7 @@ class Handler(HandlerBase):
 
         if test.tags:
             s += "\n\n### Tags\n"
-            for i, tag in enumerate(test.tags * 7):
+            for i, tag in enumerate(test.tags):
                 if i > 0 and i % 3 == 0:
                     s += "||\n"
                 s += f'||<strong class="tag tag-{i % 5}">{tag.value}</strong>'
