@@ -27,13 +27,15 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
     border: 1px solid #cccccc;
     display: inline-block;
     margin-bottom: 7px;
-    padding: 15px;
+    padding: 5px;
     border-radius: 15px;
     margin-top: 5px;
     background: #f8fcff;
 }
 .hidden { display: none !important; }
 .show {display: inherit !important; }
+.requirement { cursor: pointer; user-select: none; }
+.requirement-inline.active { background: #ffffe7; }
 .requirement-description { border: 1px solid #dedede; padding: 15px; background: #fdfdfd; margin-bottom: 1em; }
 .no-tests { color: #ffa400; vertical-align: middle; margin-left: 0.5em !important; border: 1px dashed #ffa400; }
 /* Result color classes */
