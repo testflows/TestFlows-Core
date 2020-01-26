@@ -13,6 +13,7 @@
 # limitations under the License.
 import re
 
+from testflows._core.utils.strip import wstrip
 from testflows._core.contrib.arpeggio import RegExMatch as _
 from testflows._core.contrib.arpeggio import OneOrMore, ZeroOrMore, EOF, Optional, Not
 from testflows._core.contrib.arpeggio import ParserPython as PEGParser
@@ -59,6 +60,7 @@ class Visitor(PTNodeVisitor):
 
         try:
             description = "\n".join([f'{"":8}{repr(line.value)}' for lines in node.requirement_description for line in lines])
+            description = wstrip(description, f"{'':8}'\\n'\n")
             description = f"(\n{description}\n{'':8})"
         except:
             pass
@@ -148,7 +150,7 @@ def Parser():
     def document():
         return Optional(OneOrMore([requirement, heading, line])), EOF
 
-    return PEGParser(document)
+    return PEGParser(document, skipws=False)
 
 
 def generate(source, destination):

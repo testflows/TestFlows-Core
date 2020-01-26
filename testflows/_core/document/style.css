@@ -21,14 +21,38 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .tag-2 { background: #006f80;}
 .tag-3 { background: #008033;}
 .tag-4 { background: #f87d00;}
+/* Text classes */
+.requirement-inline {
+    color: #354558;
+    border: 1px solid #cccccc;
+    display: inline-block;
+    margin-bottom: 7px;
+    padding: 15px;
+    border-radius: 15px;
+    margin-top: 5px;
+    background: #f8fcff;
+}
+.hidden { display: none !important; }
+.show {display: inherit !important; }
+.requirement-description { border: 1px solid #dedede; padding: 15px; background: #fdfdfd; margin-bottom: 1em; }
+.no-tests { color: #ffa400; vertical-align: middle; margin-left: 0.5em !important; border: 1px dashed #ffa400; }
 /* Result color classes */
+.time { color: #666666; }
+.time-inline { display: inline-block; margin-right: 10px; margin-left: 10px; width: 6em; }
 .result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
+.result-inline { display: inline-block; margin-right: 10px; margin-left: 10px; width: 3em; text-align: center; }
 .result-ok { color: #0dad55 }
 .result-xout, .result-xok, .result-xfail, .result-xerror, .result-xnull { background-color: #307bbb; color: white; }
 .result-fail { background-color: #f02323; color: white; }
 .result-error { background-color: #ffa400; color: white; }
 .result-skip {background-color: #aeaeae; color: white; }
 .result-null {background-color: purple; color: white; }
+/* UTF-8 icons */
+.utf-icon { padding-right: 10px; font-size: 1.5em;}
+.color-ok { color: #0dad55; }
+.color-fail { color: #f02323; }
+.color-error { color: #ffa400; }
+.color-null { color: purple; }
 /* Code Highlighting */
 .highlight .hll { background-color: #ffffcc }
 .highlight  { background-color: #fff; color: #383e44; border: 1px solid rgb(229, 229, 229); padding-left: 10px; padding-right: 10px; overflow-y: scroll; display: block;}
@@ -1156,6 +1180,11 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 }
 .c100 > span.title {
   top: 1em;
+}
+.c100.smaller-title > span {
+    width: inherit;
+    line-height: 5em;
+    font-size: 0.15em;
 }
 /* Embedded images */
 .logo-test { color: #4e4e4e; font-weight: bold; }
