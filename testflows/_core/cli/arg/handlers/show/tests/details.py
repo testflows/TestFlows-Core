@@ -76,4 +76,4 @@ class Handler(HandlerBase):
     def handle(self, args):
         results = {}
         self.FirstStage(results, args.log).run()
-        self.SecondStage(results, args.output).run()
+        self.SecondStage(results["tests"], args.output).run()
