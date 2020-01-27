@@ -146,7 +146,7 @@ class Formatter:
             s += f'\n  <div class="requirement"><span class="requirement-inline"><i class="utf-icon {self.icon_colors[r["status"]]}">{self.utf_icons[r["status"]]}</i>{r["requirement"].name}</span></div>'
             description = r["requirement"].description.replace("\\n","\n")
             if description:
-                s += f'<div markdown="1" class="requirement-description hidden">{description}</div>'
+                s += f'<div markdown="1" class="requirement-description hidden">\n{description}\n</div>'
             for test in r["tests"]:
                 result = test["result"]
                 cls = result.name.lower()
