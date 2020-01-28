@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from testflows._core.contrib.pygments.lexer import RegexLexer
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups
 from testflows._core.contrib.pygments.token import *
 
 __all__ = ['TestFlowsLexer']
@@ -23,15 +23,15 @@ class TestFlowsLexer(RegexLexer):
 
     tokens = {
         'root': [
-            (r'\s*(Module|Suite|Feature|Test|Scenario)', Keyword.Namespace),
-            (r'\s*(Given|When|Then|And|By|Finally)', Keyword),
-            (r'\s*(Arguments|Requirements|Attributes|Tags|Examples)$', Name.Label),
-            (r'\s*OK', Result.OK),
-            (r'\s*Fail', Result.Fail),
-            (r'\s*Skip', Result.Skip),
-            (r'\s*Error', Result.Error),
-            (r'\s*Null', Result.Null),
-            (r'\s*(XOK|XFail|XNull|XError)', Result.Xout),
+            (r'(\s*)(Module|Suite|Feature|Test|Scenario)( .*)', bygroups(Keyword, Keyword.Namespace, Name.Namespace)),
+            (r'(\s*)(Given|When|Then|And|By|Finally)', Keyword),
+            (r'(\s*)(Arguments|Requirements|Attributes|Tags|Examples)', Name.Label),
+            (r'(\s*)OK', Result.OK),
+            (r'(\s*)Fail', Result.Fail),
+            (r'(\s*)Skip', Result.Skip),
+            (r'(\s*)Error', Result.Error),
+            (r'(\s*)Null', Result.Null),
+            (r'(\s*)(XOK|XFail|XNull|XError)', Result.Xout),
             (r' .*\n', Text),
         ]
     }
