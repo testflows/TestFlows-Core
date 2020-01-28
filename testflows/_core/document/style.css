@@ -38,7 +38,8 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .test.active { border: 1px solid #dedede; border-radius: 15px; background: #fefee7; }
 .requirement-inline.active { background: #ffffe7; }
 .requirement-description, .test-procedure { border: 1px solid #dedede; padding: 15px; background: #fdfdfd; margin-bottom: 1em; overflow-x: auto; }
-.test-procedure { height: 70vh; background: #fff4fc; }
+.test-procedure { background: #fdfdfd; margin-top: 15px; margin-bottom: 15px; }
+.test-procedure .highlight { height: 70vh; }
 .no-tests { color: #ffa400; vertical-align: middle; margin-left: 0.5em !important; border: 1px dashed #ffa400; }
 /* Result color classes */
 .time { color: #666666; }
@@ -127,6 +128,13 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .highlight .vi { color: #19177C } /* Name.Variable.Instance */
 .highlight .vm { color: #19177C } /* Name.Variable.Magic */
 .highlight .il { color: #666666 } /* Literal.Number.Integer.Long */
+.highlight .r  { color: purple } /* Result */
+.highlight .ro { color: #0dad55; font-weight: bold } /* Result.OK */
+.highlight .rf { color: #f02323; font-weight: bold } /* Result.Fail */
+.highlight .re { color: #ffa400; font-weight: bold } /* Result.Error */
+.highlight .rn { color: purple; font-weight: bold } /* Result.Null */
+.highlight .rs { color: #aeaeae; font-weight: bold } /* Result.Skip */
+.highlight .rx { color: #307bbb; font-weight: bold } /* Result.Xout */
 /* Pie charts */
 .chart { float: left; width: 100%; }
 /* https://github.com/afuersch/css-percentage-circle

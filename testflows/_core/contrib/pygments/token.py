@@ -82,6 +82,8 @@ Token.Token = Token
 Token.String = String
 Token.Number = Number
 
+# Result types
+Result = Token.Result
 
 def is_token_subtype(ttype, other):
     """
@@ -210,4 +212,12 @@ STANDARD_TYPES = {
     Generic.Strong:                'gs',
     Generic.Subheading:            'gu',
     Generic.Traceback:             'gt',
+
+    Result:                        'r',
+    Result.OK:                     'ro',
+    Result.Fail:                   'rf',
+    Result.Null:                   'rn',
+    Result.Error:                  're',
+    Result.Skip:                   'rs',
+    Result.Xout:                   'rx'
 }

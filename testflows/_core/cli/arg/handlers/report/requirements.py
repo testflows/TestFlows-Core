@@ -161,7 +161,7 @@ class Formatter:
                 result = test["result"]
                 cls = result.name.lower()
                 s += f'<div class="test"><span class="result result-inline result-{cls}">{result.name}</span><span class="time time-inline">{strftimedelta(result.p_time)}</span>{test["test"].name}</div>'
-                s += f'<div class="hidden">\n<pre class="test-procedure">{test["messages"]}</pre>\n</div>'
+                s += f'<div class="test-procedure hidden">\n```testflows\n{test["messages"]}\n```\n</div>'
             if not r["tests"]:
                 s += f'<div class="no-tests"><span class="result-inline">\u270E</span>No tests</div>'
             s += "\n  "

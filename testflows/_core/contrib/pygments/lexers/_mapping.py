@@ -431,6 +431,7 @@ LEXERS = {
     'TermcapLexer': ('testflows._core.contrib.pygments.lexers.configs', 'Termcap', ('termcap',), ('termcap', 'termcap.src'), ()),
     'TerminfoLexer': ('testflows._core.contrib.pygments.lexers.configs', 'Terminfo', ('terminfo',), ('terminfo', 'terminfo.src'), ()),
     'TerraformLexer': ('testflows._core.contrib.pygments.lexers.configs', 'Terraform', ('terraform', 'tf'), ('*.tf',), ('application/x-tf', 'application/x-terraform')),
+    'TestFlowsLexer': ('testflows._core.contrib.pygments.lexers.testflows', 'TestFlows', ('testflows',), ('*.tfs',), ()),
     'TexLexer': ('testflows._core.contrib.pygments.lexers.markup', 'TeX', ('tex', 'latex'), ('*.tex', '*.aux', '*.toc'), ('text/x-tex', 'text/x-latex')),
     'TextLexer': ('testflows._core.contrib.pygments.lexers.special', 'Text only', ('text',), ('*.txt',), ('text/plain',)),
     'ThriftLexer': ('testflows._core.contrib.pygments.lexers.dsls', 'Thrift', ('thrift',), ('*.thrift',), ('application/x-thrift',)),
