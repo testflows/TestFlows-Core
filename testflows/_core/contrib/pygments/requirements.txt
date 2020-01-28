@@ -1,6 +1,0 @@
-pytest-cov
-pytest-randomly
-pytest
-pyflakes
-pylint
-tox
