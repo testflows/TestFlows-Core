@@ -12,8 +12,8 @@
 import os
 import sys
 
-from pygments.formatter import Formatter
-from pygments.util import get_bool_opt, get_int_opt, get_list_opt, \
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.util import get_bool_opt, get_int_opt, get_list_opt, \
     get_choice_opt, xrange
 
 import subprocess

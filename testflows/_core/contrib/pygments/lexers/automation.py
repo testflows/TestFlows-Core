@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups, combined
-from pygments.token import Text, Comment, Operator, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, combined
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Name, String, \
     Number, Punctuation, Generic
 
 __all__ = ['AutohotkeyLexer', 'AutoItLexer']

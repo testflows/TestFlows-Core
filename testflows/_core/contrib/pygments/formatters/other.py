@@ -9,10 +9,10 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.formatter import Formatter
-from pygments.util import get_choice_opt
-from pygments.token import Token
-from pygments.console import colorize
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.util import get_choice_opt
+from testflows._core.contrib.pygments.token import Token
+from testflows._core.contrib.pygments.console import colorize
 
 __all__ = ['NullFormatter', 'RawTokenFormatter', 'TestcaseFormatter']
 

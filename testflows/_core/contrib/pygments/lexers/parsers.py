@@ -11,18 +11,18 @@
 
 import re
 
-from pygments.lexer import RegexLexer, DelegatingLexer, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, DelegatingLexer, \
     include, bygroups, using
-from pygments.token import Punctuation, Other, Text, Comment, Operator, \
+from testflows._core.contrib.pygments.token import Punctuation, Other, Text, Comment, Operator, \
     Keyword, Name, String, Number, Whitespace
-from pygments.lexers.jvm import JavaLexer
-from pygments.lexers.c_cpp import CLexer, CppLexer
-from pygments.lexers.objective import ObjectiveCLexer
-from pygments.lexers.d import DLexer
-from pygments.lexers.dotnet import CSharpLexer
-from pygments.lexers.ruby import RubyLexer
-from pygments.lexers.python import PythonLexer
-from pygments.lexers.perl import PerlLexer
+from testflows._core.contrib.pygments.lexers.jvm import JavaLexer
+from testflows._core.contrib.pygments.lexers.c_cpp import CLexer, CppLexer
+from testflows._core.contrib.pygments.lexers.objective import ObjectiveCLexer
+from testflows._core.contrib.pygments.lexers.d import DLexer
+from testflows._core.contrib.pygments.lexers.dotnet import CSharpLexer
+from testflows._core.contrib.pygments.lexers.ruby import RubyLexer
+from testflows._core.contrib.pygments.lexers.python import PythonLexer
+from testflows._core.contrib.pygments.lexers.perl import PerlLexer
 
 __all__ = ['RagelLexer', 'RagelEmbeddedLexer', 'RagelCLexer', 'RagelDLexer',
            'RagelCppLexer', 'RagelObjectiveCLexer', 'RagelRubyLexer',
@@ -691,7 +691,7 @@ class AntlrActionScriptLexer(DelegatingLexer):
     filenames = ['*.G', '*.g']
 
     def __init__(self, **options):
-        from pygments.lexers.actionscript import ActionScriptLexer
+        from testflows._core.contrib.pygments.lexers.actionscript import ActionScriptLexer
         super(AntlrActionScriptLexer, self).__init__(ActionScriptLexer,
                                                      AntlrLexer, **options)
 

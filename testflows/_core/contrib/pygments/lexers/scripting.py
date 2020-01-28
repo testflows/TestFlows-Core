@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, default, combined, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, default, combined, \
     words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error, Whitespace, Other
-from pygments.util import get_bool_opt, get_list_opt, iteritems
+from testflows._core.contrib.pygments.util import get_bool_opt, get_list_opt, iteritems
 
 __all__ = ['LuaLexer', 'MoonScriptLexer', 'ChaiscriptLexer', 'LSLLexer',
            'AppleScriptLexer', 'RexxLexer', 'MOOCodeLexer', 'HybrisLexer',
@@ -40,7 +40,7 @@ class LuaLexer(RegexLexer):
 
         .. sourcecode:: pycon
 
-            >>> from pygments.lexers._lua_builtins import MODULES
+            >>> from testflows._core.contrib.pygments.lexers._lua_builtins import MODULES
             >>> MODULES.keys()
             ['string', 'coroutine', 'modules', 'io', 'basic', ...]
     """
@@ -141,7 +141,7 @@ class LuaLexer(RegexLexer):
 
         self._functions = set()
         if self.func_name_highlighting:
-            from pygments.lexers._lua_builtins import MODULES
+            from testflows._core.contrib.pygments.lexers._lua_builtins import MODULES
             for mod, func in iteritems(MODULES):
                 if mod not in self.disabled_modules:
                     self._functions.update(func)

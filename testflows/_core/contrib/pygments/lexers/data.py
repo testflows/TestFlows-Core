@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import RegexLexer, ExtendedRegexLexer, LexerContext, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, ExtendedRegexLexer, LexerContext, \
     include, bygroups, inherit
-from pygments.token import Text, Comment, Keyword, Name, String, Number, \
+from testflows._core.contrib.pygments.token import Text, Comment, Keyword, Name, String, Number, \
     Punctuation, Literal, Error
 
 __all__ = ['YamlLexer', 'JsonLexer', 'JsonBareObjectLexer', 'JsonLdLexer']

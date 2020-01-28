@@ -9,9 +9,9 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, words, include, bygroups, using, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, words, include, bygroups, using, \
     this, default
-from pygments.token import Text, Comment, Operator, Keyword, Name, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, \
     Number, Punctuation, String
 
 __all__ = ['GLShaderLexer', 'PostScriptLexer', 'AsymptoteLexer', 'GnuplotLexer',
@@ -508,7 +508,7 @@ class AsymptoteLexer(RegexLexer):
     }
 
     def get_tokens_unprocessed(self, text):
-        from pygments.lexers._asy_builtins import ASYFUNCNAME, ASYVARNAME
+        from testflows._core.contrib.pygments.lexers._asy_builtins import ASYFUNCNAME, ASYVARNAME
         for index, token, value in \
                 RegexLexer.get_tokens_unprocessed(self, text):
             if token is Name and value in ASYFUNCNAME:

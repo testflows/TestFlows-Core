@@ -9,10 +9,10 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, DelegatingLexer, bygroups
-from pygments.lexers.mime import MIMELexer
-from pygments.token import Text, Keyword, Name, String, Number, Comment
-from pygments.util import get_bool_opt
+from testflows._core.contrib.pygments.lexer import RegexLexer, DelegatingLexer, bygroups
+from testflows._core.contrib.pygments.lexers.mime import MIMELexer
+from testflows._core.contrib.pygments.token import Text, Keyword, Name, String, Number, Comment
+from testflows._core.contrib.pygments.util import get_bool_opt
 
 __all__ = ["EmailLexer"]
 

@@ -40,15 +40,15 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, do_insertions, bygroups, words
-from pygments.token import Punctuation, Whitespace, Text, Comment, Operator, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, do_insertions, bygroups, words
+from testflows._core.contrib.pygments.token import Punctuation, Whitespace, Text, Comment, Operator, \
     Keyword, Name, String, Number, Generic
-from pygments.lexers import get_lexer_by_name, ClassNotFound
-from pygments.util import iteritems
+from testflows._core.contrib.pygments.lexers import get_lexer_by_name, ClassNotFound
+from testflows._core.contrib.pygments.util import iteritems
 
-from pygments.lexers._postgres_builtins import KEYWORDS, DATATYPES, \
+from testflows._core.contrib.pygments.lexers._postgres_builtins import KEYWORDS, DATATYPES, \
     PSEUDO_TYPES, PLPGSQL_KEYWORDS
-from pygments.lexers import _tsql_builtins
+from testflows._core.contrib.pygments.lexers import _tsql_builtins
 
 
 __all__ = ['PostgresLexer', 'PlPgsqlLexer', 'PostgresConsoleLexer',

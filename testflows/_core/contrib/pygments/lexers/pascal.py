@@ -11,15 +11,15 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, include, bygroups, words, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, include, bygroups, words, \
     using, this, default
-from pygments.util import get_bool_opt, get_list_opt
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.util import get_bool_opt, get_list_opt
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error
-from pygments.scanner import Scanner
+from testflows._core.contrib.pygments.scanner import Scanner
 
 # compatibility import
-from pygments.lexers.modula2 import Modula2Lexer
+from testflows._core.contrib.pygments.lexers.modula2 import Modula2Lexer
 
 __all__ = ['DelphiLexer', 'AdaLexer']
 

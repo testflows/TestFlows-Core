@@ -11,10 +11,10 @@
 
 from __future__ import division
 
-from pygments.formatter import Formatter
-from pygments.lexer import Lexer
-from pygments.token import Token, STANDARD_TYPES
-from pygments.util import get_bool_opt, get_int_opt, StringIO, xrange, \
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.lexer import Lexer
+from testflows._core.contrib.pygments.token import Token, STANDARD_TYPES
+from testflows._core.contrib.pygments.util import get_bool_opt, get_int_opt, StringIO, xrange, \
     iteritems
 
 

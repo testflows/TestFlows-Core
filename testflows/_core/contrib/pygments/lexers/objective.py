@@ -11,12 +11,12 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, this, words, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, this, words, \
     inherit, default
-from pygments.token import Text, Keyword, Name, String, Operator, \
+from testflows._core.contrib.pygments.token import Text, Keyword, Name, String, Operator, \
     Number, Punctuation, Literal, Comment
 
-from pygments.lexers.c_cpp import CLexer, CppLexer
+from testflows._core.contrib.pygments.lexers.c_cpp import CLexer, CppLexer
 
 __all__ = ['ObjectiveCLexer', 'ObjectiveCppLexer', 'LogosLexer', 'SwiftLexer']
 
@@ -177,7 +177,7 @@ def objective(baselexer):
             return 0
 
         def get_tokens_unprocessed(self, text):
-            from pygments.lexers._cocoa_builtins import COCOA_INTERFACES, \
+            from testflows._core.contrib.pygments.lexers._cocoa_builtins import COCOA_INTERFACES, \
                 COCOA_PROTOCOLS, COCOA_PRIMITIVES
 
             for index, token, value in \
@@ -491,7 +491,7 @@ class SwiftLexer(RegexLexer):
     }
 
     def get_tokens_unprocessed(self, text):
-        from pygments.lexers._cocoa_builtins import COCOA_INTERFACES, \
+        from testflows._core.contrib.pygments.lexers._cocoa_builtins import COCOA_INTERFACES, \
             COCOA_PROTOCOLS, COCOA_PRIMITIVES
 
         for index, token, value in \

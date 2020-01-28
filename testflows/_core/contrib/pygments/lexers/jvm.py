@@ -11,12 +11,12 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, include, bygroups, using, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, include, bygroups, using, \
     this, combined, default, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation
-from pygments.util import shebang_matches
-from pygments import unistring as uni
+from testflows._core.contrib.pygments.util import shebang_matches
+from testflows._core.contrib.pygments import unistring as uni
 
 __all__ = ['JavaLexer', 'ScalaLexer', 'GosuLexer', 'GosuTemplateLexer',
            'GroovyLexer', 'IokeLexer', 'ClojureLexer', 'ClojureScriptLexer',

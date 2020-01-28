@@ -87,7 +87,7 @@ class PygmentsDoc(Directive):
         return node.children
 
     def document_lexers(self):
-        from pygments.lexers._mapping import LEXERS
+        from testflows._core.contrib.pygments.lexers._mapping import LEXERS
         out = []
         modules = {}
         moduledocstrings = {}
@@ -124,7 +124,7 @@ class PygmentsDoc(Directive):
         return ''.join(out)
 
     def document_formatters(self):
-        from pygments.formatters import FORMATTERS
+        from testflows._core.contrib.pygments.formatters import FORMATTERS
 
         out = []
         for classname, data in sorted(FORMATTERS.items(), key=lambda x: x[0]):
@@ -142,7 +142,7 @@ class PygmentsDoc(Directive):
         return ''.join(out)
 
     def document_filters(self):
-        from pygments.filters import FILTERS
+        from testflows._core.contrib.pygments.filters import FILTERS
 
         out = []
         for name, cls in FILTERS.items():

@@ -25,9 +25,9 @@
 
 import re
 
-from pygments.lexer import Lexer
-from pygments.token import Token
-from pygments.util import text_type
+from testflows._core.contrib.pygments.lexer import Lexer
+from testflows._core.contrib.pygments.token import Token
+from testflows._core.contrib.pygments.util import text_type
 
 __all__ = ['RobotFrameworkLexer']
 

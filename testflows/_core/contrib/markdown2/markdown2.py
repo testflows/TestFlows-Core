@@ -1750,7 +1750,7 @@ class Markdown(object):
 
     def _get_pygments_lexer(self, lexer_name):
         try:
-            from pygments import lexers, util
+            from testflows._core.contrib.pygments import lexers, util
         except ImportError:
             return None
         try:
@@ -1759,10 +1759,10 @@ class Markdown(object):
             return None
 
     def _color_with_pygments(self, codeblock, lexer, **formatter_opts):
-        import pygments
-        import pygments.formatters
+        import testflows._core.contrib.pygments as pygments
+        import testflows._core.contrib.pygments.formatters as pygments_formatters
 
-        class HtmlCodeFormatter(pygments.formatters.HtmlFormatter):
+        class HtmlCodeFormatter(pygments_formatters.HtmlFormatter):
             def _wrap_code(self, inner):
                 """A function for use in a Pygments Formatter which
                 wraps in <code> tags.

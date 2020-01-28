@@ -10,9 +10,9 @@
 """
 
 import sys
-import pygments.cmdline
+import testflows._core.contrib.pygments.cmdline as pygments_cmdline
 
 try:
-    sys.exit(pygments.cmdline.main(sys.argv))
+    sys.exit(pygments_cmdline.main(sys.argv))
 except KeyboardInterrupt:
     sys.exit(1)

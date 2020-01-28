@@ -11,15 +11,15 @@
 
 import re
 
-from pygments.lexers.html import HtmlLexer, XmlLexer
-from pygments.lexers.javascript import JavascriptLexer
-from pygments.lexers.css import CssLexer
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer, XmlLexer
+from testflows._core.contrib.pygments.lexers.javascript import JavascriptLexer
+from testflows._core.contrib.pygments.lexers.css import CssLexer
 
-from pygments.lexer import RegexLexer, DelegatingLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, DelegatingLexer, include, bygroups, \
     using, this, do_insertions, default, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Generic, Other
-from pygments.util import get_bool_opt, ClassNotFound
+from testflows._core.contrib.pygments.util import get_bool_opt, ClassNotFound
 
 __all__ = ['BBCodeLexer', 'MoinWikiLexer', 'RstLexer', 'TexLexer', 'GroffLexer',
            'MozPreprocHashLexer', 'MozPreprocPercentLexer',
@@ -128,7 +128,7 @@ class RstLexer(RegexLexer):
     flags = re.MULTILINE
 
     def _handle_sourcecode(self, match):
-        from pygments.lexers import get_lexer_by_name
+        from testflows._core.contrib.pygments.lexers import get_lexer_by_name
 
         # section header
         yield match.start(1), Punctuation, match.group(1)
@@ -516,7 +516,7 @@ class MarkdownLexer(RegexLexer):
         """
         match args: 1:backticks, 2:lang_name, 3:newline, 4:code, 5:backticks
         """
-        from pygments.lexers import get_lexer_by_name
+        from testflows._core.contrib.pygments.lexers import get_lexer_by_name
 
         # section header
         yield match.start(1), String        , match.group(1)

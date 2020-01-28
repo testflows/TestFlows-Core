@@ -11,10 +11,10 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, default, words, include
-from pygments.token import Comment, Error, Keyword, Name, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, default, words, include
+from testflows._core.contrib.pygments.token import Comment, Error, Keyword, Name, Number, \
     Punctuation, Operator, String, Text, Whitespace
-from pygments.lexers import _vbscript_builtins
+from testflows._core.contrib.pygments.lexers import _vbscript_builtins
 
 
 __all__ = ['BlitzBasicLexer', 'BlitzMaxLexer', 'MonkeyLexer', 'CbmBasicV2Lexer',

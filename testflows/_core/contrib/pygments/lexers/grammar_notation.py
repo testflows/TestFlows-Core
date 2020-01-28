@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, include, this, using, words
-from pygments.token import Comment, Keyword, Literal, Name, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, include, this, using, words
+from testflows._core.contrib.pygments.token import Comment, Keyword, Literal, Name, Number, \
     Operator, Punctuation, String, Text
 
 __all__ = ['BnfLexer', 'AbnfLexer', 'JsgfLexer']

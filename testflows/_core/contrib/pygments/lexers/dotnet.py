@@ -10,14 +10,14 @@
 """
 import re
 
-from pygments.lexer import RegexLexer, DelegatingLexer, bygroups, include, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, DelegatingLexer, bygroups, include, \
     using, this, default, words
-from pygments.token import Punctuation, \
+from testflows._core.contrib.pygments.token import Punctuation, \
     Text, Comment, Operator, Keyword, Name, String, Number, Literal, Other
-from pygments.util import get_choice_opt, iteritems
-from pygments import unistring as uni
+from testflows._core.contrib.pygments.util import get_choice_opt, iteritems
+from testflows._core.contrib.pygments import unistring as uni
 
-from pygments.lexers.html import XmlLexer
+from testflows._core.contrib.pygments.lexers.html import XmlLexer
 
 __all__ = ['CSharpLexer', 'NemerleLexer', 'BooLexer', 'VbNetLexer',
            'CSharpAspxLexer', 'VbNetAspxLexer', 'FSharpLexer']

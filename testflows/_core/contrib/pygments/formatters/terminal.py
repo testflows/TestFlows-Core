@@ -11,11 +11,11 @@
 
 import sys
 
-from pygments.formatter import Formatter
-from pygments.token import Keyword, Name, Comment, String, Error, \
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.token import Keyword, Name, Comment, String, Error, \
     Number, Operator, Generic, Token, Whitespace
-from pygments.console import ansiformat
-from pygments.util import get_choice_opt
+from testflows._core.contrib.pygments.console import ansiformat
+from testflows._core.contrib.pygments.util import get_choice_opt
 
 
 __all__ = ['TerminalFormatter']

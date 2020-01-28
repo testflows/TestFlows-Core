@@ -12,12 +12,12 @@
 
 import re
 
-from pygments.token import String, Comment, Keyword, Name, Error, Whitespace, \
+from testflows._core.contrib.pygments.token import String, Comment, Keyword, Name, Error, Whitespace, \
     string_to_tokentype
-from pygments.filter import Filter
-from pygments.util import get_list_opt, get_int_opt, get_bool_opt, \
+from testflows._core.contrib.pygments.filter import Filter
+from testflows._core.contrib.pygments.util import get_list_opt, get_int_opt, get_bool_opt, \
      get_choice_opt, ClassNotFound, OptionError, text_type, string_types
-from pygments.plugin import find_plugin_filters
+from testflows._core.contrib.pygments.plugin import find_plugin_filters
 
 
 def find_filter_class(filtername):

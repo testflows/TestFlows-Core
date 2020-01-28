@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, words, re
-from pygments.token import Text, Operator, Keyword, Name, Comment
+from testflows._core.contrib.pygments.lexer import RegexLexer, words, re
+from testflows._core.contrib.pygments.token import Text, Operator, Keyword, Name, Comment
 
 __all__ = ['RoboconfGraphLexer', 'RoboconfInstancesLexer']
 

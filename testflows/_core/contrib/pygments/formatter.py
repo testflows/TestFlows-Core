@@ -11,8 +11,8 @@
 
 import codecs
 
-from pygments.util import get_bool_opt, string_types
-from pygments.styles import get_style_by_name
+from testflows._core.contrib.pygments.util import get_bool_opt, string_types
+from testflows._core.contrib.pygments.styles import get_style_by_name
 
 __all__ = ['Formatter']
 

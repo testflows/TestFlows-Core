@@ -11,10 +11,10 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, \
     this, inherit, default, words
-from pygments.util import get_bool_opt
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.util import get_bool_opt
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error
 
 __all__ = ['CLexer', 'CppLexer']

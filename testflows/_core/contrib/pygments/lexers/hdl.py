@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, include, using, this, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, include, using, this, words
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error
 
 __all__ = ['VerilogLexer', 'SystemVerilogLexer', 'VhdlLexer']

@@ -9,18 +9,18 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexers.configs import ApacheConfLexer, NginxConfLexer, \
+from testflows._core.contrib.pygments.lexers.configs import ApacheConfLexer, NginxConfLexer, \
     SquidConfLexer, LighttpdConfLexer, IniLexer, RegeditLexer, PropertiesLexer
-from pygments.lexers.console import PyPyLogLexer
-from pygments.lexers.textedit import VimLexer
-from pygments.lexers.markup import BBCodeLexer, MoinWikiLexer, RstLexer, \
+from testflows._core.contrib.pygments.lexers.console import PyPyLogLexer
+from testflows._core.contrib.pygments.lexers.textedit import VimLexer
+from testflows._core.contrib.pygments.lexers.markup import BBCodeLexer, MoinWikiLexer, RstLexer, \
     TexLexer, GroffLexer
-from pygments.lexers.installers import DebianControlLexer, SourcesListLexer
-from pygments.lexers.make import MakefileLexer, BaseMakefileLexer, CMakeLexer
-from pygments.lexers.haxe import HxmlLexer
-from pygments.lexers.sgf import SmartGameFormatLexer
-from pygments.lexers.diff import DiffLexer, DarcsPatchLexer
-from pygments.lexers.data import YamlLexer
-from pygments.lexers.textfmts import IrcLogsLexer, GettextLexer, HttpLexer
+from testflows._core.contrib.pygments.lexers.installers import DebianControlLexer, SourcesListLexer
+from testflows._core.contrib.pygments.lexers.make import MakefileLexer, BaseMakefileLexer, CMakeLexer
+from testflows._core.contrib.pygments.lexers.haxe import HxmlLexer
+from testflows._core.contrib.pygments.lexers.sgf import SmartGameFormatLexer
+from testflows._core.contrib.pygments.lexers.diff import DiffLexer, DarcsPatchLexer
+from testflows._core.contrib.pygments.lexers.data import YamlLexer
+from testflows._core.contrib.pygments.lexers.textfmts import IrcLogsLexer, GettextLexer, HttpLexer
 
 __all__ = []

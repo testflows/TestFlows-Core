@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, \
     this, default, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error, Generic
 
 __all__ = ['Inform6Lexer', 'Inform6TemplateLexer', 'Inform7Lexer',

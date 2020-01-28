@@ -11,16 +11,16 @@
 
 import re
 
-from pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
     default, using
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Punctuation
-from pygments.util import looks_like_xml, html_doctype_matches
+from testflows._core.contrib.pygments.util import looks_like_xml, html_doctype_matches
 
-from pygments.lexers.javascript import JavascriptLexer
-from pygments.lexers.jvm import ScalaLexer
-from pygments.lexers.css import CssLexer, _indentation, _starts_block
-from pygments.lexers.ruby import RubyLexer
+from testflows._core.contrib.pygments.lexers.javascript import JavascriptLexer
+from testflows._core.contrib.pygments.lexers.jvm import ScalaLexer
+from testflows._core.contrib.pygments.lexers.css import CssLexer, _indentation, _starts_block
+from testflows._core.contrib.pygments.lexers.ruby import RubyLexer
 
 __all__ = ['HtmlLexer', 'DtdLexer', 'XmlLexer', 'XsltLexer', 'HamlLexer',
            'ScamlLexer', 'PugLexer']

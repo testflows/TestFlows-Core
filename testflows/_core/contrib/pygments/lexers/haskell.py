@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, \
     default, include, inherit
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Generic
-from pygments import unistring as uni
+from testflows._core.contrib.pygments import unistring as uni
 
 __all__ = ['HaskellLexer', 'HspecLexer', 'IdrisLexer', 'AgdaLexer', 'CryptolLexer',
            'LiterateHaskellLexer', 'LiterateIdrisLexer', 'LiterateAgdaLexer',
@@ -535,7 +535,7 @@ class LiterateLexer(Lexer):
                     insertions.append((len(code), [(0, Text, line)]))
         else:
             # latex-style
-            from pygments.lexers.markup import TexLexer
+            from testflows._core.contrib.pygments.lexers.markup import TexLexer
             lxlexer = TexLexer(**self.options)
             codelines = 0
             latex = ''

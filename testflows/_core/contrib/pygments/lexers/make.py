@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, include, bygroups, \
     do_insertions, using
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Punctuation
-from pygments.lexers.shell import BashLexer
+from testflows._core.contrib.pygments.lexers.shell import BashLexer
 
 __all__ = ['MakefileLexer', 'BaseMakefileLexer', 'CMakeLexer']
 

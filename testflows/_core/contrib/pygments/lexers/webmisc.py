@@ -11,16 +11,16 @@
 
 import re
 
-from pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
     default, using
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Literal
-from pygments.util import unirange
+from testflows._core.contrib.pygments.util import unirange
 
-from pygments.lexers.css import _indentation, _starts_block
-from pygments.lexers.html import HtmlLexer
-from pygments.lexers.javascript import JavascriptLexer
-from pygments.lexers.ruby import RubyLexer
+from testflows._core.contrib.pygments.lexers.css import _indentation, _starts_block
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer
+from testflows._core.contrib.pygments.lexers.javascript import JavascriptLexer
+from testflows._core.contrib.pygments.lexers.ruby import RubyLexer
 
 __all__ = ['DuelLexer', 'SlimLexer', 'XQueryLexer', 'QmlLexer', 'CirruLexer']
 

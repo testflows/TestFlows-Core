@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import Lexer
-from pygments.token import Token, Error, Text
-from pygments.util import get_choice_opt, text_type, BytesIO
+from testflows._core.contrib.pygments.lexer import Lexer
+from testflows._core.contrib.pygments.token import Token, Error, Text
+from testflows._core.contrib.pygments.util import get_choice_opt, text_type, BytesIO
 
 
 __all__ = ['TextLexer', 'RawTokenLexer']

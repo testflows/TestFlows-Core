@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, bygroups, words
-from pygments.token import Comment, Keyword, Name, Number, Operator, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, words
+from testflows._core.contrib.pygments.token import Comment, Keyword, Name, Number, Operator, \
     Punctuation, String, Text
 
 __all__ = ['WhileyLexer']

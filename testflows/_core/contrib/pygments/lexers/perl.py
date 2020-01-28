@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, ExtendedRegexLexer, include, bygroups, \
     using, this, default, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation
-from pygments.util import shebang_matches
+from testflows._core.contrib.pygments.util import shebang_matches
 
 __all__ = ['PerlLexer', 'Perl6Lexer']
 

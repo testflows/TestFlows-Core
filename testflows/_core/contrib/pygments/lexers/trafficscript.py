@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer
-from pygments.token import String, Number, Name, Keyword, Operator, Text, Comment
+from testflows._core.contrib.pygments.lexer import RegexLexer
+from testflows._core.contrib.pygments.token import String, Number, Name, Keyword, Operator, Text, Comment
 
 __all__ = ['RtsLexer']
 

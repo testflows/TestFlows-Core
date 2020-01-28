@@ -18,8 +18,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups, using, default
-from pygments.token import Text, Comment, Name, Literal, Number, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, default
+from testflows._core.contrib.pygments.token import Text, Comment, Name, Literal, Number, String, \
     Punctuation, Keyword, Operator, Generic
 
 __all__ = ['OdinLexer', 'CadlLexer', 'AdlLexer']

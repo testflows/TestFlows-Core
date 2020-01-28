@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.style import Style
-from pygments.token import Token, Comment, Name, Keyword, \
+from testflows._core.contrib.pygments.style import Style
+from testflows._core.contrib.pygments.token import Token, Comment, Name, Keyword, \
     Generic, Number, String, Whitespace
 
 class FruityStyle(Style):

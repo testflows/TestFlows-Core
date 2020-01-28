@@ -15,9 +15,9 @@ import os
 import sys
 import os.path
 
-from pygments.formatter import Formatter
-from pygments.token import Token, Text, STANDARD_TYPES
-from pygments.util import get_bool_opt, get_int_opt, get_list_opt, \
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.token import Token, Text, STANDARD_TYPES
+from testflows._core.contrib.pygments.util import get_bool_opt, get_int_opt, get_list_opt, \
     StringIO, string_types, iteritems
 
 try:

@@ -10,8 +10,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import ExtendedRegexLexer, bygroups, DelegatingLexer
-from pygments.token import Name, Number, String, Comment, Punctuation, \
+from testflows._core.contrib.pygments.lexer import ExtendedRegexLexer, bygroups, DelegatingLexer
+from testflows._core.contrib.pygments.token import Name, Number, String, Comment, Punctuation, \
     Other, Keyword, Operator, Whitespace
 
 __all__ = ['SlashLexer']
@@ -181,5 +181,5 @@ class SlashLexer(DelegatingLexer):
     filenames = ['*.sl']
 
     def __init__(self, **options):
-        from pygments.lexers.web import HtmlLexer
+        from testflows._core.contrib.pygments.lexers.web import HtmlLexer
         super(SlashLexer, self).__init__(HtmlLexer, SlashLanguageLexer, **options)

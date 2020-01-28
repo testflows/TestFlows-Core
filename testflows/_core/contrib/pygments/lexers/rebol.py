@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Generic, Whitespace
 
 __all__ = ['RebolLexer', 'RedLexer']

@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import ExtendedRegexLexer, RegexLexer, bygroups, words, \
+from testflows._core.contrib.pygments.lexer import ExtendedRegexLexer, RegexLexer, bygroups, words, \
     include, default, this, using, combined
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Literal, Whitespace
 
 __all__ = ['ProtoBufLexer', 'ZeekLexer', 'PuppetLexer', 'RslLexer',

@@ -12,8 +12,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.style import Style
-from pygments.token import Comment, Error, Generic, Keyword, Name, Number, \
+from testflows._core.contrib.pygments.style import Style
+from testflows._core.contrib.pygments.token import Comment, Error, Generic, Keyword, Name, Number, \
     Operator, String, Token
 
 

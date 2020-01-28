@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include
-from pygments.util import get_bool_opt, get_list_opt
-from pygments.token import Text, Comment, Operator, Keyword, Name, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include
+from testflows._core.contrib.pygments.util import get_bool_opt, get_list_opt
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, \
     String, Number, Punctuation, Error
 
 __all__ = ['Modula2Lexer']

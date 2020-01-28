@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import RegexLexer, ExtendedRegexLexer, include, default, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, ExtendedRegexLexer, include, default, \
     words
-from pygments.token import Name, Comment, String, Error, Number, Text, \
+from testflows._core.contrib.pygments.token import Name, Comment, String, Error, Number, Text, \
     Keyword, Punctuation
 
 __all__ = ['BibTeXLexer', 'BSTLexer']

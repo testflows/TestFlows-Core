@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, default
-from pygments.token import Text, Comment, Keyword, Name, Literal
+from testflows._core.contrib.pygments.lexer import RegexLexer, default
+from testflows._core.contrib.pygments.token import Text, Comment, Keyword, Name, Literal
 
 __all__ = ['CapnProtoLexer']
 

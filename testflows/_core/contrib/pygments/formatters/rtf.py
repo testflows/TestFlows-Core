@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.formatter import Formatter
-from pygments.util import get_int_opt, _surrogatepair
+from testflows._core.contrib.pygments.formatter import Formatter
+from testflows._core.contrib.pygments.util import get_int_opt, _surrogatepair
 
 
 __all__ = ['RtfFormatter']

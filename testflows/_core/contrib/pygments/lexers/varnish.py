@@ -9,9 +9,9 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups, using, this, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, this, \
     inherit, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Literal
 
 __all__ = ['VCLLexer', 'VCLSnippetLexer']

@@ -11,12 +11,12 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, default, using, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, default, using, \
     this, words, combined
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Other
-from pygments.util import get_bool_opt, iteritems
-import pygments.unistring as uni
+from testflows._core.contrib.pygments.util import get_bool_opt, iteritems
+import testflows._core.contrib.pygments.unistring as uni
 
 __all__ = ['JavascriptLexer', 'KalLexer', 'LiveScriptLexer', 'DartLexer',
            'TypeScriptLexer', 'LassoLexer', 'ObjectiveJLexer',
@@ -766,7 +766,7 @@ class LassoLexer(RegexLexer):
         self._builtins = set()
         self._members = set()
         if self.builtinshighlighting:
-            from pygments.lexers._lasso_builtins import BUILTINS, MEMBERS
+            from testflows._core.contrib.pygments.lexers._lasso_builtins import BUILTINS, MEMBERS
             for key, value in iteritems(BUILTINS):
                 self._builtins.update(value)
             for key, value in iteritems(MEMBERS):

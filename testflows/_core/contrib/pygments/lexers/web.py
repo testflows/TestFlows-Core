@@ -9,16 +9,16 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexers.html import HtmlLexer, DtdLexer, XmlLexer, XsltLexer, \
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer, DtdLexer, XmlLexer, XsltLexer, \
     HamlLexer, ScamlLexer, JadeLexer
-from pygments.lexers.css import CssLexer, SassLexer, ScssLexer
-from pygments.lexers.javascript import JavascriptLexer, LiveScriptLexer, \
+from testflows._core.contrib.pygments.lexers.css import CssLexer, SassLexer, ScssLexer
+from testflows._core.contrib.pygments.lexers.javascript import JavascriptLexer, LiveScriptLexer, \
     DartLexer, TypeScriptLexer, LassoLexer, ObjectiveJLexer, CoffeeScriptLexer
-from pygments.lexers.actionscript import ActionScriptLexer, \
+from testflows._core.contrib.pygments.lexers.actionscript import ActionScriptLexer, \
     ActionScript3Lexer, MxmlLexer
-from pygments.lexers.php import PhpLexer
-from pygments.lexers.webmisc import DuelLexer, XQueryLexer, SlimLexer, QmlLexer
-from pygments.lexers.data import JsonLexer
+from testflows._core.contrib.pygments.lexers.php import PhpLexer
+from testflows._core.contrib.pygments.lexers.webmisc import DuelLexer, XQueryLexer, SlimLexer, QmlLexer
+from testflows._core.contrib.pygments.lexers.data import JsonLexer
 JSONLexer = JsonLexer  # for backwards compatibility with Pygments 1.5
 
 __all__ = []

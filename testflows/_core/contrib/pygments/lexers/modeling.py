@@ -11,12 +11,12 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, default
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, default
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Whitespace
 
-from pygments.lexers.html import HtmlLexer
-from pygments.lexers import _stan_builtins
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer
+from testflows._core.contrib.pygments.lexers import _stan_builtins
 
 __all__ = ['ModelicaLexer', 'BugsLexer', 'JagsLexer', 'StanLexer']
 

@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, \
     words, include
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Generic
-from pygments.util import shebang_matches, unirange
+from testflows._core.contrib.pygments.util import shebang_matches, unirange
 
 __all__ = ['JuliaLexer', 'JuliaConsoleLexer']
 

@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.style import Style
-from pygments.token import Keyword, Name, Comment, String
+from testflows._core.contrib.pygments.style import Style
+from testflows._core.contrib.pygments.token import Keyword, Name, Comment, String
 
 
 class IgorStyle(Style):

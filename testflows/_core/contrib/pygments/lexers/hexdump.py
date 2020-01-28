@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, bygroups, include
-from pygments.token import Text, Name, Number, String, Punctuation
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, include
+from testflows._core.contrib.pygments.token import Text, Name, Number, String, Punctuation
 
 __all__ = ['HexdumpLexer']
 

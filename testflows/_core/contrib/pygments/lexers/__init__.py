@@ -15,10 +15,10 @@ import types
 import fnmatch
 from os.path import basename
 
-from pygments.lexers._mapping import LEXERS
-from pygments.modeline import get_filetype_from_buffer
-from pygments.plugin import find_plugin_lexers
-from pygments.util import ClassNotFound, itervalues, guess_decode, text_type
+from testflows._core.contrib.pygments.lexers._mapping import LEXERS
+from testflows._core.contrib.pygments.modeline import get_filetype_from_buffer
+from testflows._core.contrib.pygments.plugin import find_plugin_lexers
+from testflows._core.contrib.pygments.util import ClassNotFound, itervalues, guess_decode, text_type
 
 COMPAT = {
     'Python3Lexer': 'PythonLexer',
@@ -247,7 +247,7 @@ def guess_lexer_for_filename(_fn, _text, **options):
 
     usage::
 
-        >>> from pygments.lexers import guess_lexer_for_filename
+        >>> from testflows._core.contrib.pygments.lexers import guess_lexer_for_filename
         >>> guess_lexer_for_filename('hello.html', '<%= @foo %>')
         <pygments.lexers.templates.RhtmlLexer object at 0xb7d2f32c>
         >>> guess_lexer_for_filename('hello.html', '<h1>{{ title|e }}</h1>')

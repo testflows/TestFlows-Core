@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, default, words, bygroups, include, using
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, default, words, bygroups, include, using
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Whitespace, Literal
-from pygments.lexers.shell import BashLexer
-from pygments.lexers.data import JsonLexer
+from testflows._core.contrib.pygments.lexers.shell import BashLexer
+from testflows._core.contrib.pygments.lexers.data import JsonLexer
 
 __all__ = ['IniLexer', 'RegeditLexer', 'PropertiesLexer', 'KconfigLexer',
            'Cfengine3Lexer', 'ApacheConfLexer', 'SquidConfLexer',

@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, bygroups
-from pygments.token import Comment, String, Name, Text
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups
+from testflows._core.contrib.pygments.token import Comment, String, Name, Text
 
 __all__ = ['XorgLexer']
 

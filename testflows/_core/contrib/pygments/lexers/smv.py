@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, words
-from pygments.token import Comment, Generic, Keyword, Name, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, words
+from testflows._core.contrib.pygments.token import Comment, Generic, Keyword, Name, Number, \
     Operator, Punctuation, Text
 
 __all__ = ['NuSMVLexer']

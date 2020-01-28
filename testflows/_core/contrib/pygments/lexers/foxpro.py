@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer
-from pygments.token import Punctuation, Text, Comment, Operator, Keyword, \
+from testflows._core.contrib.pygments.lexer import RegexLexer
+from testflows._core.contrib.pygments.token import Punctuation, Text, Comment, Operator, Keyword, \
      Name, String
 
 __all__ = ['FoxProLexer']

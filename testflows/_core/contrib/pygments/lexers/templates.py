@@ -11,19 +11,19 @@
 
 import re
 
-from pygments.lexers.html import HtmlLexer, XmlLexer
-from pygments.lexers.javascript import JavascriptLexer, LassoLexer
-from pygments.lexers.css import CssLexer
-from pygments.lexers.php import PhpLexer
-from pygments.lexers.python import PythonLexer
-from pygments.lexers.perl import PerlLexer
-from pygments.lexers.jvm import JavaLexer, TeaLangLexer
-from pygments.lexers.data import YamlLexer
-from pygments.lexer import Lexer, DelegatingLexer, RegexLexer, bygroups, \
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer, XmlLexer
+from testflows._core.contrib.pygments.lexers.javascript import JavascriptLexer, LassoLexer
+from testflows._core.contrib.pygments.lexers.css import CssLexer
+from testflows._core.contrib.pygments.lexers.php import PhpLexer
+from testflows._core.contrib.pygments.lexers.python import PythonLexer
+from testflows._core.contrib.pygments.lexers.perl import PerlLexer
+from testflows._core.contrib.pygments.lexers.jvm import JavaLexer, TeaLangLexer
+from testflows._core.contrib.pygments.lexers.data import YamlLexer
+from testflows._core.contrib.pygments.lexer import Lexer, DelegatingLexer, RegexLexer, bygroups, \
     include, using, this, default, combined
-from pygments.token import Error, Punctuation, Whitespace, \
+from testflows._core.contrib.pygments.token import Error, Punctuation, Whitespace, \
     Text, Comment, Operator, Keyword, Name, String, Number, Other, Token
-from pygments.util import html_doctype_matches, looks_like_xml
+from testflows._core.contrib.pygments.util import html_doctype_matches, looks_like_xml
 
 __all__ = ['HtmlPhpLexer', 'XmlPhpLexer', 'CssPhpLexer',
            'JavascriptPhpLexer', 'ErbLexer', 'RhtmlLexer',
@@ -65,7 +65,7 @@ class ErbLexer(Lexer):
     _block_re = re.compile(r'(<%%|%%>|<%=|<%#|<%-|<%|-%>|%>|^%[^%].*?$)', re.M)
 
     def __init__(self, **options):
-        from pygments.lexers.ruby import RubyLexer
+        from testflows._core.contrib.pygments.lexers.ruby import RubyLexer
         self.ruby_lexer = RubyLexer(**options)
         Lexer.__init__(self, **options)
 

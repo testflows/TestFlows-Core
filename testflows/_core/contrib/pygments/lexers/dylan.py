@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, default
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, bygroups, do_insertions, default
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Generic, Literal
 
 __all__ = ['DylanLexer', 'DylanConsoleLexer', 'DylanLidLexer']

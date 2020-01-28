@@ -15,9 +15,9 @@ import types
 import fnmatch
 from os.path import basename
 
-from pygments.formatters._mapping import FORMATTERS
-from pygments.plugin import find_plugin_formatters
-from pygments.util import ClassNotFound, itervalues
+from testflows._core.contrib.pygments.formatters._mapping import FORMATTERS
+from testflows._core.contrib.pygments.plugin import find_plugin_formatters
+from testflows._core.contrib.pygments.util import ClassNotFound, itervalues
 
 __all__ = ['get_formatter_by_name', 'get_formatter_for_filename',
            'get_all_formatters', 'load_formatter_from_file'] + list(FORMATTERS)
@@ -140,7 +140,7 @@ class _automodule(types.ModuleType):
     def __getattr__(self, name):
         info = FORMATTERS.get(name)
         if info:
-            _load_formatters(info[0])
+            _load_formatters('testflows._core.contrib.' + info[0])
             cls = _formatter_cache[info[1]]
             setattr(self, name, cls)
             return cls

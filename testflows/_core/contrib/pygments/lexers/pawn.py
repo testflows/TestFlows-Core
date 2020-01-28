@@ -9,10 +9,10 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error
-from pygments.util import get_bool_opt
+from testflows._core.contrib.pygments.util import get_bool_opt
 
 __all__ = ['SourcePawnLexer', 'PawnLexer']
 
@@ -112,7 +112,7 @@ class SourcePawnLexer(RegexLexer):
 
         self._functions = set()
         if self.smhighlighting:
-            from pygments.lexers._sourcemod_builtins import FUNCTIONS
+            from testflows._core.contrib.pygments.lexers._sourcemod_builtins import FUNCTIONS
             self._functions.update(FUNCTIONS)
         RegexLexer.__init__(self, **options)
 

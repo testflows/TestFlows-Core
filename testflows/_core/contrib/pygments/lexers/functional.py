@@ -9,13 +9,13 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexers.lisp import SchemeLexer, CommonLispLexer, RacketLexer, \
+from testflows._core.contrib.pygments.lexers.lisp import SchemeLexer, CommonLispLexer, RacketLexer, \
     NewLispLexer, ShenLexer
-from pygments.lexers.haskell import HaskellLexer, LiterateHaskellLexer, \
+from testflows._core.contrib.pygments.lexers.haskell import HaskellLexer, LiterateHaskellLexer, \
     KokaLexer
-from pygments.lexers.theorem import CoqLexer
-from pygments.lexers.erlang import ErlangLexer, ErlangShellLexer, \
+from testflows._core.contrib.pygments.lexers.theorem import CoqLexer
+from testflows._core.contrib.pygments.lexers.erlang import ErlangLexer, ErlangShellLexer, \
     ElixirConsoleLexer, ElixirLexer
-from pygments.lexers.ml import SMLLexer, OcamlLexer, OpaLexer
+from testflows._core.contrib.pygments.lexers.ml import SMLLexer, OcamlLexer, OpaLexer
 
 __all__ = []

@@ -9,13 +9,13 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexers.python import NumPyLexer
-from pygments.lexers.matlab import MatlabLexer, MatlabSessionLexer, \
+from testflows._core.contrib.pygments.lexers.python import NumPyLexer
+from testflows._core.contrib.pygments.lexers.matlab import MatlabLexer, MatlabSessionLexer, \
     OctaveLexer, ScilabLexer
-from pygments.lexers.julia import JuliaLexer, JuliaConsoleLexer
-from pygments.lexers.r import RConsoleLexer, SLexer, RdLexer
-from pygments.lexers.modeling import BugsLexer, JagsLexer, StanLexer
-from pygments.lexers.idl import IDLLexer
-from pygments.lexers.algebra import MuPADLexer
+from testflows._core.contrib.pygments.lexers.julia import JuliaLexer, JuliaConsoleLexer
+from testflows._core.contrib.pygments.lexers.r import RConsoleLexer, SLexer, RdLexer
+from testflows._core.contrib.pygments.lexers.modeling import BugsLexer, JagsLexer, StanLexer
+from testflows._core.contrib.pygments.lexers.idl import IDLLexer
+from testflows._core.contrib.pygments.lexers.algebra import MuPADLexer
 
 __all__ = []

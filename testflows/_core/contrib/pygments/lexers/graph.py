@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, this
-from pygments.token import Keyword, Punctuation, Comment, Operator, Name,\
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, this
+from testflows._core.contrib.pygments.token import Keyword, Punctuation, Comment, Operator, Name,\
     String, Number, Whitespace
 
 

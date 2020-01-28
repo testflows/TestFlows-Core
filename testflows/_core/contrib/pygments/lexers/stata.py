@@ -10,11 +10,11 @@
 """
 
 import re
-from pygments.lexer import RegexLexer, include, words
-from pygments.token import Comment, Keyword, Name, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, words
+from testflows._core.contrib.pygments.token import Comment, Keyword, Name, Number, \
     String, Text, Operator
 
-from pygments.lexers._stata_builtins import builtins_base, builtins_functions
+from testflows._core.contrib.pygments.lexers._stata_builtins import builtins_base, builtins_functions
 
 __all__ = ['StataLexer']
 

@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, words, default
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, words, default
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Literal, Error
 
-from pygments.lexers.python import PythonLexer
+from testflows._core.contrib.pygments.lexers.python import PythonLexer
 
 __all__ = ['SchemeLexer', 'CommonLispLexer', 'HyLexer', 'RacketLexer',
            'NewLispLexer', 'EmacsLispLexer', 'ShenLexer', 'CPSALexer',
@@ -190,7 +190,7 @@ class CommonLispLexer(RegexLexer):
     symbol = r'(\|[^|]+\||(?:%s)(?:%s)*)' % (nonmacro, constituent)
 
     def __init__(self, **options):
-        from pygments.lexers._cl_builtins import BUILTIN_FUNCTIONS, \
+        from testflows._core.contrib.pygments.lexers._cl_builtins import BUILTIN_FUNCTIONS, \
             SPECIAL_FORMS, MACROS, LAMBDA_LIST_KEYWORDS, DECLARATIONS, \
             BUILTIN_TYPES, BUILTIN_CLASSES
         self.builtin_function = BUILTIN_FUNCTIONS

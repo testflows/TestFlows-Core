@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, words, bygroups
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, words, bygroups
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Error
 
-from pygments.lexers._openedge_builtins import OPENEDGEKEYWORDS
+from testflows._core.contrib.pygments.lexers._openedge_builtins import OPENEDGEKEYWORDS
 
 __all__ = ['CobolLexer', 'CobolFreeformatLexer', 'ABAPLexer', 'OpenEdgeLexer',
            'GoodDataCLLexer', 'MaqlLexer']

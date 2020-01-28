@@ -20,8 +20,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using
-from pygments.token import Text, Comment, Name, String, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using
+from testflows._core.contrib.pygments.token import Text, Comment, Name, String, Number, \
     Operator, Punctuation
 
 __all__ = ['TypoScriptLexer', 'TypoScriptCssDataLexer', 'TypoScriptHtmlDataLexer']

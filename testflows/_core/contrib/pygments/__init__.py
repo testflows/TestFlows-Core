@@ -27,7 +27,7 @@
 """
 import sys
 
-from pygments.util import StringIO, BytesIO
+from testflows._core.contrib.pygments.util import StringIO, BytesIO
 
 __version__ = '2.5.2'
 __docformat__ = 'restructuredtext'
@@ -86,5 +86,5 @@ def highlight(code, lexer, formatter, outfile=None):
 
 
 if __name__ == '__main__':  # pragma: no cover
-    from pygments.cmdline import main
+    from testflows._core.contrib.pygments.cmdline import main
     sys.exit(main(sys.argv))

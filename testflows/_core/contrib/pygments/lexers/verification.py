@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, words
-from pygments.token import Comment, Operator, Keyword, Name, Number, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, words
+from testflows._core.contrib.pygments.token import Comment, Operator, Keyword, Name, Number, \
     Punctuation, Whitespace
 
 __all__ = ['BoogieLexer', 'SilverLexer']

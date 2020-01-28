@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups
-from pygments.token import Text, Comment, Operator, Name, String, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Name, String, \
     Number, Keyword
 
 __all__ = ['TeraTermLexer']

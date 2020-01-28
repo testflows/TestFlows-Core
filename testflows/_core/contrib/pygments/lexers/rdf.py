@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, default
-from pygments.token import Keyword, Punctuation, String, Number, Operator, Generic, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, default
+from testflows._core.contrib.pygments.token import Keyword, Punctuation, String, Number, Operator, Generic, \
     Whitespace, Name, Literal, Comment, Text
 
 __all__ = ['SparqlLexer', 'TurtleLexer', 'ShExCLexer']

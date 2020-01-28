@@ -10,9 +10,9 @@
 """
 
 import re
-from pygments.lexer import RegexLexer, include, words
-from pygments.token import Keyword, Text, Comment, Name
-from pygments.token import String, Number, Punctuation, Operator
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, words
+from testflows._core.contrib.pygments.token import Keyword, Text, Comment, Name
+from testflows._core.contrib.pygments.token import String, Number, Punctuation, Operator
 
 __all__ = ['EzhilLexer']
 

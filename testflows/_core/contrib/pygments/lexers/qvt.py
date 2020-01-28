@@ -9,9 +9,9 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, bygroups, include, combined, default, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, include, combined, default, \
     words
-from pygments.token import Text, Comment, Operator, Keyword, Punctuation, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Punctuation, \
     Name, String, Number
 
 __all__ = ['QVToLexer']

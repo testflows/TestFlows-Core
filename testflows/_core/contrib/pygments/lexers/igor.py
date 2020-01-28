@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, words
-from pygments.token import Text, Comment, Keyword, Name, String
+from testflows._core.contrib.pygments.lexer import RegexLexer, words
+from testflows._core.contrib.pygments.token import Text, Comment, Keyword, Name, String
 
 __all__ = ['IgorLexer']
 

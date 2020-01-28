@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.token import Token, STANDARD_TYPES
-from pygments.util import add_metaclass
+from testflows._core.contrib.pygments.token import Token, STANDARD_TYPES
+from testflows._core.contrib.pygments.util import add_metaclass
 
 # Default mapping of ansixxx to RGB colors.
 _ansimap = {

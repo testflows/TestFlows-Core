@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, bygroups
-from pygments.token import Name, Literal, String, Text, Punctuation
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups
+from testflows._core.contrib.pygments.token import Name, Literal, String, Text, Punctuation
 
 __all__ = ["SmartGameFormatLexer"]
 

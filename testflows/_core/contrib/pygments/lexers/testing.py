@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups
-from pygments.token import Comment, Keyword, Name, String, Number, Generic, Text
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups
+from testflows._core.contrib.pygments.token import Comment, Keyword, Name, String, Number, Generic, Text
 
 __all__ = ['GherkinLexer', 'TAPLexer']
 

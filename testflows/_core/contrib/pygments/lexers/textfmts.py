@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexers import guess_lexer, get_lexer_by_name
-from pygments.lexer import RegexLexer, bygroups, default, do_insertions
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexers import guess_lexer, get_lexer_by_name
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, default, do_insertions
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Generic, Literal, Punctuation
-from pygments.util import ClassNotFound
+from testflows._core.contrib.pygments.util import ClassNotFound
 
 __all__ = ['IrcLogsLexer', 'TodotxtLexer', 'HttpLexer', 'GettextLexer',
            'NotmuchLexer']
@@ -152,7 +152,7 @@ class HttpLexer(RegexLexer):
         content = match.group()
         offset = match.start()
         if content_type:
-            from pygments.lexers import get_lexer_for_mimetype
+            from testflows._core.contrib.pygments.lexers import get_lexer_for_mimetype
             possible_lexer_mimetypes = [content_type]
             if '+' in content_type:
                 # application/calendar+xml can be treated as application/xml

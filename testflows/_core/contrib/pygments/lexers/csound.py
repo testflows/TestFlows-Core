@@ -11,13 +11,13 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, default, include, using, words
-from pygments.token import Comment, Error, Keyword, Name, Number, Operator, Punctuation, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, default, include, using, words
+from testflows._core.contrib.pygments.token import Comment, Error, Keyword, Name, Number, Operator, Punctuation, \
     String, Text, Whitespace
-from pygments.lexers._csound_builtins import OPCODES, DEPRECATED_OPCODES
-from pygments.lexers.html import HtmlLexer
-from pygments.lexers.python import PythonLexer
-from pygments.lexers.scripting import LuaLexer
+from testflows._core.contrib.pygments.lexers._csound_builtins import OPCODES, DEPRECATED_OPCODES
+from testflows._core.contrib.pygments.lexers.html import HtmlLexer
+from testflows._core.contrib.pygments.lexers.python import PythonLexer
+from testflows._core.contrib.pygments.lexers.scripting import LuaLexer
 
 __all__ = ['CsoundScoreLexer', 'CsoundOrchestraLexer', 'CsoundDocumentLexer']
 

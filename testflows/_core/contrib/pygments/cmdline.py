@@ -16,19 +16,19 @@ import sys
 import getopt
 from textwrap import dedent
 
-from pygments import __version__, highlight
-from pygments.util import ClassNotFound, OptionError, docstring_headline, \
+from testflows._core.contrib.pygments import __version__, highlight
+from testflows._core.contrib.pygments.util import ClassNotFound, OptionError, docstring_headline, \
     guess_decode, guess_decode_from_terminal, terminal_encoding
-from pygments.lexers import get_all_lexers, get_lexer_by_name, guess_lexer, \
+from testflows._core.contrib.pygments.lexers import get_all_lexers, get_lexer_by_name, guess_lexer, \
     load_lexer_from_file, get_lexer_for_filename, find_lexer_class_for_filename
-from pygments.lexers.special import TextLexer
-from pygments.formatters.latex import LatexEmbeddedLexer, LatexFormatter
-from pygments.formatters import get_all_formatters, get_formatter_by_name, \
+from testflows._core.contrib.pygments.lexers.special import TextLexer
+from testflows._core.contrib.pygments.formatters.latex import LatexEmbeddedLexer, LatexFormatter
+from testflows._core.contrib.pygments.formatters import get_all_formatters, get_formatter_by_name, \
     load_formatter_from_file, get_formatter_for_filename, find_formatter_class
-from pygments.formatters.terminal import TerminalFormatter
-from pygments.formatters.terminal256 import Terminal256Formatter
-from pygments.filters import get_all_filters, find_filter_class
-from pygments.styles import get_all_styles, get_style_by_name
+from testflows._core.contrib.pygments.formatters.terminal import TerminalFormatter
+from testflows._core.contrib.pygments.formatters.terminal256 import Terminal256Formatter
+from testflows._core.contrib.pygments.filters import get_all_filters, find_filter_class
+from testflows._core.contrib.pygments.styles import get_all_styles, get_style_by_name
 
 
 USAGE = """\
@@ -486,7 +486,7 @@ def main_inner(popts, args, usage):
        fmter.name in ('Terminal', 'Terminal256'):  # pragma: no cover
         # unfortunately colorama doesn't support binary streams on Py3
         if sys.version_info > (3,):
-            from pygments.util import UnclosingTextIOWrapper
+            from testflows._core.contrib.pygments.util import UnclosingTextIOWrapper
             outfile = UnclosingTextIOWrapper(outfile, encoding=fmter.encoding)
             fmter.encoding = None
         try:

@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import RegexLexer, bygroups, default, words
-from pygments.token import Text, Comment, Keyword, Name, String, Number
+from testflows._core.contrib.pygments.lexer import RegexLexer, bygroups, default, words
+from testflows._core.contrib.pygments.token import Text, Comment, Keyword, Name, String, Number
 
 __all__ = ['FactorLexer']
 

@@ -11,8 +11,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.style import Style
-from pygments.token import (Comment, Error, Generic, Name, Number, Operator,
+from testflows._core.contrib.pygments.style import Style
+from testflows._core.contrib.pygments.token import (Comment, Error, Generic, Name, Number, Operator,
                             String, Text, Whitespace, Keyword)
 
 BLUE_LIGHT = '#0080ff'

@@ -10,8 +10,8 @@
 """
 
 import re
-from pygments.lexer import RegexLexer, include, words
-from pygments.token import Comment, Keyword, Name, Number, String, Text, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, words
+from testflows._core.contrib.pygments.token import Comment, Keyword, Name, Number, String, Text, \
     Other, Generic
 
 __all__ = ['SASLexer']

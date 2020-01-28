@@ -11,9 +11,9 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, \
     using, this
-from pygments.token import Text, Comment, Keyword, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Keyword, String, \
     Generic
 
 

@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import RegexLexer, include, bygroups
-from pygments.token import Generic, Comment, String, Text, Keyword, Name, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups
+from testflows._core.contrib.pygments.token import Generic, Comment, String, Text, Keyword, Name, \
     Punctuation, Number
 
 __all__ = ['VCTreeStatusLexer', 'PyPyLogLexer']

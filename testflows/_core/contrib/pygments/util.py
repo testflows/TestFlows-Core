@@ -126,7 +126,7 @@ def shebang_matches(text, regex):
     r"""Check if the given regular expression matches the last part of the
     shebang if one exists.
 
-        >>> from pygments.util import shebang_matches
+        >>> from testflows._core.contrib.pygments.util import shebang_matches
         >>> shebang_matches('#!/usr/bin/env python', r'python(2\.\d)?')
         True
         >>> shebang_matches('#!/usr/bin/python2.4', r'python(2\.\d)?')

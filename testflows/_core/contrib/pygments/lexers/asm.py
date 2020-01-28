@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, using, words, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, using, words, \
     DelegatingLexer
-from pygments.lexers.c_cpp import CppLexer, CLexer
-from pygments.lexers.d import DLexer
-from pygments.token import Text, Name, Number, String, Comment, Punctuation, \
+from testflows._core.contrib.pygments.lexers.c_cpp import CppLexer, CLexer
+from testflows._core.contrib.pygments.lexers.d import DLexer
+from testflows._core.contrib.pygments.token import Text, Name, Number, String, Comment, Punctuation, \
     Other, Keyword, Operator
 
 __all__ = ['GasLexer', 'ObjdumpLexer', 'DObjdumpLexer', 'CppObjdumpLexer',

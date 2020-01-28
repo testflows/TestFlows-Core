@@ -12,11 +12,11 @@
 import re
 import copy
 
-from pygments.lexer import ExtendedRegexLexer, RegexLexer, include, bygroups, \
+from testflows._core.contrib.pygments.lexer import ExtendedRegexLexer, RegexLexer, include, bygroups, \
     default, words, inherit
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation
-from pygments.util import iteritems
+from testflows._core.contrib.pygments.util import iteritems
 
 __all__ = ['CssLexer', 'SassLexer', 'ScssLexer', 'LessCssLexer']
 

@@ -11,8 +11,8 @@
 
 import re
 
-from pygments.lexer import Lexer, RegexLexer, include, do_insertions, bygroups
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.lexer import Lexer, RegexLexer, include, do_insertions, bygroups
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Generic
 
 __all__ = ['RConsoleLexer', 'SLexer', 'RdLexer']

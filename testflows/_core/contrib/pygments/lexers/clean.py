@@ -9,8 +9,8 @@
     :license: BSD, see LICENSE for details.
 """
 
-from pygments.lexer import ExtendedRegexLexer, words, include, bygroups
-from pygments.token import Comment, Error, Keyword, Literal, Name, Number, \
+from testflows._core.contrib.pygments.lexer import ExtendedRegexLexer, words, include, bygroups
+from testflows._core.contrib.pygments.token import Comment, Error, Keyword, Literal, Name, Number, \
     Operator, Punctuation, String, Whitespace
 
 __all__ = ['CleanLexer']

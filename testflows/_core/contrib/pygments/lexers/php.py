@@ -11,11 +11,11 @@
 
 import re
 
-from pygments.lexer import RegexLexer, include, bygroups, default, using, \
+from testflows._core.contrib.pygments.lexer import RegexLexer, include, bygroups, default, using, \
     this, words
-from pygments.token import Text, Comment, Operator, Keyword, Name, String, \
+from testflows._core.contrib.pygments.token import Text, Comment, Operator, Keyword, Name, String, \
     Number, Punctuation, Other
-from pygments.util import get_bool_opt, get_list_opt, iteritems, \
+from testflows._core.contrib.pygments.util import get_bool_opt, get_list_opt, iteritems, \
     shebang_matches
 
 __all__ = ['ZephirLexer', 'PhpLexer']
@@ -110,7 +110,7 @@ class PhpLexer(RegexLexer):
 
         .. sourcecode:: pycon
 
-            >>> from pygments.lexers._php_builtins import MODULES
+            >>> from testflows._core.contrib.pygments.lexers._php_builtins import MODULES
             >>> MODULES.keys()
             ['PHP Options/Info', 'Zip', 'dba', ...]
 
@@ -243,7 +243,7 @@ class PhpLexer(RegexLexer):
         # collect activated functions in a set
         self._functions = set()
         if self.funcnamehighlighting:
-            from pygments.lexers._php_builtins import MODULES
+            from testflows._core.contrib.pygments.lexers._php_builtins import MODULES
             for key, value in iteritems(MODULES):
                 if key not in self.disabledmodules:
                     self._functions.update(value)
