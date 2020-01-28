@@ -35,9 +35,10 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .hidden { display: none !important; }
 .show {display: inherit !important; }
 .requirement, .test { cursor: pointer; user-select: none; }
+.test.active { border: 1px solid #dedede; border-radius: 15px; background: #fefee7; }
 .requirement-inline.active { background: #ffffe7; }
 .requirement-description, .test-procedure { border: 1px solid #dedede; padding: 15px; background: #fdfdfd; margin-bottom: 1em; overflow-x: auto; }
-.test-procedure { height: 70vh; background: #fff4fc; border-radius: 15px; }
+.test-procedure { height: 70vh; background: #fff4fc; }
 .no-tests { color: #ffa400; vertical-align: middle; margin-left: 0.5em !important; border: 1px dashed #ffa400; }
 /* Result color classes */
 .time { color: #666666; }
