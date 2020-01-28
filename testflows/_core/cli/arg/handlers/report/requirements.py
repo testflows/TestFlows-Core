@@ -258,6 +258,9 @@ class Handler(HandlerBase):
 
         if test["test"].p_type > TestType.Test:
             for t in tests[idx + 1:]:
+                flags = Flags(t["test"].p_flags)
+                if flags & SKIP and settings.show_skipped is False:
+                    continue
                 if t["test"].started > ended:
                     break
                 if t["test"].p_type >= TestType.Test \
@@ -266,6 +269,9 @@ class Handler(HandlerBase):
                     messages.append(format_result(t["result"], t["result"].name))
         else:
             for t in tests[idx + 1:]:
+                flags = Flags(t["test"].p_flags)
+                if flags & SKIP and settings.show_skipped is False:
+                    continue
                 if t["test"].started > ended:
                     break
                 if t["test"].p_id.startswith(test["test"].p_id):
@@ -280,6 +286,9 @@ class Handler(HandlerBase):
     def add_tests(self, requirements, results):
         tests = list(results["tests"].values())
         for i, test in enumerate(tests):
+            flags = Flags(test["test"].p_flags)
+            if flags & SKIP and settings.show_skipped is False:
+                continue
             result = test["result"]
             if result.p_type < TestType.Test:
                 continue
@@ -301,7 +310,7 @@ class Handler(HandlerBase):
                 satisfied = True
                 for test in tests:
                     result = test["result"]
-                    if result.name != "OK" and not result.name.startswith("X"):
+                    if result.name != "OK":
                         satisfied = False
                 if satisfied:
                     counts.satisfied += 1
