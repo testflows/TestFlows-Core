@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from testflows._core.name import parentname
 from testflows._core.transform.log import message
 from testflows._core.transform.log.report.totals import Counts, all_counts
 from testflows._core.transform.log.report.totals import format_test as process_test_counts
@@ -19,6 +20,13 @@ from testflows._core.transform.log.report.totals import format_result as process
 def process_test(msg, results):
     results["tests"][msg.name] = {"test": msg}
     process_test_counts(msg, results["counts"])
+
+    # add test to the tests map
+    parent = parentname(msg.p_id)
+    if results["tests_by_parent"].get(parent) is None:
+        results["tests_by_parent"][parent] = []
+    results["tests_by_parent"][parent].append(msg)
+    results["tests_by_id"][msg.p_id] = msg
 
 def process_result(msg, results):
     results["tests"][msg.test]["result"] = msg
@@ -47,6 +55,12 @@ def transform(results, stop_event):
     """
     if results.get("tests") is None:
         results["tests"] = {}
+
+    if results.get("tests_by_parent") is None:
+        results["tests_by_parent"] = {}
+
+    if results.get("tests_by_id") is None:
+        results["tests_by_id"] = {}
 
     if results.get("counts") is None:
         results["counts"] = all_counts()

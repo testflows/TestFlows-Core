@@ -24,7 +24,7 @@ from testflows._core.cli.colors import color, cursor_up
 
 indent = " " * 2
 #: map of tests by name
-tests_by_name = {}
+tests_by_id = {}
 #: map of tests by parent
 tests_by_parent = {}
 
@@ -110,19 +110,19 @@ def format_tickets(msg, indent):
         out.append(color(f"{indent}{' ' * 4}{ticket.name}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
-def and_keyword(msg, parent_name, keyword, subtype):
+def and_keyword(msg, parent_id, keyword, subtype):
     """Handle processing of Given, When, Then, But, By and Finally
     keywords and convert them to And when necessary.
     """
-    prev = tests_by_parent[parent_name][-2] if len(tests_by_parent.get(parent_name, [])) > 1 else None
+    prev = tests_by_parent[parent_id][-2] if len(tests_by_parent.get(parent_id, [])) > 1 else None
     if prev and prev.p_subtype == subtype and tests_by_parent.get(prev.p_id) is None:
         keyword = "And"
-    parent = tests_by_name.get(parent_name)
-    if parent and parent.p_subtype == subtype and len(tests_by_parent.get(parent_name, [])) == 1:
+    parent = tests_by_id.get(parent_id)
+    if parent and parent.p_subtype == subtype and len(tests_by_parent.get(parent_id, [])) == 1:
         keyword = "And"
     return keyword
 
-def format_test(msg, keyword):
+def format_test(msg, keyword, tests_by_parent, tests_by_id):
     flags = Flags(msg.p_flags)
     if flags & SKIP and settings.show_skipped is False:
         return
@@ -132,7 +132,7 @@ def format_test(msg, keyword):
     if tests_by_parent.get(parent) is None:
         tests_by_parent[parent] = []
     tests_by_parent[parent].append(msg)
-    tests_by_name[msg.p_id] = msg
+    tests_by_id[msg.p_id] = msg
 
     if msg.p_type == TestType.Module:
         keyword += "Module"
@@ -199,7 +199,7 @@ def format_result(msg, result):
 
 formatters = {
     message.RawInput: (format_input, f""),
-    message.RawTest: (format_test, f""),
+    message.RawTest: (format_test, f"", tests_by_parent, tests_by_id),
     message.RawResultOK: (format_result, f"OK"),
     message.RawResultFail: (format_result, f"Fail"),
     message.RawResultError: (format_result, f"Error"),
