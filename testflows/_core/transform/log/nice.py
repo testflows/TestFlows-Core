@@ -59,13 +59,17 @@ def format_input(msg, keyword):
     out += color("\u270b " + msg.message, "yellow", attrs=["bold"]) + cursor_up() + "\n"
     return out
 
-def format_description(msg, indent):
-    first, rest = (msg.description.description.rstrip() + "\n").split("\n", 1)
+def format_multiline(text, indent):
+    first, rest = (text.rstrip() + "\n").split("\n", 1)
     first = first.strip()
     if first:
         first += "\n"
-    desc = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
-    desc = textwrap.indent(desc, indent + "  ")
+    out = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
+    out = textwrap.indent(out, indent + "  ")
+    return out
+
+def format_description(msg, indent):
+    desc = format_multiline(msg.description.description, indent)
     desc = color(desc, "white", attrs=["dim"])
     return desc + "\n"
 
@@ -201,11 +205,13 @@ def format_result(msg, prefix, result):
         return
     _result = color_result(prefix, result)
     _test = color_other(basename(msg.test))
+    _indent = indent * (msg.p_id.count('/') - 1)
 
     return (color_other(f"{strftimedelta(msg.p_time):>20}") +
-        f"{'':3}{indent * (msg.p_id.count('/') - 1)}{_result} "
-        f"{_test}{color_other(', ' + msg.test)}{color_other((', ' + msg.message) if msg.message else '')}"
-        f"{color_other((', ' + msg.reason) if msg.reason else '')}\n")
+        f"{'':3}{_indent}{_result} "
+        f"{_test}{color_other(', ' + msg.test)}"
+        f"{(color_other(', ') + color(format_multiline(msg.message, _indent + ' ' * 26).lstrip(), 'yellow', attrs=['bold'])) if msg.message else ''}"
+        f"{(color_other(', ') + color(msg.reason, 'blue', attrs=['bold'])) if msg.reason else ''}\n")
 
 def format_other(msg, keyword):
     if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
