@@ -19,7 +19,7 @@ from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.transform.log import message
 from testflows._core.objects import ExamplesTable
-from testflows._core.name import split, parentname
+from testflows._core.name import split, parentname, basename
 from testflows._core.cli.colors import color, cursor_up
 
 indent = " " * 2
@@ -27,6 +27,9 @@ indent = " " * 2
 tests_by_id = {}
 #: map of tests by parent
 tests_by_parent = {}
+
+def color_other(other):
+    return color(other, "white", attrs=["dim"])
 
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold"])
@@ -55,13 +58,17 @@ def format_input(msg, keyword):
     out += color("\u270b " + msg.message, "yellow", attrs=["bold"]) + cursor_up() + "\n"
     return out
 
-def format_description(msg, indent):
-    first, rest = (msg.description.description.rstrip() + "\n").split("\n", 1)
+def format_multiline(text, indent):
+    first, rest = (text.rstrip() + "\n").split("\n", 1)
     first = first.strip()
     if first:
         first += "\n"
-    desc = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
-    desc = textwrap.indent(desc, indent + "  ")
+    out = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
+    out = textwrap.indent(out, indent + "  ")
+    return out
+
+def format_description(msg, indent):
+    desc = format_multiline(msg.description.description, indent)
     desc = color(desc, "white", attrs=["dim"])
     return desc + "\n"
 
@@ -195,7 +202,22 @@ def format_result(msg, result):
         return
 
     _result = color_result(result)
-    return f"{indent * (msg.p_id.count('/') - 1)}{_result}\n"
+    _test = color_test_name(basename(msg.test))
+
+    _indent = indent * (msg.p_id.count('/') - 1)
+    out = f"{_indent}{_result}"
+
+    if msg.name in ("Fail", "Error", "Null"):
+        out += f" {_test}"
+        if msg.message:
+            out += color_test_name(",")
+            out += f" {color(format_multiline(msg.message, _indent).lstrip(), 'yellow', attrs=['bold'])}"
+    elif msg.name.startswith("X"):
+        out += f" {_test}"
+        if msg.reason:
+            out += color_test_name(",")
+            out += f" {color(msg.reason, 'blue', attrs=['bold'])}"
+    return out + "\n"
 
 formatters = {
     message.RawInput: (format_input, f""),
