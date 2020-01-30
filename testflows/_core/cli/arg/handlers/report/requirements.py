@@ -15,6 +15,7 @@ import os
 import sys
 import json
 import time
+import base64
 import threading
 import importlib.util
 
@@ -30,6 +31,7 @@ from testflows._core.transform.log.message import message_map
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.transform.log.short import format_test, format_result
@@ -39,10 +41,14 @@ from testflows._core.name import sep
 from testflows._core.transform.log.report.totals import Counts
 from testflows._core.objects import Requirement
 
+logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
 testflows_em = testflows.replace("[", "").replace("]", "")
 
 template = f"""
+<section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
+
+---
 # Requirements Coverage Report
 %(body)s
   
@@ -93,6 +99,24 @@ class Formatter:
         "unsatisfied": "color-fail",
         "untested": "color-error"
     }
+
+    def format_logo(self, data):
+        if not data["company"].get("logo"):
+            return ""
+        data = base64.b64encode(data["company"]["logo"]).decode("utf-8")
+        return '\n<p>' + logo % {"data": data} + "</p>\n"
+
+    def format_confidential(self, data):
+        if not data["company"].get("confidential"):
+            return ""
+        return f'\n<p class="confidential">Document status - Confidential</p>\n'
+
+    def format_copyright(self, data):
+        if not data["company"].get("name"):
+            return ""
+        return (f'\n<p class="copyright">\n'
+            f'{copyright(data["company"]["name"])}\n'
+            "</p>\n")
 
     def format_metadata(self, data):
         metadata = data["metadata"]
@@ -173,7 +197,12 @@ class Formatter:
         body += self.format_summary(data)
         body += self.format_statistics(data)
         body += self.format_table(data)
-        return template.strip() % {"body": body, "script": script}
+        return template.strip() % {
+            "logo": self.format_logo(data),
+            "confidential": self.format_confidential(data),
+            "copyright": self.format_copyright(data),
+            "body": body,
+            "script": script}
 
 class Counts(object):
     def __init__(self, name, units, satisfied, unsatisfied, untested):
@@ -207,6 +236,10 @@ class Handler(HandlerBase):
             type=str, default="job.url")
         parser.add_argument("--format", metavar="type", type=str,
             help="output format, default: md (Markdown)", choices=["md"], default="md")
+        parser.add_argument("--copyright", metavar="name", help="add copyright notice", type=str)
+        parser.add_argument("--confidential", help="mark as confidential", action="store_true")
+        parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
+                help='use logo image (.png)')
 
         parser.set_defaults(func=cls())
 
@@ -320,25 +353,30 @@ class Handler(HandlerBase):
                     req["status"] = "unsatisfied"
         return counts
 
-    def data(self, source, results, input_link=None):
+    def company(self, args):
+        d = {}
+        if args.copyright:
+            d["name"] = args.copyright
+        if args.confidential:
+            d["confidential"] = True
+        if args.logo:
+            d["logo"] = args.logo.read()
+        return d
+
+    def data(self, source, results, args):
         d = dict()
         requirements = self.requirements(source)
         d["requirements"] = self.add_tests(requirements, results)
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(d["requirements"])
+        d["company"] = self.company(args)
         counts = d["counts"]
         return d
 
     def generate(self, formatter, results, args):
         output = args.output
         output.write(
-            formatter.format(
-                self.data(
-                    args.requirements,
-                    results,
-                    input_link=args.input_link
-                )
-            )
+            formatter.format(self.data(args.requirements, results, args))
         )
         output.write("\n")
 

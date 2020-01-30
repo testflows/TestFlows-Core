@@ -12,8 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-
-from datetime import datetime
+import base64
 
 import testflows.settings as settings
 import testflows._core.cli.arg.type as argtype
@@ -24,13 +23,18 @@ from testflows._core.transform.log.message import message_map
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 
+logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
 testflows_em = testflows.replace("[", "").replace("]", "")
 template = f"""
+<section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
+
+---
 # %(name)s Test Run Report
 %(body)s
   
@@ -54,8 +58,24 @@ class Handler(HandlerBase):
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
         parser.add_argument("-a", "--artifacts", metavar="link", type=str, help='link to the artifacts')
+        parser.add_argument("--copyright", metavar="name", help="add copyright notice", type=str)
+        parser.add_argument("--confidential", help="mark as confidential", action="store_true")
+        parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
+                help='use logo image (.png)')
 
         parser.set_defaults(func=cls())
+
+    def logo_section(self, data):
+        data = base64.b64encode(data.read()).decode("utf-8")
+        return '\n<p>' + logo % {"data": data} + "</p>\n"
+
+    def confidential_section(self):
+        return f'\n<p class="confidential">Document status - Confidential</p>\n'
+
+    def copyright_section(self, name):
+        return (f'\n<p class="copyright">\n'
+            f"{copyright(name)}\n"
+            "</p>\n")
 
     def version_section(self, results):
         duration = ""
@@ -276,7 +296,16 @@ class Handler(HandlerBase):
             name = list(results["tests"].values())[0]["test"].name.lstrip("/").title()
 
         body = ""
+        copyright = ""
+        confidential = ""
+        logo = ""
         body += self.version_section(results)
+        if args.logo:
+            logo += self.logo_section(args.logo)
+        if args.confidential:
+            confidential += self.confidential_section()
+        if args.copyright:
+            copyright += self.copyright_section(args.copyright)
         body += self.attributes_and_tags_section(results)
         if artifacts:
             body += self.artifacts_section(artifacts)
@@ -285,7 +314,12 @@ class Handler(HandlerBase):
         body += self.fails_section(results)
         body += self.xfails_section(results)
         body += self.results_section(results)
-        output.write(template.strip() % {"name": name, "body": body})
+        output.write(template.strip() % {
+            "name": name,
+            "body": body,
+            "logo": logo,
+            "copyright": copyright,
+            "confidential": confidential})
         output.write("\n")
 
     def handle(self, args):

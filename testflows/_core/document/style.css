@@ -32,6 +32,11 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
     margin-top: 5px;
     background: #f8fcff;
 }
+hr { border-color: #3fdc84; }
+.clearfix { overflow: auto; }
+.logo { max-width: 10em; float: right; }
+.copyright { color: grey; font-size: 12px; }
+.confidential { color: darkorange; }
 .hidden { display: none !important; }
 .show {display: inherit !important; }
 .requirement, .test { cursor: pointer; user-select: none; }
