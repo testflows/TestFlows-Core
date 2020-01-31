@@ -71,7 +71,7 @@ window.onload = function(){
     document.querySelectorAll('.requirement').forEach(
         function(item){
             item.addEventListener('click', function(){
-                item.nextSibling.classList.toggle('show');
+                item.nextElementSibling.classList.toggle('show');
                 item.children[0].classList.toggle('active');    
             });
         });
@@ -80,7 +80,7 @@ window.onload = function(){
     document.querySelectorAll('.test').forEach(
         function(item){
             item.addEventListener('click', function(){
-                item.nextSibling.classList.toggle('show');
+                item.nextElementSibling.classList.toggle('show');
                 item.classList.toggle('active');    
             });
         }); 
@@ -177,18 +177,18 @@ class Formatter:
         reqs = data["requirements"]
         s = "\n\n## Coverage\n"
         for r in reqs.values():
-            s += f'\n  <div class="requirement"><span class="requirement-inline"><i class="utf-icon {self.icon_colors[r["status"]]}">{self.utf_icons[r["status"]]}</i>{r["requirement"].name}</span></div>'
+            s += f'\n<section class="requirement"><span class="requirement-inline"><i class="utf-icon {self.icon_colors[r["status"]]}">{self.utf_icons[r["status"]]}</i>{r["requirement"].name}</span></section>'
             description = r["requirement"].description.replace("\\n","\n")
             if description:
-                s += f'<div markdown="1" class="requirement-description hidden">\n{description}\n</div>'
+                s += f'\n<div markdown="1" class="requirement-description hidden">\n{description}\n</div>'
             for test in r["tests"]:
                 result = test["result"]
                 cls = result.name.lower()
-                s += f'<div class="test"><span class="result result-inline result-{cls}">{result.name}</span><span class="time time-inline">{strftimedelta(result.p_time)}</span>{test["test"].name}</div>'
-                s += f'<div class="test-procedure hidden">\n```testflows\n{test["messages"]}\n```\n</div>'
+                s += f'\n<div class="test"><span class="result result-inline result-{cls}">{result.name}</span><span class="time time-inline">{strftimedelta(result.p_time)}</span>{test["test"].name}</div>'
+                s += f'\n<div class="test-procedure hidden">\n```testflows\n{test["messages"]}\n```\n</div>'
             if not r["tests"]:
-                s += f'<div class="no-tests"><span class="result-inline">\u270E</span>No tests</div>'
-            s += "\n  "
+                s += f'\n<div class="no-tests">\n<span class="result-inline">\u270E</span>\nNo tests\n</div>'
+            s += "\n"
         return s + "\n"
 
     def format(self, data):

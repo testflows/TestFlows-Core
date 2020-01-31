@@ -83,9 +83,9 @@ class Formatter:
             f'{testflows} {metadata["version"]}||\n'
         )
         if metadata.get("order-by"):
-            s += f'||**Order By**||{metadata["order-by"]}||\n'
+            s += f'||**Order By**||{metadata["order-by"].capitalize()}||\n'
         if metadata.get("sort"):
-            s += f'||**Sort**||{"ascending" if metadata["sort"] == "asc" else "descending"}||\n'
+            s += f'||**Sort**||{"Ascending" if metadata["sort"] == "asc" else "Descending"}||\n'
         if metadata.get("filter"):
             s += f'||**Filter**||{metadata["filter"]}||\n'
         return s + "\n"
