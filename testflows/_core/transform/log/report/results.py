@@ -17,8 +17,18 @@ from testflows._core.transform.log.report.totals import Counts, all_counts
 from testflows._core.transform.log.report.totals import format_test as process_test_counts
 from testflows._core.transform.log.report.totals import format_result as process_result_counts
 
-def process_test(msg, results):
-    results["tests"][msg.p_id] = {"test": msg}
+def process_test(msg, results, names):
+    def add_name(name, names, p_id, duplicate=0):
+        _name = name
+        if duplicate:
+            _name = f'{name} ~{duplicate}'
+        if _name in names:
+            return add_name(name, names, duplicate + 1)
+        names[p_id] = _name
+        return
+
+    add_name(msg.name, names, msg.p_id)
+    results["tests"][names[msg.p_id]] = {"test": msg}
     process_test_counts(msg, results["counts"])
 
     # add test to the tests map
@@ -28,11 +38,11 @@ def process_test(msg, results):
     results["tests_by_parent"][parent].append(msg)
     results["tests_by_id"][msg.p_id] = msg
 
-def process_result(msg, results):
-    results["tests"][msg.p_id]["result"] = msg
+def process_result(msg, results, names):
+    results["tests"][names[msg.p_id]]["result"] = msg
     process_result_counts(msg, results["counts"])
 
-def process_version(msg, results):
+def process_version(msg, results, names):
     results["version"] = msg.version
     results["started"] = msg.p_time
 
@@ -53,6 +63,8 @@ processors = {
 def transform(results, stop_event):
     """Transform parsed log line into a short format.
     """
+    names = {}
+
     if results.get("tests") is None:
         results["tests"] = {}
 
@@ -70,6 +82,6 @@ def transform(results, stop_event):
         if line is not None:
             processor = processors.get(type(line), None)
             if processor:
-                processor(line, results)
+                processor(line, results, names)
 
         line = yield line
