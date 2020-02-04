@@ -322,10 +322,10 @@ class Handler(HandlerBase):
     def tests(self, results):
         tests = []
         for r in results.values():
-            for test in r["tests"].values():
+            for uname, test in r["tests"].items():
                 if test["test"].p_type < TestType.Test:
                     continue
-                tests.append(test["test"].name)
+                tests.append(uname)
         return sorted(list(set(tests)))
 
     def table(self, tests, results, ref_link=None):
@@ -372,6 +372,8 @@ class Handler(HandlerBase):
 
     def data(self, results, args):
         d = dict()
+        for r in results.values():
+            print(r["tests"].keys())
         results = self.sort(results, args.order_by, args.sort)
         d["tests"] = self.filter(self.tests(results), args.only)
         d["table"] = self.table(d["tests"], results, args.log_link)

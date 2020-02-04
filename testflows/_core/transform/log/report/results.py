@@ -17,7 +17,7 @@ from testflows._core.transform.log.report.totals import Counts, all_counts
 from testflows._core.transform.log.report.totals import format_test as process_test_counts
 from testflows._core.transform.log.report.totals import format_result as process_result_counts
 
-def process_test(msg, results, names, unique=set()):
+def process_test(msg, results, names, unique):
     def add_name(name, names, unique, p_id, duplicate=0):
         _name = name
         if duplicate:
@@ -39,11 +39,11 @@ def process_test(msg, results, names, unique=set()):
     results["tests_by_parent"][parent].append(msg)
     results["tests_by_id"][msg.p_id] = msg
 
-def process_result(msg, results, names):
+def process_result(msg, results, names, unique):
     results["tests"][names[msg.p_id]]["result"] = msg
     process_result_counts(msg, results["counts"])
 
-def process_version(msg, results, names):
+def process_version(msg, results, names, unique):
     results["version"] = msg.version
     results["started"] = msg.p_time
 
@@ -65,6 +65,8 @@ def transform(results, stop_event):
     """Transform parsed log line into a short format.
     """
     names = {}
+    # unique test names
+    unique = set()
 
     if results.get("tests") is None:
         results["tests"] = {}
@@ -83,6 +85,6 @@ def transform(results, stop_event):
         if line is not None:
             processor = processors.get(type(line), None)
             if processor:
-                processor(line, results, names)
+                processor(line, results, names, unique)
 
         line = yield line
