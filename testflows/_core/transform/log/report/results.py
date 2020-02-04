@@ -18,7 +18,7 @@ from testflows._core.transform.log.report.totals import format_test as process_t
 from testflows._core.transform.log.report.totals import format_result as process_result_counts
 
 def process_test(msg, results):
-    results["tests"][msg.name] = {"test": msg}
+    results["tests"][msg.p_id] = {"test": msg}
     process_test_counts(msg, results["counts"])
 
     # add test to the tests map
@@ -29,7 +29,7 @@ def process_test(msg, results):
     results["tests_by_id"][msg.p_id] = msg
 
 def process_result(msg, results):
-    results["tests"][msg.test]["result"] = msg
+    results["tests"][msg.p_id]["result"] = msg
     process_result_counts(msg, results["counts"])
 
 def process_version(msg, results):

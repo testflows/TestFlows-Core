@@ -347,6 +347,8 @@ class TestBase(object):
         :param parent: parent name
         """
         name = name % {"name": cls.name} if name is not None else cls.name
+        if name is None:
+            raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
         # so convert any '/' to U+2215 division slash
         name = name.replace(name_sep, "\u2215")
@@ -769,7 +771,6 @@ class Scenario(Test):
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Scenario, self).__init__(name, **kwargs)
 
-
 class _background(Test):
     def __init__(self, name, **kwargs):
         kwargs["subtype"] = TestSubType.Background
@@ -793,47 +794,61 @@ def Background(name, **kwargs):
             bg.stack = stack
             yield bg
 
-class Given(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.Given
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Given, self).__init__(name, **kwargs)
+def Given(name, **kwargs):
+    kwargs["subtype"] = TestSubType.Given
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
-class When(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.When
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(When, self).__init__(name, **kwargs)
+def When(step, **kwargs):
+    kwargs["subtype"] = TestSubType.When
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(step, TestStep):
+        return step(**kwargs)
+    else:
+        return Step(step, **kwargs)
 
-class Then(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.Then
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Then, self).__init__(name, **kwargs)
+def Then(name, **kwargs):
+    kwargs["subtype"] = TestSubType.Then
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
-class And(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.And
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(And, self).__init__(name, **kwargs)
+def And(name, **kwargs):
+    kwargs["subtype"] = TestSubType.And
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
-class But(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.But
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(But, self).__init__(name, **kwargs)
+def But(name, **kwargs):
+    kwargs["subtype"] = TestSubType.But
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
-class By(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.By
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(By, self).__init__(name, **kwargs)
+def By(name, **kwargs):
+    kwargs["subtype"] = TestSubType.By
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
-class Finally(Step):
-    def __init__(self, name, **kwargs):
-        kwargs["subtype"] = TestSubType.Finally
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Finally, self).__init__(name, **kwargs)
+def Finally(name, **kwargs):
+    kwargs["subtype"] = TestSubType.Finally
+    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+    if isinstance(name, TestStep):
+        return name(**kwargs)
+    else:
+        return Step(name, **kwargs)
 
 class NullStep():
     def __enter__(self):
@@ -879,6 +894,9 @@ class _testdecorator(object):
             with self.type(**_kwargs, _frame=frame) as test:
                 self.func(**{name: arg.value for name, arg in test.args.items()})
             return test
+
+class TestStep(_testdecorator):
+    type = Step
 
 class TestCase(_testdecorator):
     type = Test
