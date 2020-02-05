@@ -372,8 +372,6 @@ class Handler(HandlerBase):
 
     def data(self, results, args):
         d = dict()
-        for r in results.values():
-            print(r["tests"].keys())
         results = self.sort(results, args.order_by, args.sort)
         d["tests"] = self.filter(self.tests(results), args.only)
         d["table"] = self.table(d["tests"], results, args.log_link)
