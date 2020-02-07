@@ -119,6 +119,8 @@ class TestBase(object):
     examples = None
     name = None
     description = None
+    node = None
+    map = None
     flags = Flags()
     name_sep = "."
     type = TestType.Test
@@ -290,7 +292,8 @@ class TestBase(object):
                  uid=None, tags=None, attributes=None, requirements=None,
                  users=None, tickets=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
-                 start=None, end=None, args=None, id=None, _frame=None, _run=True):
+                 start=None, end=None, args=None, id=None, node=None, map=None,
+                 _frame=None, _run=True):
 
         self.lock = threading.Lock()
         self._run = _run
@@ -314,6 +317,8 @@ class TestBase(object):
         self.start_time = time.time()
         self.parent = parent
         self.id = get(id, [settings.test_id])
+        self.node = get(node, self.node)
+        self.map = get(map, self.map)
         self.tags = tags
         self.requirements = get(requirements, self.requirements)
         self.attributes = get(attributes, self.attributes)

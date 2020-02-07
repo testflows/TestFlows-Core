@@ -30,6 +30,7 @@ from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
 from .report.results import transform as results_transform
+from .report.map import transform as map_transform
 
 class Pipeline(object):
     """Combines multiple steps into a pipeline
@@ -243,6 +244,20 @@ class VersionReportLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(VersionReportLogPipeline, self).__init__(steps)
+
+class MapLogPipeline(Pipeline):
+    def __init__(self, input, maps):
+        stop_event = threading.Event()
+        message_types = [Message.TEST]
+        command = f"grep -m1 -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
+        steps = [
+            read_and_filter_transform(input, command=command),
+            parse_transform(stop_event),
+            map_transform(maps, stop_event),
+            stop_transform(stop_event)
+        ]
+        super(MapLogPipeline, self).__init__(steps)
 
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results):

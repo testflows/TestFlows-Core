@@ -80,6 +80,31 @@ class Null(Result):
 class XNull(XResult):
     pass
 
+class Map(TestObject):
+    _fields = ("node", "nexts", "ins", "outs")
+    _defaults = (None,) * 3
+
+    def __init__(self, node, nexts=None, ins=None, outs=None):
+        self.node = node
+        self.nexts = nexts
+        self.ins = ins
+        self.outs = outs
+        return super(Map, self).__init__()
+
+    def node_name(self):
+        return self.node.name
+
+def maps(test, nexts=None, ins=None, outs=None):
+    """Add a node and a map to a test.
+
+    :param test: test
+    :param nexts: next steps
+    :param ins: input steps
+    :param outs: output steps
+    """
+    test.func.map = Map(test, nexts, ins, outs)
+    test.func.node = test.func.map.node_name()
+
 class Tag(TestObject):
     _fields = ("value",)
     _defaults = ()
