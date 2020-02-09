@@ -80,6 +80,22 @@ class Null(Result):
 class XNull(XResult):
     pass
 
+class Node(TestObject):
+    _fields = ("name", "module", "uid")
+    _defaults = ()
+
+    def __init__(self, name, module, uid):
+        self.name = name
+        self.module = module
+        self.uid = uid
+
+    @classmethod
+    def create(cls, test):
+        name = test.name
+        module = ".".join([test.__module__, test.name])
+        uid = hash(module, short=True)
+        return cls(name, module, uid)
+
 class Map(TestObject):
     _fields = ("node", "nexts", "ins", "outs")
     _defaults = (None,) * 3
@@ -91,9 +107,6 @@ class Map(TestObject):
         self.outs = outs
         return super(Map, self).__init__()
 
-    def node_name(self):
-        return self.node.name
-
 def maps(test, nexts=None, ins=None, outs=None):
     """Add a node and a map to a test.
 
@@ -102,8 +115,11 @@ def maps(test, nexts=None, ins=None, outs=None):
     :param ins: input steps
     :param outs: output steps
     """
+    if getattr(test.func, "map", None) is not None:
+        raise ValueError("test has already been mapped")
+
     test.func.map = Map(test, nexts, ins, outs)
-    test.func.node = test.func.map.node_name()
+    test.func.node = Node.create(test)
 
 class Tag(TestObject):
     _fields = ("value",)

@@ -22,7 +22,7 @@ from .serialize import dumps
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message
-from .objects import Tag, Map
+from .objects import Tag, Node, Map
 from .funcs import top
 from . import __version__
 
@@ -121,7 +121,7 @@ class TestOutput(object):
         def map_fields(obj, visited):
             visited.add(obj.node)
             return rstrip_list([
-                str(obj.node_name()),
+                rstrip_list(object_fields(Node.create(obj.node))),
                 rstrip_list([map_fields(
                     Map(n) if n in visited else getattr(n.func, "map", Map(n)), visited)
                         for n in obj.nexts]) if obj.nexts else None,
@@ -146,7 +146,7 @@ class TestOutput(object):
             [rstrip_list(object_fields(user)) for user in self.test.users],
             [rstrip_list(object_fields(ticket)) for ticket in self.test.tickets],
             rstrip_list(object_fields(self.test.examples)) if self.test.examples else None,
-            str(self.test.node) if self.test.node else None,
+            rstrip_list(object_fields(self.test.node)) if self.test.node else None,
             map_fields(self.test.map, set()) if (self.test.map and self.test is top()) else None
         ]))[1:-1]
         self.message(Message.TEST, msg, rtime=0)

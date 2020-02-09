@@ -22,7 +22,7 @@ from testflows._core.cli.arg.handlers.report.version import Handler as version_h
 from testflows._core.cli.arg.handlers.report.official import Handler as official_handler
 from testflows._core.cli.arg.handlers.report.compare import Handler as compare_handler
 from testflows._core.cli.arg.handlers.report.requirements import Handler as requirements_handler
-from testflows._core.cli.arg.handlers.report.map import Handler as map_handler
+from testflows._core.cli.arg.handlers.report.map.handler import Handler as map_handler
 
 class Handler(HandlerBase):
     @classmethod

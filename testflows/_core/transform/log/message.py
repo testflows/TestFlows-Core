@@ -138,6 +138,8 @@ class RawTest(RawFormat, TestMessage, namedtuple_with_defaults(
             args[20] = [RawTicket(*ticket) for ticket in args[20]]
         if l > 21 and args[21]:  # examples
             args[21] = RawExamples(*args[21])
+        if l > 22 and args[22]:  # node
+            args[22] = RawNode(*args[22])
         if l > 23 and args[23]:  # maps
             args[23] = RawMap(*args[23])
         return super(RawTest, cls).__new__(cls, *args)
@@ -169,6 +171,12 @@ class RawExamples(namedtuple_with_defaults(
         "RawExamples",
         " ".join(objects.ExamplesTable._fields),
         defaults=objects.ExamplesTable._defaults)):
+    pass
+
+class RawNode(namedtuple_with_defaults(
+        "RawNode",
+        " ".join(objects.Node._fields),
+        defaults=objects.Node._defaults)):
     pass
 
 class RawMap(namedtuple_with_defaults(

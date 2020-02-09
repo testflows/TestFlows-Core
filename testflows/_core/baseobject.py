@@ -21,12 +21,16 @@ def get(a, b):
     """
     return a if not a is None else b
 
-def hash(*s):
+def hash(*s, short=False):
     """Calculate standard hash.
     
     :param s: strings
+    :param short: short version, default: False
     """
-    return sha1(''.join(s).encode("utf-8")).hexdigest()[:32]
+    value = sha1(''.join(s).encode("utf-8")).hexdigest()[:32]
+    if short:
+        return value[-16:]
+    return value
 
 
 class TestObject(object):
