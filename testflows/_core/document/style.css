@@ -21,6 +21,8 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .tag-2 { background: #006f80;}
 .tag-3 { background: #008033;}
 .tag-4 { background: #f87d00;}
+/* Test map */
+#map-chart { border: 1px solid #eaeaea; }
 /* Text classes */
 .requirement-inline {
     color: #354558;
