@@ -24,13 +24,18 @@ function chart() {
 
     const simulation = d3.forceSimulation()
          .force("link", d3.forceLink().id(d => d.id))
-         .force("charge", d3.forceManyBody().strength(-2400))
+         .force("charge", d3.forceManyBody().strength(-1400))
          .force("x", d3.forceX())
          .force("y", d3.forceY());
 
     simulation.on("tick", () => {
          link_selection.selectAll("path").attr("d", linkArc);
          node_selection.selectAll("g").attr("transform", d => `translate(${d.x},${d.y})`);
+    });
+
+    data.nodes_id_to_node = {};
+    data.nodes.forEach(function(node) {
+         data.nodes_id_to_node[node.id] = node;
     });
 
     var graph_links = data.links.map(d => Object.create(d));
@@ -90,32 +95,47 @@ function chart() {
             return; // ignore drag
 
         var node = graph_nodes[d.index];
-        console.log(node);
-        if (node.children.length > 0) {
+
+        if (node.children.nodes.length > 0) {
             var node_id_to_index = {}
             graph_nodes.forEach(function(node) {
                 node_id_to_index[node.id] = node.index;
             });
 
-            var children = new Set();
-            function find_all_children(node) {
-                if (children.has(node.index)) return;
-                node.children.forEach(function(child) {
-                    if (child in node_id_to_index) {
-                        find_all_children(graph_nodes[node_id_to_index[child]]);
-                        children.add(node_id_to_index[child]);
-                    }
-                });
+            if (node.collapsed) {
+                graph_nodes = graph_nodes.concat(node.children.nodes.map(function(id) {
+                    var obj = Object.create(data.nodes_id_to_node[id]);
+                    if (obj.children.nodes)
+                        obj.collapsed = true;
+                    return obj;
+                }));
+                graph_links = graph_links.concat(node.children.links.map(d => Object.create(d)));
+                node.collapsed = false;
             }
-            find_all_children(node);
-            Array.from(children).sort((a, b) => b - a).forEach(index => graph_nodes.splice(index, 1));
-            graph_links = graph_links.filter(link => !(children.has(link.source.index) || children.has(link.target.index)));
+            else {
+                var children = new Set();
+                function find_all_children(node) {
+                    if (children.has(node)) return;
+                    if (node.children) {
+                        node.children.nodes.forEach(function(child) {
+                            if (child in node_id_to_index) {
+                                find_all_children(graph_nodes[node_id_to_index[child]]);
+                                children.add(node_id_to_index[child]);
+                            }
+                        });
+                    }
+                }
+                find_all_children(node);
+                Array.from(children).sort((a, b) => b - a).forEach(index => graph_nodes.splice(index, 1));
+                graph_links = graph_links.filter(link => !(children.has(link.source.index) || children.has(link.target.index)));
+                node.collapsed = true;
+            }
             update();
         }
     }
 
     var color_node = function(d) {
-        if (d.children.length > 0) {
+        if (d.children.nodes.length > 0) {
             return "#ffd8fd";
         }
         return "white";

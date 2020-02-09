@@ -117,7 +117,7 @@ class Formatter:
 
             return node
 
-        def gather_links(nodes):
+        def gather_links(nodes, gnodes):
             links = []
             for node in nodes.values():
                 for n in node["nexts"]:
@@ -126,6 +126,17 @@ class Formatter:
                     links.append({"source": node["node"].uid, "target": n["node"].uid, "type": "inner link"})
                 for n in node["outs"]:
                     links.append({"source": n["node"].uid, "target": node["node"].uid, "type": "inner link"})
+
+            for link in links:
+                for node in gnodes:
+                    children_links = node["children"]["links"]
+                    children_nodes = set(node["children"]["nodes"])
+                    for child in children_nodes:
+                        if child == link["source"] or child == link["target"]:
+                            if ((link["source"] in children_nodes or link["source"] == node["id"])
+                                    and (link["target"] in children_nodes or link["target"] == node["id"])):
+                                children_links.append(link)
+
             return links
 
         def gather_nodes(nodes):
@@ -135,14 +146,38 @@ class Formatter:
                     "id": node["node"].uid,
                     "name": node["node"].name,
                     "module": node["node"].module,
-                    "children": [n["node"].uid for n in node["ins"]] + [n["node"].uid for n in node["outs"]]
+                    "next": [n["node"].uid for n in node["nexts"]],
+                    "children": {
+                        "nodes": set(),
+                        "links": []
+                    }
                 })
+
+                def find_all_children(node, start, children):
+                    if node["node"].uid in children:
+                        return
+                    if node is start:
+                        return
+                    children.add(node["node"].uid)
+                    if node["ins"] or node["outs"]:
+                        return
+                    for n in node["nexts"]:
+                        find_all_children(n, start, children)
+
+                for n in node["ins"] + node["outs"]:
+                    find_all_children(n, node, gnodes[-1]["children"]["nodes"])
+                gnodes[-1]["children"]["nodes"] = list(gnodes[-1]["children"]["nodes"])
+
             return gnodes
 
         nodes = {}
         generate_nodes(nodes, data["map"])
-        chart_nodes = json.dumps(gather_nodes(nodes), indent=2)
-        chart_links = json.dumps(gather_links(nodes), indent=2)
+
+        gnodes = gather_nodes(nodes)
+        glinks = gather_links(nodes, gnodes)
+
+        chart_nodes = json.dumps(gnodes, indent=2)
+        chart_links = json.dumps(glinks, indent=2)
 
         s = (
             '\n##Steps Diagram\n\n'
