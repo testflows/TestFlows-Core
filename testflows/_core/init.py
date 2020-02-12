@@ -24,6 +24,7 @@ from .transform.log.pipeline import RawLogPipeline
 from .transform.log.pipeline import NiceLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
+from .transform.log.pipeline import SlickLogPipeline
 
 def cleanup():
     """Clean up old temporary log files.
@@ -68,6 +69,14 @@ def stdout_raw_handler():
         log.seek(0)
         RawLogPipeline(log, sys.stdout, tail=True).run()
 
+def stdout_slick_handler():
+    """Handler to output messages to sys.stdout
+    using "slick" format.
+    """
+    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+        log.seek(0)
+        SlickLogPipeline(log, sys.stdout, tail=True).run()
+
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
@@ -104,6 +113,7 @@ def init():
 
     output_handler_map = {
         "raw": stdout_raw_handler,
+        "slick": stdout_slick_handler,
         "nice": stdout_nice_handler,
         "silent": stdout_silent_handler,
         "quiet": stdout_silent_handler,
