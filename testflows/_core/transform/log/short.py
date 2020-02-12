@@ -144,7 +144,10 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id):
     if msg.p_type == TestType.Module:
         keyword += "Module"
     elif msg.p_type == TestType.Suite:
-        keyword += "Suite"
+        if msg.p_subtype == TestSubType.Feature:
+            keyword += "Feature"
+        else:
+            keyword += "Suite"
     elif msg.p_type == TestType.Iteration:
         keyword += "Iteration"
     elif msg.p_type == TestType.Step:
@@ -165,9 +168,7 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id):
         else:
             keyword += "Step"
     else:
-        if msg.p_subtype == TestSubType.Feature:
-            keyword += "Feature"
-        elif msg.p_subtype == TestSubType.Scenario:
+        if msg.p_subtype == TestSubType.Scenario:
             keyword += "Scenario"
         elif msg.p_subtype == TestSubType.Background:
             keyword += "Background"

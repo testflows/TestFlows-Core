@@ -23,6 +23,7 @@ from .write import transform as write_transform
 from .stop import transform as stop_transform
 from .raw import transform as raw_transform
 from .short import transform as short_transform
+from .slick import transform as slick_transform
 from .index import transform as index_transform
 from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
@@ -138,6 +139,26 @@ class NiceLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(NiceLogPipeline, self).__init__(steps)
+
+class SlickLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail),
+            parse_transform(stop_event),
+            fanout(
+                slick_transform(),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(SlickLogPipeline, self).__init__(steps)
 
 class DotsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False):
