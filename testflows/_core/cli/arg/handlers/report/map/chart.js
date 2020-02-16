@@ -42,6 +42,7 @@ function chart() {
     var graph_links = data.links.map(d => Object.create(d));
     var graph_nodes = data.nodes.map(d => Object.create(d));
     var graph_types = Array.from(types);
+    var graph_highlight_paths = [];
 
     graph_types.push("visited");
 
@@ -101,12 +102,14 @@ function chart() {
             .attr("stroke", "white")
             .attr("stroke-width", 3);
 
-        simulation.alpha(0.1).restart();
+        simulation.alpha(0.25).restart();
     };
 
     function highlight(paths) {
         if (!paths)
             return;
+
+        graph_highlight_paths = paths;
 
         var highlight_nodes = new Set();
         var highlight_links = new Set();
@@ -201,6 +204,7 @@ function chart() {
                 node.collapsed = true;
             }
             update();
+            highlight(graph_highlight_paths);
         }
     }
 
