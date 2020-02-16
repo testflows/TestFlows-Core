@@ -16,6 +16,8 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 /* Webkit customized scrollbar */
 ::-webkit-scrollbar { width: 4px; height: 4px; background: transparent; }
 ::-webkit-scrollbar-thumb { background: #6593d0; }
+/* Misc */
+.with-border { border: 1px solid #eaeaea; }
 /* Tag styles */
 .tag {color: white; padding: 1px; padding-left: 10px; padding-right: 10px; border-radius: 15px;}
 .tag-0 { background: #19177c;}
@@ -1218,4 +1220,63 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
     background-size: contain;
     background-repeat: no-repeat;
 	background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAMAAAAp4XiDAAABrVBMVEUAAAAAAP8A//8AgP8A//8Aqv8A//8Av/8A1f8A4/8AzP8A0f8Av/8A1f8A2P8A2/8AzP8Az/8A0v8Axv8A1f8Ayf8AzP8Azv8A0f8AyP8A0/8Ayv8AzP8Axv8AyP8Ayv8AzP8Azv8A0f8AzP8Axv8Az/8Ayf8Ay/8AzP8Azf8Azv8Ay/8Azf8Ayf8Azv8Az/8Ay/8AzP8AyP8Azf8Ayf8Azv8Ayv8AzP8Azf8Ayf8Azv8Ayv8Ay/8Azf8Ayv8Azv8Ayv8Ay/8Azf8Azv8Ay/8AzP8Ayv8Azf8Ay/8AzP8Ayv8Ay/8Ay/8Azf8Azf8Azv8Ay/8AzP8Azf8Azf8Ay/8AzP8Azf8Azf8Azv8AzP8Azf8Azf8AzP8AzP8Azf8AzP8Azv8AzP8Ay/8AzP8AzP8Azf8Ay/8AzP8Ay/8Azf8AzP8Ayv8Ay/8AzP8Azv8AzP8AzP8Ay/8AzP8AzP8AzP8AzP8Ay/8AzP8Azf8Azf8AzP8Ay/8Azf8AzP8Azf8Ay/8Azf8AzP8Ay/8AzP8AzP8AzP8AzP8AzP8AzP8AzP8Ay/8AzP8AzP8AzP8AzP9YzlPqAAAAj3RSTlMAAQECAgMDBAYJCgsMDA0ODxAREhITFBUWFxcYGRscHR4fISMkJSYnKCkqLC4vLzAxMjMzNDQ1Nzg5OTo7PT4+P0BCQ0RGSEhKS01OT1FSU1haW1xeX2BhYmRlZmhpa21tb3FydHV2eHp6fH5/gYGDh4iMkJKVmZydqKmrsrO3vMDExsnN0dbY2t7j5+vw80T/rZQAAAF7SURBVHjaldNpOwJRFMDxK0uW7DvZypYhiZKkiBBFkuxLsssW2bWQtPGZTZFm5nnM3PN/dd78nnPui4vAlYJFTSNUCIkqoGiQEQKYaFLKCD5ItKiVsg6QEGlJ0gwRYn2CVANEuyFJ8vFFpzFJenjYosv0Q1qxBTH/S+pwRbclRQowRe9iisgxn9Jv/yNiPKFcS5MKLDG4mSaqHByh3qEQCY7QOKmkFkOMHFCJBuOusWMaaeMWehedFHKKiQs6UXAKwyWDlHOJKTeDyLmE8ZpBpos4xIyHScQcwnTLJEMZ7MJ8nyBXFKLjs4LsSbfbQ9tiHchC/8ZXOG7MiUEgUs0uO5PENlrGAsxP3hcLSpdbKawvZvuJ0ke/z7uAAM0FAn6fFQAyz4NvAb8NIHiud5LYEaDTEElWIGIpTJJViJB+kGQdIkpeI+HQBoJ0F42Et0BiPBaNbINEXjAWdSBQZ/HYLkxI4vE9BOvhcx8o+r4OEbDnI6gYPkHQtGDxDUUplrGY+46YAAAAAElFTkSuQmCC);
+}
+/* Customize the label (the container) */
+.container {
+  display: block;
+  position: relative;
+  padding-left: 35px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+/* Hide the browser's default checkbox */
+.container input {
+  position: absolute;
+  opacity: 0;
+  cursor: pointer;
+  height: 0;
+  width: 0;
+}
+/* Create a custom checkbox */
+.checkmark {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 25px;
+  width: 25px;
+  background-color: #eee;
+}
+/* On mouse-over, add a grey background color */
+.container:hover input ~ .checkmark {
+  background-color: #2196F3;
+}
+/* When the checkbox is checked, add a blue background */
+.container input:checked ~ .checkmark {
+  background-color: #2196F3;
+}
+/* Create the checkmark/indicator (hidden when not checked) */
+.checkmark:after {
+  content: "";
+  position: absolute;
+  display: none;
+}
+/* Show the checkmark when checked */
+.container input:checked ~ .checkmark:after {
+  display: block;
+}
+/* Style the checkmark/indicator */
+.container .checkmark:after {
+  left: 9px;
+  top: 5px;
+  width: 5px;
+  height: 10px;
+  border: solid white;
+  border-width: 0 3px 3px 0;
+  -webkit-transform: rotate(45deg);
+  -ms-transform: rotate(45deg);
+  transform: rotate(45deg);
 }

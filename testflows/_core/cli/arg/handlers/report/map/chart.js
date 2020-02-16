@@ -1,4 +1,5 @@
 function chart() {
+    var chart = {};
     const width = 950,
         height = 800;
 
@@ -40,12 +41,15 @@ function chart() {
 
     var graph_links = data.links.map(d => Object.create(d));
     var graph_nodes = data.nodes.map(d => Object.create(d));
+    var graph_types = Array.from(types);
+
+    graph_types.push("visited");
 
     function update() {
         simulation.nodes(graph_nodes);
         simulation.force("link").links(graph_links);
 
-        const marker = marker_selection.selectAll("marker").data(types)
+        const marker = marker_selection.selectAll("marker").data(graph_types)
             .join("marker")
             .attr("id", d => `arrow-${d}`)
             .attr("viewBox", "0 -5 10 10")
@@ -59,6 +63,10 @@ function chart() {
             .attr("d", "M0,-5L10,0L0,5");
 
         const link = link_selection.selectAll("path").data(graph_links, d => d.source + d.target);
+
+        link.attr("stroke", d => color_type(d.type))
+            .attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location)})`);
+
         link.exit().remove();
 
         const enter_links = link.enter();
@@ -67,6 +75,10 @@ function chart() {
             .attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location)})`);
 
         const node = node_selection.selectAll("g").data(graph_nodes, d => d.id);
+
+        node.selectAll("circle")
+            .attr("fill", d => color_node(d));
+
         node.exit().remove();
 
         const enter_nodes = node.enter();
@@ -88,7 +100,65 @@ function chart() {
             .attr("fill", "none")
             .attr("stroke", "white")
             .attr("stroke-width", 3);
+
+        simulation.alpha(0.1).restart();
     };
+
+    function highlight(paths) {
+        if (!paths)
+            return;
+
+        var highlight_nodes = new Set();
+        var highlight_links = new Set();
+
+        paths.forEach(function(path) {
+            path.path.nodes.forEach(function(n) {
+                highlight_nodes.add(n);
+            });
+            path.path.links.forEach(function(l) {
+                highlight_links.add(l.source + '/' + l.target);
+            });
+        });
+
+        graph_nodes.forEach(function(node) {
+            if (highlight_nodes.has(node.id)) {
+                node.type = "visited";
+            }
+            else {
+                node.type = "unvisited";
+            }
+        });
+
+        if (window.debug) {
+            console.log("highlight links:")
+            highlight_links.forEach(function(l) {
+                e = l.split("/");
+                console.log(e, data.nodes_id_to_node[e[0]], data.nodes_id_to_node[e[1]])
+                console.log(data.nodes_id_to_node[e[0]].name, " -> ", data.nodes_id_to_node[e[1]].name);
+            });
+        }
+
+        graph_links.forEach(function(link) {
+            if (!link.id)
+                link.id = link.source.id + '/' + link.target.id;
+            if (!link._type)
+                link._type = link.type
+
+            if (highlight_links.has(link.id)) {
+                link.type = "visited";
+                if (window.debug)
+                    console.log(data.nodes_id_to_node[link.source.id].name, " -> ", data.nodes_id_to_node[link.target.id].name);
+            }
+            else {
+                link.type = link._type;
+            }
+        });
+
+        update();
+    };
+
+    chart.update = update;
+    chart.highlight = highlight;
 
     function node_click(d) {
         if (d3.event.defaultPrevented)
@@ -135,6 +205,9 @@ function chart() {
     }
 
     var color_node = function(d) {
+        if (d.type == "visited") {
+            return "mediumspringgreen";
+        }
         if (d.children.nodes.length > 0) {
             return "#ffd8fd";
         }
@@ -144,6 +217,9 @@ function chart() {
     var color_type = function(type) {
         if (type == "link") {
             return "blue";
+        }
+        else if (type == "visited")  {
+            return "mediumspringgreen";
         }
         return "orange";
     };
@@ -180,9 +256,6 @@ function chart() {
             .on("end", dragended);
     };
 
-    update();
+    chart.update();
+    return chart;
 }
-
-window.onload = function() {
-  chart();
-};

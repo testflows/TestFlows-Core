@@ -67,34 +67,42 @@ def pressing_equal():
 
 @TestStep
 def entering_number(num=None):
-    if num is not None:
-        if num < 0:
-            And(pressing_negative)
-            num = abs(num)
-        for digit in str(num):
-            And(globals().get(f"pressing_{digit}"))
+    if num is None:
+        return
+    num = str(num)
+    
+    digit = num[:1]
+    if digit == '':
+        return
+    elif digit == '-':
+       By(pressing_negative)
     else:
-        raise NotImplementedError
+       By(globals().get(f"pressing_{digit}"))
+    return By(entering_number, args={"num": num[1:]})
 
 @TestStep
 def entering_operation(op=None):
-    if op is not None:
-        if op == "+":
-            By(pressing_addition)
-        elif op == "-":
-            By(pressing_substract)
-        elif op == "*":
-            By(pressing_multiply)
-        elif op == "/":
-            By(pressing_devide)
-        else:
-            raise ValueError(f"invalid operation {op}")
+    if op is None:
+        return
+
+    if op == "+":
+        By(pressing_addition)
+    elif op == "-":
+        By(pressing_substract)
+    elif op == "*":
+        By(pressing_multiply)
+    elif op == "/":
+        By(pressing_devide)
     else:
-        raise NotImplementedError
+        raise ValueError(f"invalid operation {op}")
+    By(entering_operation)
 
 @TestStep
-def entering_equal():
+def entering_equal(press=True):
+    if press is False:
+        return
     By(pressing_equal)
+    By(entering_equal, args={"press": False})
 
 @TestStep
 def checking_result(expected=None):
@@ -105,6 +113,7 @@ def checking_result(expected=None):
 
 ## build a map
 pressing_number_keys = [
+    pressing_negative,
     pressing_0,
     pressing_1,
     pressing_2,
@@ -124,7 +133,8 @@ pressing_operation_keys = [
     pressing_divide
 ]
 
-for key in list(pressing_number_keys):
+# map nodes
+for key in pressing_number_keys + pressing_operation_keys + [pressing_equal, checking_result]:
     maps(key)
 
 maps(entering_number,
