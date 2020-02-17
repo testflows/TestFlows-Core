@@ -37,7 +37,10 @@ md = Markdown(extras={
 }, link_patterns=link_patterns)
 
 template = """
+<!DOCTYPE html>
+<html lang="en">
 <head>
+<meta charset="utf-8">
 <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet"> 
 <style>
 %(style)s
@@ -46,7 +49,8 @@ template = """
 <body>
 %(body)s
 </body>
-"""
+</html>
+""".strip()
 
 file_dir = os.path.dirname(os.path.abspath(__file__))
 stylesheet = os.path.join(file_dir, "style.css")
