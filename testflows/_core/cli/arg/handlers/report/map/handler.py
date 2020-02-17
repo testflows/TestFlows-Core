@@ -290,7 +290,7 @@ class Handler(HandlerBase):
             ended = started + test["result"].p_time
             path = []
 
-            for t in tests[idx + 1:]:
+            for t in tests[idx:]:
                 flags = Flags(t["test"].p_flags)
                 if flags & SKIP and settings.show_skipped is False:
                     continue

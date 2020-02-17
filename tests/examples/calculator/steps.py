@@ -92,7 +92,7 @@ def entering_operation(op=None):
     elif op == "*":
         By(pressing_multiply)
     elif op == "/":
-        By(pressing_devide)
+        By(pressing_divide)
     else:
         raise ValueError(f"invalid operation {op}")
     By(entering_operation)
