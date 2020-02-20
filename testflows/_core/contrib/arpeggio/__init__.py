@@ -1492,7 +1492,7 @@ class Parser(DebugPrinter):
         # In debug mode export parse tree to dot file for
         # visualization
         if self.debug and self.parse_tree:
-            from arpeggio.export import PTDOTExporter
+            from testflows._core.contrib.arpeggio.export import PTDOTExporter
             root_rule_name = self.parse_tree.rule_name
             PTDOTExporter().exportFile(
                 self.parse_tree, "{}_parse_tree.dot".format(root_rule_name))
@@ -1723,7 +1723,7 @@ class ParserPython(Parser):
         # In debug mode export parser model to dot for
         # visualization
         if self.debug:
-            from arpeggio.export import PMDOTExporter
+            from testflows._core.contrib.arpeggio.export import PMDOTExporter
             root_rule = language_def.__name__
             PMDOTExporter().exportFile(self.parser_model,
                                        "{}_parser_model.dot".format(root_rule))
