@@ -32,10 +32,17 @@ class RegexBuilder(PTNodeVisitor):
         self.stacks[-1].append(r'.')
 
     def visit_any_char_in_seq(self, node, children):
-        self.stacks[-1][-1] += f'[{"".join([re.escape(c) for c in node.value[1:-1]])}]'
+        chars = node.value[1:-1]
+        chars = re.sub(r"\\(.)", r"\1", chars)
+        regex = f'[{"".join([re.escape(c) for c in chars])}]'
+        if '/' in chars:
+            self.stacks[-1].append(regex)
+        else:
+            self.stacks[-1][-1] += regex
 
     def visit_any_char_not_in_seq(self, node, children):
         chars = node.value[2:-1]
+        chars = re.sub(r"\\(.)", r"\1", chars)
         regex = f'[^{"".join([re.escape(c) for c in chars])}]'
         if '/' in chars:
             self.stacks[-1].append(regex)
@@ -102,7 +109,7 @@ class RegexBuilder(PTNodeVisitor):
 
 def Parser():
     def char():
-        return RegExMatch(r"(\\.)|[^/\*\:\?\(\)\[\]]")
+        return RegExMatch(r"(\\.)|[^/\*\:\?\(\)\[\]\{\}]")
 
     def wildcard():
         return RegExMatch(r"[*]")
@@ -114,10 +121,10 @@ def Parser():
         return RegExMatch(r"[\?]")
 
     def any_char_in_seq():
-        return RegExMatch(r"\[[^\[!][^/]*\]")
+        return RegExMatch(r"\[(([^\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
 
     def any_char_not_in_seq():
-        return RegExMatch(r"\[\![^/]*\]")
+        return RegExMatch(r"\[\!(([^\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
 
     def separator():
         return RegExMatch(r"/")
@@ -152,7 +159,7 @@ def Parser():
     def pattern():
         return subpattern, EOF
 
-    return ParserPython(pattern)
+    return ParserPython(pattern, memoization=True)
 
 parser = Parser()
 
