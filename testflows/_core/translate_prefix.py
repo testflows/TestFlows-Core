@@ -14,6 +14,7 @@ class RegexBuilder(PTNodeVisitor):
         self.process_subpattern = [True]
         self.repeated_group_start_idx = []
         self.repeated_as_many_group_start_idx = []
+        self.not_followed_by_group_start_idx = []
         super(RegexBuilder, self).__init__(*args, **kwargs)
 
     def visit_char(self, node, children):
@@ -76,6 +77,16 @@ class RegexBuilder(PTNodeVisitor):
     def visit_group(self, node, children):
         pass
 
+    def visit_not_followed_by_group_start(self, node, children):
+        self.process_subpattern.append(False)
+        self.stacks[-1].append('')
+        self.not_followed_by_group_start_idx.append(len(self.stacks[-1])-1)
+
+    def visit_not_followed_by_group(self, node, children):
+        idx = self.not_followed_by_group_start_idx.pop()
+        items = self.stacks[-1][idx:]
+        self.stacks[-1] = self.stacks[-1][:idx] + [f"(?!{''.join(items)})"]
+
     def visit_repeated_group_start(self, node, children):
         self.process_subpattern.append(False)
         self.repeated_group_start_idx.append(len(self.stacks[-1]))
@@ -109,7 +120,7 @@ class RegexBuilder(PTNodeVisitor):
 
 def Parser():
     def char():
-        return RegExMatch(r"(\\.)|[^/\*\:\?\(\)\[\]\{\}]")
+        return RegExMatch(r"(\\.)|[^/!\*\:\?\(\)\[\]\{\}]")
 
     def wildcard():
         return RegExMatch(r"[*]")
@@ -121,10 +132,10 @@ def Parser():
         return RegExMatch(r"[\?]")
 
     def any_char_in_seq():
-        return RegExMatch(r"\[(([^\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
+        return RegExMatch(r"\[(([^!\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
 
     def any_char_not_in_seq():
-        return RegExMatch(r"\[\!(([^\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
+        return RegExMatch(r"\[\!(([^!\*\:\?\)\(\]\[\{\}])|(\\.))*\]")
 
     def separator():
         return RegExMatch(r"/")
@@ -141,8 +152,14 @@ def Parser():
     def repeated_as_many_group_start():
         return '('
 
+    def not_followed_by_group_start():
+        return '(?!'
+
     def group():
         return group_start, ZeroOrMore(subpattern), ')'
+
+    def not_followed_by_group():
+        return not_followed_by_group_start, ZeroOrMore(subpattern), ')'
 
     def optional_group():
         return optional_group_start, ZeroOrMore(subpattern), RegExMatch(r'\)\?')
@@ -154,7 +171,7 @@ def Parser():
         return repeated_as_many_group_start, ZeroOrMore(subpattern), RegExMatch(r'\)\{\d+,\d+\}')
 
     def subpattern():
-        return OneOrMore([optional_group, repeated_group, repeated_as_many_group, group, char, separator, any_char_not_in_seq, any_char_in_seq, any_char, wildcard, wildcard_without_separator])
+        return OneOrMore([not_followed_by_group, optional_group, repeated_group, repeated_as_many_group, group, char, separator, any_char_not_in_seq, any_char_in_seq, any_char, wildcard, wildcard_without_separator])
 
     def pattern():
         return subpattern, EOF
