@@ -3,66 +3,82 @@ from testflows.core import *
 ## Press keys
 @TestStep
 def pressing_0():
+    getsattr(current().context, "keys", []).append(0)
     note("pressing: 0")
 
 @TestStep
 def pressing_1():
+    getsattr(current().context, "keys", []).append(1)
     note("pressing: 1")
 
 @TestStep
 def pressing_2():
+    getsattr(current().context, "keys", []).append(2)
     note("pressing: 2")
 
 @TestStep
 def pressing_3():
+    getsattr(current().context, "keys", []).append(3)
     note("pressing: 3")
 
 @TestStep
 def pressing_4():
+    getsattr(current().context, "keys", []).append(4)
     note("pressing: 4")
 
 @TestStep
 def pressing_5():
+    getsattr(current().context, "keys", []).append(5)
     note("pressing: 5")
 
 @TestStep
 def pressing_6():
+    getsattr(current().context, "keys", []).append(6)
     note("pressing: 6")
 
 @TestStep
 def pressing_7():
+    getsattr(current().context, "keys", []).append(7)
     note("pressing: 7")
 
 @TestStep
 def pressing_8():
+    getsattr(current().context, "keys", []).append(8)
     note("pressing: 8")
 
 @TestStep
 def pressing_9():
+    getsattr(current().context, "keys", []).append(9)
     note("pressing: 9")
 
 @TestStep
 def pressing_negative():
+    getsattr(current().context, "keys", []).append("-")
     note("pressing: negative")
 
 @TestStep
 def pressing_addition():
+    getsattr(current().context, "keys", []).append("+")
     note("pressing: +")
 
 @TestStep
 def pressing_substract():
+    getsattr(current().context, "keys", []).append("-")
     note("pressing: -")
 
 @TestStep
 def pressing_divide():
+    getsattr(current().context, "keys", []).append("/")
     note("pressing: /")
 
 @TestStep
 def pressing_multiply():
+    getsattr(current().context, "keys", []).append("*")
     note("pressing: *")
 
 @TestStep
 def pressing_equal():
+    getsattr(current().context, "keys", []).append("=")
     note("pressing: =")
 
 @TestStep
@@ -106,6 +122,7 @@ def entering_equal(press=True):
 
 @TestStep
 def checking_result(expected=None):
+    note(getattr(current().context, "keys", None))
     if expected is not None:
         assert expected == expected, error()
     else:

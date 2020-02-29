@@ -164,16 +164,6 @@ class TestContext(object):
             else:
                 return False
 
-    def gets(self, name, *default):
-        """Get context attribute or set it to the default value.
-        """
-        try:
-            value = self._state.get(name, *default)
-        except KeyError:
-            raise AttributeError(name) from None
-        self._state[name] = value
-        return value
-
 class TestBase(object):
     """Base class for all the tests.
 
