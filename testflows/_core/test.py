@@ -99,6 +99,80 @@ class DummyTest(object):
         if isinstance(exception_value, DummyTestException):
             return True
 
+class TestContext(object):
+    """Test context.
+    """
+    def __init__(self, parent, state=None):
+        self._parent = parent
+        self._state = get(state, {})
+        self._cleanups = []
+
+    def cleanup(self, func, *args, **kwargs):
+        def func_wrapper():
+            func(*args, **kwargs)
+        self._cleanups.append(func_wrapper)
+
+    def _cleanup(self):
+        exc_type, exc_value, exc_traceback = None, None, None
+        for func in reversed(self._cleanups):
+            try:
+                func()
+            except (Exception, KeyboardInterrupt) as e:
+                if not exc_value:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+        return exc_type, exc_value, exc_traceback
+
+    def __getattr__(self, name):
+        try:
+            if name.startswith('_'):
+                return self.__dict__[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+        curr = self
+        while True:
+            try:
+                return curr._state[name]
+            except KeyError:
+                if curr._parent:
+                    curr = curr._parent
+                    continue
+                raise AttributeError(name) from None
+
+    def __setattr__(self, name, value):
+        if name.startswith('_'):
+            self.__dict__[name] = value
+        else:
+            self._state[name] = value
+
+    def __delattr__(self, name):
+        try:
+            del self._state[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+    def __contains__(self, name):
+        if name.startswith('_'):
+            return name in self.__dict__
+
+        curr = self
+        while True:
+            if name in curr._state:
+                return True
+            if curr._parent:
+                curr = curr._parent
+            else:
+                return False
+
+    def gets(self, name, *default):
+        """Get context attribute or set it to the default value.
+        """
+        try:
+            value = self._state.get(name, *default)
+        except KeyError:
+            raise AttributeError(name) from None
+        self._state[name] = value
+        return value
 
 class TestBase(object):
     """Base class for all the tests.
@@ -292,7 +366,7 @@ class TestBase(object):
                  uid=None, tags=None, attributes=None, requirements=None,
                  users=None, tickets=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
-                 start=None, end=None, args=None, id=None, node=None, map=None,
+                 start=None, end=None, args=None, id=None, node=None, map=None, context=None,
                  _frame=None, _run=True):
 
         self.lock = threading.Lock()
@@ -319,6 +393,7 @@ class TestBase(object):
         self.id = get(id, [settings.test_id])
         self.node = get(node, self.node)
         self.map = get(map, self.map)
+        self.context = get(context, TestContext(current().context if current() else None))
         self.tags = tags
         self.requirements = get(requirements, self.requirements)
         self.attributes = get(attributes, self.attributes)
@@ -413,29 +488,39 @@ class TestBase(object):
         if top() is self and not self._init:
             return False
 
-        current(self.caller_test)
-        previous(self)
+        def process_exception(exception_type, exception_value, exception_traceback):
+            if isinstance(exception_value, ResultException):
+                self.result = exception_value.result
+            elif isinstance(exception_value, AssertionError):
+                exception(test=self)
+                self.result = Fail(self.name, str(exception_value))
+            else:
+                exception(test=self)
+                self.result = Error(self.name,
+                                    "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
+                if isinstance(exception_value, KeyboardInterrupt):
+                    raise ResultException(self.result)
 
         try:
             if exception_value:
-                if isinstance(exception_value, ResultException):
-                    self.result = exception_value.result
-                elif isinstance(exception_value, AssertionError):
-                    exception(test=self)
-                    self.result = Fail(self.name, str(exception_value))
-                else:
-                    exception(test=self)
-                    self.result = Error(self.name,
-                        "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
-                    if isinstance(exception_value, KeyboardInterrupt):
-                        raise ResultException(self.result)
+                process_exception(exception_type, exception_value, exception_traceback)
             else:
                 if isinstance(self.result, Null):
                     self.result = OK(self.name)
         finally:
-            self._apply_xfails()
-            self.io.output.result(self.result)
-            self.io.close()
+            try:
+                if self.type >= TestType.Test:
+                    if self.context._cleanups:
+                        with Finally("I clean up"):
+                            cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
+                        if not exception_value and cleanup_exc_value:
+                            process_exception(cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback)
+            finally:
+                current(self.caller_test)
+                previous(self)
+                self._apply_xfails()
+                self.io.output.result(self.result)
+                self.io.close()
 
             if self.flags & PAUSE_AFTER:
                 pause()
@@ -801,6 +886,7 @@ def Background(name, **kwargs):
 
 def Given(name, **kwargs):
     kwargs["subtype"] = TestSubType.Given
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -809,6 +895,7 @@ def Given(name, **kwargs):
 
 def When(step, **kwargs):
     kwargs["subtype"] = TestSubType.When
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(step, TestStep):
         return step(**kwargs)
@@ -817,6 +904,7 @@ def When(step, **kwargs):
 
 def Then(name, **kwargs):
     kwargs["subtype"] = TestSubType.Then
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -825,6 +913,7 @@ def Then(name, **kwargs):
 
 def And(name, **kwargs):
     kwargs["subtype"] = TestSubType.And
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -833,6 +922,7 @@ def And(name, **kwargs):
 
 def But(name, **kwargs):
     kwargs["subtype"] = TestSubType.But
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -841,6 +931,7 @@ def But(name, **kwargs):
 
 def By(name, **kwargs):
     kwargs["subtype"] = TestSubType.By
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -849,6 +940,7 @@ def By(name, **kwargs):
 
 def Finally(name, **kwargs):
     kwargs["subtype"] = TestSubType.Finally
+    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
