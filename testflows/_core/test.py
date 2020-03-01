@@ -117,6 +117,8 @@ class TestContext(object):
         for func in reversed(self._cleanups):
             try:
                 func()
+            except StopIteration:
+                pass
             except (Exception, KeyboardInterrupt) as e:
                 if not exc_value:
                     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -979,7 +981,12 @@ class _testdecorator(object):
             return parent_test
         else:
             with self.type(**_kwargs, _frame=frame) as test:
-                self.func(**{name: arg.value for name, arg in test.args.items()})
+                r = self.func(**{name: arg.value for name, arg in test.args.items()})
+                def run_generator():
+                    return next(r)
+                if inspect.isgenerator(r):
+                    run_generator()
+                    test.context.cleanup(run_generator)
             return test
 
 class TestStep(_testdecorator):
