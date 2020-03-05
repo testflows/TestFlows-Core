@@ -149,6 +149,8 @@ class SlickLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 slick_transform(),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
