@@ -385,7 +385,9 @@ class TestBase(object):
         self.id = get(id, [settings.test_id])
         self.node = get(node, self.node)
         self.map = get(map, self.map)
-        self.context = get(context, TestContext(current().context if current() else None))
+        self.type = get(type, self.type)
+        self.subtype = get(subtype, self.subtype)
+        self.context = get(context, current().context if current() and self.type < TestType.Test else (TestContext(current().context if current() else None)))
         self.tags = tags
         self.requirements = get(requirements, self.requirements)
         self.attributes = get(attributes, self.attributes)
@@ -399,8 +401,6 @@ class TestBase(object):
         self.result = Null(self.name)
         if flags is not None:
             self.flags = Flags(flags)
-        self.type = get(type, self.type)
-        self.subtype = get(subtype, self.subtype)
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
         self.uid = get(uid, self.uid)
         self.xfails = get(xfails, {})
@@ -878,7 +878,6 @@ def Background(name, **kwargs):
 
 def Given(name, **kwargs):
     kwargs["subtype"] = TestSubType.Given
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -887,7 +886,6 @@ def Given(name, **kwargs):
 
 def When(step, **kwargs):
     kwargs["subtype"] = TestSubType.When
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(step, TestStep):
         return step(**kwargs)
@@ -896,7 +894,6 @@ def When(step, **kwargs):
 
 def Then(name, **kwargs):
     kwargs["subtype"] = TestSubType.Then
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -905,7 +902,6 @@ def Then(name, **kwargs):
 
 def And(name, **kwargs):
     kwargs["subtype"] = TestSubType.And
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -914,7 +910,6 @@ def And(name, **kwargs):
 
 def But(name, **kwargs):
     kwargs["subtype"] = TestSubType.But
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -923,7 +918,6 @@ def But(name, **kwargs):
 
 def By(name, **kwargs):
     kwargs["subtype"] = TestSubType.By
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
@@ -932,7 +926,6 @@ def By(name, **kwargs):
 
 def Finally(name, **kwargs):
     kwargs["subtype"] = TestSubType.Finally
-    kwargs["context"] = kwargs.pop("context", current().context)
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
     if isinstance(name, TestStep):
         return name(**kwargs)
