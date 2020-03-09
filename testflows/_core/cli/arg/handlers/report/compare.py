@@ -284,7 +284,7 @@ class Handler(HandlerBase):
 
             for testname in tests:
                 test = result["tests"].get(testname)
-                if test:
+                if test and test.get("result"):
                     _name = test["result"].name.lower()
                     setattr(_counts, _name, getattr(_counts, _name) + 1)
                 _counts.units += 1
@@ -344,7 +344,7 @@ class Handler(HandlerBase):
         for test in tests:
             row = [test]
             for result in results.values():
-                if result["tests"].get(test):
+                if result["tests"].get(test) and result["tests"].get(test).get("result"):
                     row.append(result["tests"].get(test)["result"].name)
                 else:
                     row.append("-")
