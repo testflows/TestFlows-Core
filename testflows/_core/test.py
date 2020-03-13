@@ -876,13 +876,13 @@ def Background(name, **kwargs):
             bg.stack = stack
             yield bg
 
-def Given(name, **kwargs):
+def Given(step, **kwargs):
     kwargs["subtype"] = TestSubType.Given
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
 def When(step, **kwargs):
     kwargs["subtype"] = TestSubType.When
@@ -892,45 +892,45 @@ def When(step, **kwargs):
     else:
         return Step(step, **kwargs)
 
-def Then(name, **kwargs):
+def Then(step, **kwargs):
     kwargs["subtype"] = TestSubType.Then
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
-def And(name, **kwargs):
+def And(step, **kwargs):
     kwargs["subtype"] = TestSubType.And
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
-def But(name, **kwargs):
+def But(step, **kwargs):
     kwargs["subtype"] = TestSubType.But
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
-def By(name, **kwargs):
+def By(step, **kwargs):
     kwargs["subtype"] = TestSubType.By
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
-def Finally(name, **kwargs):
+def Finally(step, **kwargs):
     kwargs["subtype"] = TestSubType.Finally
     kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(name, TestStep):
-        return name(**kwargs)
+    if isinstance(step, TestStep):
+        return step(**kwargs)
     else:
-        return Step(name, **kwargs)
+        return Step(step, **kwargs)
 
 class NullStep():
     def __enter__(self):
