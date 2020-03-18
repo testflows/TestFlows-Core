@@ -4,7 +4,7 @@ a:hover { text-decoration-line: underline}
 strong { color: #329f7b }
 hr { border-top: 1px solid #eaeaea; }
 h1, h2 { color: #6594d0; border-bottom: 1px solid #eaeaea; padding-bottom: 0.3em; }
-h3 { color: #ffffff; font-size: 1.2em; background: #6796de; padding: 5px; }
+h3 { color: #6594d0; font-size: 1.2em; }
 h4 { color: #6594d0; font-size: 1.1em; }
 h5 { color: #6594d0; font-size: 1.0em; }
 h6 { color: #6594d0; font-size: 0.95em; }
