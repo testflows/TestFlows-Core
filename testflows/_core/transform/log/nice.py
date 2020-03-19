@@ -238,6 +238,7 @@ formatters = {
     message.RawAttribute: (format_other, f"{mark}    -"),
     message.RawRequirement: (format_other, f"{mark}    ?"),
     message.RawValue: (format_other, f"{mark}    ="),
+    message.RawMetric: (format_other, f"{mark}    [metric]"),
     message.RawException: (format_other, f"{mark}    Exception:"),
     message.RawNote: (format_other, f"{mark}    [note]"),
     message.RawDebug: (format_other, f"{mark}    [debug]"),

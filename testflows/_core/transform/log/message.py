@@ -36,6 +36,9 @@ class ProtocolMessage(Message):
 class VersionMessage(Message):
     pass
 
+class MetricMessage(Message):
+    pass
+
 class InputMessage(Message):
     pass
 
@@ -290,6 +293,12 @@ class RawVersion(RawFormat, VersionMessage, namedtuple_with_defaults(
         RawFormat.prefix.fields + "version")):
     pass
 
+class RawMetric(RawFormat, MetricMessage, namedtuple_with_defaults(
+        "RawMetricMessage",
+        RawFormat.prefix.fields + " ".join(objects.Metric._fields),
+        defaults=objects.Metric._defaults)):
+    pass
+
 message_map = MessageMap(
     RawNone, # NONE
     RawTest, # TEST
@@ -310,4 +319,5 @@ message_map = MessageMap(
     RawProtocol, # PROTOCOL
     RawInput, # INPUT
     RawVersion, # VERSION
+    RawMetric, # METRIC
 )

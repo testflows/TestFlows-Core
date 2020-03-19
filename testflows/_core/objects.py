@@ -186,7 +186,7 @@ class Requirement(TestObject):
             raise RequirementError("requirement version %s is not in %s" % (self.version, list(version)))
         return self
 
-class Measurement(TestObject):
+class Metric(TestObject):
     _fields = ("name", "value", "units", "type", "group", "uid")
     _defaults = (None,) * 3
     uid = None
@@ -200,7 +200,7 @@ class Measurement(TestObject):
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
-        return super(Measurement, self).__init__()
+        return super(Metric, self).__init__()
 
 class Output(TestObject):
     _fields = ("name", "value", "type", "group", "uid")

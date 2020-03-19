@@ -22,9 +22,23 @@ from .serialize import dumps
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message
-from .objects import Tag, Node, Map
+from .objects import Tag, Node, Map, Metric
 from .funcs import top
 from . import __version__
+
+def object_fields(obj):
+    return [getattr(obj, field) for field in obj._fields]
+
+def rstrip_list(l, value=[None, []]):
+    """Remove all the items matching the value
+    from the end of the list
+    """
+    while True:
+        if l and l[-1] in value:
+            l.pop(-1)
+            continue
+        break
+    return l
 
 class TestOutput(object):
     """Test output protocol.
@@ -97,21 +111,6 @@ class TestOutput(object):
 
         :param test: test object
         """
-
-        def object_fields(obj):
-            return [getattr(obj, field) for field in obj._fields]
-
-        def rstrip_list(l, value=[None, []]):
-            """Remove all the items matching the value
-            from the end of the list
-            """
-            while True:
-                if l and l[-1] in value:
-                    l.pop(-1)
-                    continue
-                break
-            return l
-
         def str_or_repr(v):
             try:
                 return str(v)
@@ -150,6 +149,10 @@ class TestOutput(object):
             map_fields(self.test.map, set()) if (self.test.map and self.test is top()) else None
         ]))[1:-1]
         self.message(Message.TEST, msg, rtime=0)
+
+    def metric(self, metric):
+        msg = dumps(rstrip_list(object_fields(metric)))[1:-1]
+        self.message(Message.METRIC, msg)
 
     def value(self, name, value):
         """Output value message.

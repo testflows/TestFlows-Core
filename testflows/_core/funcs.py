@@ -21,6 +21,7 @@ from .serialize import dumps
 from .message import Message
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
+from .objects import Metric
 from .testtype import TestSubType
 
 #: thread local values
@@ -107,6 +108,12 @@ def main(frame=None):
 
 class args(dict):
     pass
+
+def metric(name, value, units, type=None, group=None, uid=None, base=Metric, test=None):
+    obj = base(name=name, value=value, units=units, type=type, group=group, uid=uid)
+    if test is None:
+        test = current()
+    test.io.output.metric(obj)
 
 def note(message, test=None):
     if test is None:
