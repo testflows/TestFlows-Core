@@ -46,7 +46,7 @@ class TestOutput(object):
     :param io: message IO
     """
     rstrip_nulls = re.compile(r'(,null)+$')
-    protocol_version = "TFSPv1.3"
+    protocol_version = "TFSPv1.4"
 
     def __init__(self, test, io):
         self.io = io
