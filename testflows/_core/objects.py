@@ -16,14 +16,27 @@ from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
 
 class Result(TestObject):
-    _fields = ("test", "message", "reason")
-    _defaults = (None, None)
+    _fields = ("test", "message", "reason", "metrics", "tickets", "values")
+    _defaults = (None,) * 5
+    metrics = []
+    tickets = []
+    values = []
 
-    def __init__(self, test, message=None, reason=None):
+    def __init__(self, test, message=None, reason=None, metrics=None, tickets=None, values=None):
         self.test = test
         self.message = message
         self.reason = reason
+        self.metrics = get(metrics, list(self.metrics))
+        self.tickets = get(tickets, list(self.tickets))
+        self.values = get(values, list(self.values))
         return super(Result, self).__init__()
+
+    def __call__(self, result):
+        obj = result.__class__(*[getattr(result, field) for field in result._fields])
+        obj.metrics = self.metrics
+        obj.tickets = self.tickets
+        obj.values = self.values
+        return obj
 
     def xout(self, reason=None):
         return self
@@ -202,6 +215,21 @@ class Metric(TestObject):
         self.uid = get(uid, self.uid)
         return super(Metric, self).__init__()
 
+class Value(TestObject):
+    _fields = ("name", "value", "type", "group", "uid")
+    _defaults = (None,) * 3
+    uid = None
+    type = None
+    group = None
+
+    def __init__(self, name, value, type=None, group=None, uid=None):
+        self.name = name
+        self.value = value
+        self.type = get(type, self.type)
+        self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
+        return super(Value, self).__init__()
+
 class Output(TestObject):
     _fields = ("name", "value", "type", "group", "uid")
     _defaults = (None,) * 3
@@ -231,8 +259,8 @@ class Project(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
         self.uid = get(uid, self.uid)
         return super(Project, self).__init__()
 
@@ -268,8 +296,8 @@ class User(TestObject):
         self.link = get(link, self.link)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
         self.uid = get(uid, self.uid)
         return super(User, self).__init__()
 
@@ -289,9 +317,9 @@ class Environment(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
-        self.devices = get(devices, self.devices)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
+        self.devices = get(devices, list(self.devices))
         self.uid = get(uid, self.uid)
         return super(User, self).__init__()
 
@@ -315,11 +343,11 @@ class Device(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
-        self.requirements = get(requirements, self.requirements)
-        self.software = get(software, self.software)
-        self.hardware = get(hardware, self.hardware)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
+        self.requirements = get(requirements, list(self.requirements))
+        self.software = get(software, list(self.software))
+        self.hardware = get(hardware, list(self.hardware))
         self.uid = get(uid, self.uid)
         return super(Device, self).__init__()
 
@@ -339,9 +367,9 @@ class Software(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
-        self.requirements = get(requirements, self.requirements)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
+        self.requirements = get(requirements, list(self.requirements))
         self.uid = get(uid, self.uid)
         return super(Software, self).__init__()
 
@@ -361,9 +389,9 @@ class Hardware(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
-        self.requirements = get(requirements, self.requirements)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
+        self.requirements = get(requirements, list(self.requirements))
         self.uid = get(uid, self.uid)
         return super(Hardware, self).__init__()
 
@@ -386,9 +414,9 @@ class Job(TestObject):
         self.user = user
         self.type = get(type, self.type)
         self.group = get(group, self.group)
-        self.tags = get(tags, self.tags)
-        self.attributes = get(attributes, self.attributes)
-        self.requirements = get(requirements, self.requirements)
+        self.tags = get(tags, list(self.tags))
+        self.attributes = get(attributes, list(self.attributes))
+        self.requirements = get(requirements, list(self.requirements))
         self.uid = get(uid, self.uid)
         return super(Software, self).__init__()
 

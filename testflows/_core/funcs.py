@@ -21,7 +21,7 @@ from .serialize import dumps
 from .message import Message
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Metric
+from .objects import Value, Metric, Ticket
 from .testtype import TestSubType
 
 #: thread local values
@@ -113,7 +113,23 @@ def metric(name, value, units, type=None, group=None, uid=None, base=Metric, tes
     obj = base(name=name, value=value, units=units, type=type, group=group, uid=uid)
     if test is None:
         test = current()
+    test.result.metrics.append(obj)
     test.io.output.metric(obj)
+
+def ticket(name, link=None, type=None, group=None, uid=None, base=Ticket, test=None):
+    obj = base(name=name, link=link, type=type, group=group, uid=uid)
+    if test is None:
+        test = current()
+    test.result.tickets.append(obj)
+    test.io.output.ticket(obj)
+
+def value(name, value, type=None, group=None, uid=None, base=Value, test=None):
+    obj = base(name=name, value=value, type=type, group=group, uid=uid)
+    if test is None:
+        test = current()
+    test.result.values.append(obj)
+    test.io.output.value(obj)
+    return value
 
 def note(message, test=None):
     if test is None:
@@ -134,12 +150,6 @@ def message(message, test=None):
     if test is None:
         test = current()
     test.io.output.message(Message.NONE, dumps(str(message)))
-
-def value(name, value, test=None):
-    if test is None:
-        test = current()
-    test.io.output.value(name, value)
-    return value
 
 def exception(test=None):
     if test is None:

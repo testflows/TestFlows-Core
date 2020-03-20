@@ -39,6 +39,9 @@ class VersionMessage(Message):
 class MetricMessage(Message):
     pass
 
+class TicketMessage(Message):
+    pass
+
 class InputMessage(Message):
     pass
 
@@ -64,7 +67,16 @@ class TestMessage(Message):
     pass
 
 class ResultMessage(Message):
-    pass
+    def __new__(cls, *args):
+        args = list(args)
+        l = len(args)
+        if l > 13 and args[13]: # metrics
+            args[13] = [RawResultMetric(*m) for m in args[13]]
+        if l > 14 and args[14]: # tickets
+            args[14] = [RawResultTicket(*t) for t in args[14]]
+        if l > 15 and args[15]: # values
+            args[15] = [RawResultValue(*v) for v in args[15]]
+        return super(ResultMessage, cls).__new__(cls, *args)
 
 class OKMessage(ResultMessage):
     pass
@@ -104,11 +116,6 @@ class RawFormat():
 class RawNone(RawFormat, NoneMessage, namedtuple_with_defaults(
         "RawNoneMessage",
         RawFormat.prefix.fields + "message")):
-    pass
-
-class RawValue(RawFormat, ValueMessage, namedtuple_with_defaults(
-        "RawValueMessage",
-        RawFormat.prefix.fields + "name value")):
     pass
 
 class RawException(RawFormat, ExceptionMessage, namedtuple_with_defaults(
@@ -209,55 +216,55 @@ class RawRequirement(namedtuple_with_defaults(
 class RawResultOK(RawFormat, OKMessage, namedtuple_with_defaults(
         "RawResultOKMessage",
         RawFormat.prefix.fields + " ".join(objects.OK._fields),
-        defaults=objects.OK._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "OK"
 
 class RawResultFail(RawFormat, FailMessage, namedtuple_with_defaults(
         "RawResultFailMessage",
         RawFormat.prefix.fields + " ".join(objects.Fail._fields),
-        defaults=objects.Fail._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "Fail"
 
 class RawResultSkip(RawFormat, SkipMessage, namedtuple_with_defaults(
         "RawResultSkipMessage",
         RawFormat.prefix.fields + " ".join(objects.Skip._fields),
-        defaults=objects.Skip._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "Skip"
 
 class RawResultError(RawFormat, ErrorMessage, namedtuple_with_defaults(
         "RawResultErrorMessage",
         RawFormat.prefix.fields + " ".join(objects.Error._fields),
-        defaults=objects.Error._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "Error"
 
 class RawResultNull(RawFormat, NullMessage, namedtuple_with_defaults(
         "RawResultNullMessage",
         RawFormat.prefix.fields + " ".join(objects.Null._fields),
-        defaults=objects.Null._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "Null"
 
 class RawResultXOK(RawFormat, XOKMessage, namedtuple_with_defaults(
         "RawResultXOKMessage",
         RawFormat.prefix.fields + " ".join(objects.XOK._fields),
-        defaults=objects.XOK._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "XOK"
 
 class RawResultXFail(RawFormat, XFailMessage, namedtuple_with_defaults(
         "RawResultXFailMessage",
         RawFormat.prefix.fields + " ".join(objects.XFail._fields),
-        defaults=objects.XFail._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "XFail"
 
 class RawResultXError(RawFormat, XErrorMessage, namedtuple_with_defaults(
         "RawResultXErrorMessage",
         RawFormat.prefix.fields + " ".join(objects.XError._fields),
-        defaults=objects.XError._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "XError"
 
 class RawResultXNull(RawFormat, XNullMessage, namedtuple_with_defaults(
         "RawResultXNullMessage",
         RawFormat.prefix.fields + " ".join(objects.XNull._fields),
-        defaults=objects.XNull._defaults)):
+        defaults=(None, None, [], [], []))):
     name = "XNull"
 
 FailResults = [RawResultFail, RawResultError, RawResultNull]
@@ -293,10 +300,40 @@ class RawVersion(RawFormat, VersionMessage, namedtuple_with_defaults(
         RawFormat.prefix.fields + "version")):
     pass
 
+class RawValue(RawFormat, ValueMessage, namedtuple_with_defaults(
+        "RawValueMessage",
+        RawFormat.prefix.fields + " ".join(objects.Value._fields),
+        defaults=objects.Value._defaults)):
+    pass
+
 class RawMetric(RawFormat, MetricMessage, namedtuple_with_defaults(
         "RawMetricMessage",
         RawFormat.prefix.fields + " ".join(objects.Metric._fields),
         defaults=objects.Metric._defaults)):
+    pass
+
+class RawTicket(RawFormat, TicketMessage, namedtuple_with_defaults(
+        "RawTicketMessage",
+        RawFormat.prefix.fields + " ".join(objects.Ticket._fields),
+        defaults=objects.Ticket._defaults)):
+    pass
+
+class RawResultValue(RawFormat, ValueMessage, namedtuple_with_defaults(
+        "RawResultValue",
+        " ".join(objects.Value._fields),
+        defaults=objects.Value._defaults)):
+    pass
+
+class RawResultMetric(RawFormat, MetricMessage, namedtuple_with_defaults(
+        "RawResultMetric",
+        " ".join(objects.Metric._fields),
+        defaults=objects.Metric._defaults)):
+    pass
+
+class RawResultTicket(RawFormat, TicketMessage, namedtuple_with_defaults(
+        "RawResultTicket",
+        " ".join(objects.Ticket._fields),
+        defaults=objects.Ticket._defaults)):
     pass
 
 message_map = MessageMap(
@@ -320,4 +357,5 @@ message_map = MessageMap(
     RawInput, # INPUT
     RawVersion, # VERSION
     RawMetric, # METRIC
+    RawTicket, # TICKET
 )

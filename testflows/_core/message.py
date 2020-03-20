@@ -35,6 +35,7 @@ class Message(IntEnum):
     INPUT = 17
     VERSION = 18
     METRIC = 19
+    TICKET = 20
 
 ResultMessages = [
     Message.OK,
@@ -53,5 +54,5 @@ MessageMap = namedtuple(
         "NONE TEST NULL OK FAIL SKIP ERROR "
         "EXCEPTION VALUE NOTE DEBUG TRACE "
         "XOK XFAIL XERROR XNULL PROTOCOL INPUT "
-        "VERSION METRIC"
+        "VERSION METRIC TICKET"
     )

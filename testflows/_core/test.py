@@ -482,23 +482,24 @@ class TestBase(object):
 
         def process_exception(exception_type, exception_value, exception_traceback):
             if isinstance(exception_value, ResultException):
-                self.result = exception_value.result
+                self.result = self.result(exception_value.result)
             elif isinstance(exception_value, AssertionError):
                 exception(test=self)
-                self.result = Fail(self.name, str(exception_value))
+                self.result = self.result(Fail(self.name, str(exception_value)))
             else:
                 exception(test=self)
-                self.result = Error(self.name,
-                                    "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
+                result = Error(self.name,
+                    "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
+                self.result = self.result(result)
                 if isinstance(exception_value, KeyboardInterrupt):
-                    raise ResultException(self.result)
+                    raise ResultException(result)
 
         try:
             if exception_value:
                 process_exception(exception_type, exception_value, exception_traceback)
             else:
                 if isinstance(self.result, Null):
-                    self.result = OK(self.name)
+                    self.result = self.result(OK(self.name))
         finally:
             try:
                 if self.type >= TestType.Test:

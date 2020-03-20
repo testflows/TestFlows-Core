@@ -150,25 +150,31 @@ class TestOutput(object):
         ]))[1:-1]
         self.message(Message.TEST, msg, rtime=0)
 
+    def ticket(self, ticket):
+        msg = dumps(rstrip_list(object_fields(ticket)))[1:-1]
+        self.message(Message.TICKET, msg)
+
     def metric(self, metric):
         msg = dumps(rstrip_list(object_fields(metric)))[1:-1]
         self.message(Message.METRIC, msg)
 
-    def value(self, name, value):
-        """Output value message.
-
-        :param name: name
-        :param value: value
-        """
-        msg = dumps([Message.VALUE, name, repr(value)])[1:-1]
-        self.message(msg)
+    def value(self, value):
+        msg = dumps(rstrip_list(object_fields(value)))[1:-1]
+        self.message(Message.VALUE, msg)
 
     def result(self, result):
         """Output result message.
 
         :param result: result object
         """
-        msg = dumps([self.test.name, result.message, result.reason])[1:-1]
+        msg = dumps(rstrip_list([
+            self.test.name,
+            result.message,
+            result.reason,
+            [rstrip_list(object_fields(m)) for m in result.metrics],
+            [rstrip_list(object_fields(t)) for t in result.tickets],
+            [rstrip_list(object_fields(v)) for v in result.values],
+        ]))[1:-1]
         self.message(getattr(Message, result.__class__.__name__.upper()), msg)
 
     def note(self, message):

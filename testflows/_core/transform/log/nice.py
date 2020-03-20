@@ -201,18 +201,48 @@ def format_test(msg, keyword):
         out += format_examples(msg, _indent)
     return out
 
+def format_result_metrics(msg, indent):
+    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Metrics')}"]
+    for metric in msg.metrics:
+        out.append(color(f"{indent}{' ' * 4}{metric.name}", "white", attrs=["dim"]))
+        out.append(color(textwrap.indent(f"{metric.value} {metric.units}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+    return "\n".join(out) + "\n"
+
+def format_result_values(msg, indent):
+    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Values')}"]
+    for value in msg.values:
+        out.append(color(f"{indent}{' ' * 4}{value.name}", "white", attrs=["dim"]))
+        out.append(color(textwrap.indent(f"{value.value}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+    return "\n".join(out) + "\n"
+
+def format_result_tickets(msg, indent):
+    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Tickets')}"]
+    for ticket in msg.tickets:
+        out.append(color(f"{indent}{' ' * 4}{ticket.name}", "white", attrs=["dim"]))
+        out.append(color(textwrap.indent(f"{ticket.link}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+    return "\n".join(out) + "\n"
+
 def format_result(msg, prefix, result):
     if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
         return
     _result = color_result(prefix, result)
     _test = color_other(basename(msg.test))
-    _indent = indent * (msg.p_id.count('/') - 1)
+    _indent = f"{strftimedelta(msg.p_time):>20}" + f"{'':3}{indent * (msg.p_id.count('/') - 1)}"
 
-    return (color_other(f"{strftimedelta(msg.p_time):>20}") +
-        f"{'':3}{_indent}{_result} "
+    out = (f"{color_other(_indent)}{_result} "
         f"{_test}{color_other(', ' + msg.test)}"
         f"{(color_other(', ') + color(format_multiline(msg.message, _indent + ' ' * 26).lstrip(), 'yellow', attrs=['bold'])) if msg.message else ''}"
         f"{(color_other(', ') + color(msg.reason, 'blue', attrs=['bold'])) if msg.reason else ''}\n")
+
+    # convert indent to just spaces
+    #_indent = (len(_indent) + 3) * " "
+    #if msg.metrics:
+    #    out += format_result_metrics(msg, _indent)
+    #if msg.tickets:
+    #    out += format_result_tickets(msg, _indent)
+    #if msg.values:
+    #    out += format_result_values(msg, _indent)
+    return out
 
 def format_other(msg, keyword):
     if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
@@ -225,7 +255,34 @@ def format_other(msg, keyword):
     fields = textwrap.indent(fields, prefix=(indent * (msg.p_id.count('/') - 1) + " " * 30))
     fields = fields.lstrip(" ")
 
-    return color_other(f"{strftimedelta(msg.p_time):>20}{'':3}{indent * (msg.p_id.count('/') - 1)}{keyword} {fields}\n")
+    return color_other(f"{strftimedelta(msg.p_time):>20}{'':3}{indent * (msg.p_id.count('/') - 1)}{keyword} {color_other(fields)}\n")
+
+def format_metric(msg, keyword):
+    if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
+        return
+    prefix = f"{strftimedelta(msg.p_time):>20}" + f"{'':3}{indent * (msg.p_id.count('/') - 1)}"
+    _indent = (len(prefix) + 3) * " "
+    out = [color_other(f"{prefix}{keyword}") + color("Metric", "white", attrs=["dim", "bold"]) + color_other(f" {msg.name}")]
+    out.append(color_other(format_multiline(f"{msg.value} {msg.units}", _indent + " " * 2)))
+    return "\n".join(out) + "\n"
+
+def format_value(msg, keyword):
+    if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
+        return
+    prefix = f"{strftimedelta(msg.p_time):>20}" + f"{'':3}{indent * (msg.p_id.count('/') - 1)}"
+    _indent = (len(prefix) + 3) * " "
+    out = [color_other(f"{prefix}{keyword}") + color("Value", "white", attrs=["dim", "bold"]) + color_other(f" {msg.name}")]
+    out.append(color_other(format_multiline(f"{msg.value}", _indent + " " * 2)))
+    return "\n".join(out) + "\n"
+
+def format_ticket(msg, keyword):
+    if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
+        return
+    prefix = f"{strftimedelta(msg.p_time):>20}" + f"{'':3}{indent * (msg.p_id.count('/') - 1)}"
+    _indent = (len(prefix) + 3) * " "
+    out = [color_other(f"{prefix}{keyword}") + color("Ticket", "white", attrs=["dim", "bold"]) + color_other(f" {msg.name}")]
+    out.append(color_other(format_multiline(f"{msg.link}", _indent + " " * 2)))
+    return "\n".join(out) + "\n"
 
 mark = "\u27e5"
 result_mark = "\u27e5\u27e4"
@@ -237,8 +294,9 @@ formatters = {
     message.RawArgument: (format_other, f"{mark}    @"),
     message.RawAttribute: (format_other, f"{mark}    -"),
     message.RawRequirement: (format_other, f"{mark}    ?"),
-    message.RawValue: (format_other, f"{mark}    ="),
-    message.RawMetric: (format_other, f"{mark}    [metric]"),
+    message.RawValue: (format_value, f"{mark}    "),
+    message.RawMetric: (format_metric, f"{mark}    "),
+    message.RawTicket: (format_ticket, f"{mark}    "),
     message.RawException: (format_other, f"{mark}    Exception:"),
     message.RawNote: (format_other, f"{mark}    [note]"),
     message.RawDebug: (format_other, f"{mark}    [debug]"),
