@@ -24,6 +24,11 @@ from .handlers.requirement.handler import Handler as requirement_handler
 from .handlers.report.handler import Handler as report_handler
 from .handlers.show.handler import Handler as show_handler
 
+try:
+    from testflows.database.cli.handler import Handler as database_handler
+except:
+    database_handler = None
+
 from testflows._core import __version__, __license__
 
 class ArgumentParser(ArgumentParserBase):
@@ -54,3 +59,6 @@ transform_handler.add_command(commands)
 requirement_handler.add_command(commands)
 document_handler.add_command(commands)
 show_handler.add_command(commands)
+if database_handler: 
+    database_handler.add_command(commands)
+
