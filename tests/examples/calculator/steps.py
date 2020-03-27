@@ -2,87 +2,87 @@ from testflows.core import *
 
 ## Press keys
 @TestStep
-def pressing_0():
-    getsattr(current().context, "keys", []).append(0)
+def pressing_0(self):
+    getsattr(self.context, "keys", []).append(0)
     note("pressing: 0")
 
 @TestStep
-def pressing_1():
-    getsattr(current().context, "keys", []).append(1)
+def pressing_1(self):
+    getsattr(self.context, "keys", []).append(1)
     note("pressing: 1")
 
 @TestStep
-def pressing_2():
-    getsattr(current().context, "keys", []).append(2)
+def pressing_2(self):
+    getsattr(self.context, "keys", []).append(2)
     note("pressing: 2")
 
 @TestStep
-def pressing_3():
-    getsattr(current().context, "keys", []).append(3)
+def pressing_3(self):
+    getsattr(self.context, "keys", []).append(3)
     note("pressing: 3")
 
 @TestStep
-def pressing_4():
-    getsattr(current().context, "keys", []).append(4)
+def pressing_4(self):
+    getsattr(self.context, "keys", []).append(4)
     note("pressing: 4")
 
 @TestStep
-def pressing_5():
-    getsattr(current().context, "keys", []).append(5)
+def pressing_5(self):
+    getsattr(self.context, "keys", []).append(5)
     note("pressing: 5")
 
 @TestStep
-def pressing_6():
-    getsattr(current().context, "keys", []).append(6)
+def pressing_6(self):
+    getsattr(self.context, "keys", []).append(6)
     note("pressing: 6")
 
 @TestStep
-def pressing_7():
-    getsattr(current().context, "keys", []).append(7)
+def pressing_7(self):
+    getsattr(self.context, "keys", []).append(7)
     note("pressing: 7")
 
 @TestStep
-def pressing_8():
-    getsattr(current().context, "keys", []).append(8)
+def pressing_8(self):
+    getsattr(self.context, "keys", []).append(8)
     note("pressing: 8")
 
 @TestStep
-def pressing_9():
-    getsattr(current().context, "keys", []).append(9)
+def pressing_9(self):
+    getsattr(self.context, "keys", []).append(9)
     note("pressing: 9")
 
 @TestStep
-def pressing_negative():
-    getsattr(current().context, "keys", []).append("-")
+def pressing_negative(self):
+    getsattr(self.context, "keys", []).append("-")
     note("pressing: negative")
 
 @TestStep
-def pressing_addition():
-    getsattr(current().context, "keys", []).append("+")
+def pressing_addition(self):
+    getsattr(self.context, "keys", []).append("+")
     note("pressing: +")
 
 @TestStep
-def pressing_substract():
-    getsattr(current().context, "keys", []).append("-")
+def pressing_substract(self):
+    getsattr(self.context, "keys", []).append("-")
     note("pressing: -")
 
 @TestStep
-def pressing_divide():
-    getsattr(current().context, "keys", []).append("/")
+def pressing_divide(self):
+    getsattr(self.context, "keys", []).append("/")
     note("pressing: /")
 
 @TestStep
-def pressing_multiply():
-    getsattr(current().context, "keys", []).append("*")
+def pressing_multiply(self):
+    getsattr(self.context, "keys", []).append("*")
     note("pressing: *")
 
 @TestStep
-def pressing_equal():
-    getsattr(current().context, "keys", []).append("=")
+def pressing_equal(self):
+    getsattr(self.context, "keys", []).append("=")
     note("pressing: =")
 
 @TestStep
-def entering_number(num=None):
+def entering_number(self, num=None):
     if num is None:
         return
     num = str(num)
@@ -97,10 +97,9 @@ def entering_number(num=None):
     return By(entering_number, args={"num": num[1:]})
 
 @TestStep
-def entering_operation(op=None):
+def entering_operation(self, op=None):
     if op is None:
         return
-
     if op == "+":
         By(pressing_addition)
     elif op == "-":
@@ -114,14 +113,14 @@ def entering_operation(op=None):
     By(entering_operation)
 
 @TestStep
-def entering_equal(press=True):
+def entering_equal(self, press=True):
     if press is False:
         return
     By(pressing_equal)
     By(entering_equal, args={"press": False})
 
 @TestStep
-def checking_result(expected=None):
+def checking_result(self, expected=None):
     note(getattr(current().context, "keys", None))
     if expected is not None:
         assert expected == expected, error()

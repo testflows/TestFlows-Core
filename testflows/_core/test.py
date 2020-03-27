@@ -99,7 +99,7 @@ class DummyTest(object):
         if isinstance(exception_value, DummyTestException):
             return True
 
-class TestContext(object):
+class Context(object):
     """Test context.
     """
     def __init__(self, parent, state=None):
@@ -387,7 +387,7 @@ class TestBase(object):
         self.map = get(map, self.map)
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
-        self.context = get(context, current().context if current() and self.type < TestType.Test else (TestContext(current().context if current() else None)))
+        self.context = get(context, current().context if current() and self.type < TestType.Test else (Context(current().context if current() else None)))
         self.tags = tags
         self.requirements = get(requirements, self.requirements)
         self.attributes = get(attributes, self.attributes)
@@ -971,11 +971,11 @@ class _testdecorator(object):
                 __kwargs["subtype"] = TestSubType.Empty
                 for i in range(_repeat):
                     with Iteration(name=f"{i}", parent_type=parent_test.type, **__kwargs) as test:
-                        self.func(**{name: arg.value for name, arg in test.args.items()})
+                        self.func(test, **{name: arg.value for name, arg in test.args.items()})
             return parent_test
         else:
             with self.type(**_kwargs, _frame=frame) as test:
-                r = self.func(**{name: arg.value for name, arg in test.args.items()})
+                r = self.func(test, **{name: arg.value for name, arg in test.args.items()})
                 def run_generator():
                     return next(r)
                 if inspect.isgenerator(r):

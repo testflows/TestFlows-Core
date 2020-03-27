@@ -4,7 +4,7 @@ from testflows.asserts import error
 from steps import *
 
 @TestScenario
-def two_number_operation(a, op, b, equals):
+def two_number_operation(self, a, op, b, equals):
     """Check operation that takes two numbers"""
     with When(f"I enter number {a}"):
         By(entering_number, args={"num":a})
@@ -29,14 +29,13 @@ def two_number_operation(a, op, b, equals):
         (4, '/', 2, 2)
     ]
 )
-def two_number_operations():
-    self = current()
+def two_number_operations(self):
     for example in self.examples:
         name = '{a}{op}{b}={equals}'.format(**example._asdict())
         run(test=two_number_operation, name=name, args=example._asdict())
 
 @TestFeature
-def calculator():
+def calculator(self):
     """Calculator.
     """
     run(test=two_number_operations)

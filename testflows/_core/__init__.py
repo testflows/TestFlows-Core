@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 __author__ = "Vitaliy Zakaznikov (TestFlows Test Framework http://testflows.com)"
-__version__ = "1.3.__VERSION__"
+__version__ = "1.4.__VERSION__"
 __license__ = f"""
 Copyright 2019 {__author__}
 
