@@ -57,7 +57,7 @@ hr { border-color: #3fdc84; }
 /* Result color classes */
 .time { color: #666666; }
 .time-inline { display: inline-block; margin-right: 10px; margin-left: 10px; width: 6em; }
-.result { display: block; font-weight: bold; padding-left: 10px; padding-right: 10px; }
+.result { display: block; font-weight: normal; text-align: center; padding-left: 10px; padding-right: 10px; }
 .result-inline { display: inline-block; margin-right: 10px; margin-left: 10px; width: 3em; text-align: center; }
 .result-ok { color: #0dad55 }
 .result-xout, .result-xok, .result-xfail, .result-xerror, .result-xnull { background-color: #307bbb; color: white; }
