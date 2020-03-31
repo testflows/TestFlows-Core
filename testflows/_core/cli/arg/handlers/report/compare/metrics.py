@@ -11,6 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import datetime
+
+from testflows._core.utils.format import bytesize
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.report.compare.command import Handler as HandlerBase
@@ -103,7 +106,12 @@ class Handler(HandlerBase):
                 else:
                     for metric in result.metrics:
                         if metric.name == name:
-                            metrics.append(f'{metric.value} {metric.units}')
+                            if metric.units == "ms":
+                                metrics.append(f'{strftimedelta(datetime.timedelta(seconds=(int(metric.value) / 1000.0)))}')
+                            elif metric.units == "bytes":
+                                metrics.append(f'{bytesize(int(metric.value))}')
+                            else:
+                                metrics.append(f'{metric.value} {metric.units}')
             return str("<br>".join(metrics)) if metrics else "-"
 
         d["table"]["value"] = table_value

@@ -33,6 +33,7 @@ from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.message import FailResults, XoutResults
+from testflows._core.utils.sort import human
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 from testflows._core.filters import the
 from testflows._core.name import sep
@@ -324,7 +325,7 @@ class Handler(HandlerBase):
                 if test["test"].p_type < TestType.Test:
                     continue
                 tests.append(uname)
-        return sorted(list(set(tests)))
+        return human(list(set(tests)))
 
     def table(self, tests, results, ref_link=None):
         table = {
