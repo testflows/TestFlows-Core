@@ -107,7 +107,7 @@ class Handler(HandlerBase):
                     for metric in result.metrics:
                         if metric.name == name:
                             if metric.units == "ms":
-                                metrics.append(f'{strftimedelta(datetime.timedelta(seconds=(int(metric.value) / 1000.0)))}')
+                                metrics.append(f'{(int(metric.value) / 1000.0)}s')
                             elif metric.units == "bytes":
                                 metrics.append(f'{bytesize(int(metric.value))}')
                             else:
