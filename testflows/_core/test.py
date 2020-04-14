@@ -871,6 +871,12 @@ class Steps(ExitStack):
         return step
 
 @contextmanager
+def Cleanup(callback, *args, **kwargs):
+    test = kwargs.pop("_test", current())
+    test.context.cleanup(callback, *args, **kwargs)
+    yield
+
+@contextmanager
 def Background(name, **kwargs):
     with _background(name, **kwargs) as bg:
         with ExitStack() as stack:

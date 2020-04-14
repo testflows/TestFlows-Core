@@ -58,6 +58,8 @@ def cleanup():
         if not pid_exists(pid):
             try:
                 os.remove(file)
+            except PermissionError:
+                pass
             except OSError:
                 raise
 
