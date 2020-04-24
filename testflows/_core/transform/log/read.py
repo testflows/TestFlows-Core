@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import time
+
 def transform(file, tail=False, offset=False):
     """Read lines from a file-like object.
 
@@ -22,7 +24,8 @@ def transform(file, tail=False, offset=False):
     line = ""
     pos = 0
     while True:
-        line += file.readline()
+        data = file.readline()
+        line += data
         if line.endswith("\n"):
             if offset:
                 yield (line, pos)
@@ -30,3 +33,5 @@ def transform(file, tail=False, offset=False):
             else:
                 yield line
             line = ""
+        if data == "":
+            time.sleep(0.15)
