@@ -231,7 +231,7 @@ def format_result(msg, prefix, result):
 
     out = (f"{color_other(_indent)}{_result} "
         f"{_test}{color_other(', ' + msg.test)}"
-        f"{(color_other(', ') + color(format_multiline(msg.message, _indent + ' ' * 26).lstrip(), 'yellow', attrs=['bold'])) if msg.message else ''}"
+        f"{(color_other(', ') + color(format_multiline(msg.message, ' ' * len(_indent)).strip(), 'yellow', attrs=['bold'])) if msg.message else ''}"
         f"{(color_other(', ') + color(msg.reason, 'blue', attrs=['bold'])) if msg.reason else ''}\n")
 
     # convert indent to just spaces
