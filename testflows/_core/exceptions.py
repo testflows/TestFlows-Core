@@ -1,11 +1,12 @@
 import sys
 import traceback
 
-def exception():
+def exception(exc_type=None, exc_value=None, exc_traceback=None):
     """Get exception string.
     """
-    exc_type, exc_value, exc_tb  = sys.exc_info()
-    return "".join(traceback.format_exception(exc_type, exc_value, exc_tb)).rstrip()
+    if (exc_type, exc_value, exc_traceback) == (None, None, None):
+        exc_type, exc_value, exc_traceback  = sys.exc_info()
+    return "".join(traceback.format_exception(exc_type, exc_value, exc_traceback)).rstrip()
 
 
 class TestFlowsException(Exception):

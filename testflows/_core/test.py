@@ -476,27 +476,27 @@ class TestBase(object):
                 self.run(**{name: arg.value for name, arg in self.args.items()})
             return self
 
-    def __exit__(self, exception_type, exception_value, exception_traceback):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
         if top() is self and not self._init:
             return False
 
-        def process_exception(exception_type, exception_value, exception_traceback):
-            if isinstance(exception_value, ResultException):
-                self.result = self.result(exception_value.result)
-            elif isinstance(exception_value, AssertionError):
-                exception(test=self)
-                self.result = self.result(Fail(self.name, str(exception_value)))
+        def process_exception(exc_type, exc_value, exc_traceback):
+            if isinstance(exc_value, ResultException):
+                self.result = self.result(exc_value.result)
+            elif isinstance(exc_value, AssertionError):
+                exception(exc_type, exc_value, exc_traceback, test=self)
+                self.result = self.result(Fail(self.name, str(exc_value)))
             else:
-                exception(test=self)
+                exception(exc_type, exc_value, exc_traceback, test=self)
                 result = Error(self.name,
-                    "unexpected %s: %s" % (exception_type.__name__, str(exception_value)))
+                    "unexpected %s: %s" % (exc_type.__name__, str(exc_value)))
                 self.result = self.result(result)
-                if isinstance(exception_value, KeyboardInterrupt):
+                if isinstance(exc_value, KeyboardInterrupt):
                     raise ResultException(result)
 
         try:
-            if exception_value:
-                process_exception(exception_type, exception_value, exception_traceback)
+            if exc_value:
+                process_exception(exc_type, exc_value, exc_traceback)
             else:
                 if isinstance(self.result, Null):
                     self.result = self.result(OK(self.name))
@@ -506,7 +506,7 @@ class TestBase(object):
                     if self.context._cleanups:
                         with Finally("I clean up"):
                             cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
-                        if not exception_value and cleanup_exc_value:
+                        if not exc_value and cleanup_exc_value:
                             process_exception(cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback)
             finally:
                 current(self.caller_test)

@@ -151,10 +151,10 @@ def message(message, test=None):
         test = current()
     test.io.output.message(Message.NONE, dumps(str(message)))
 
-def exception(test=None):
+def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
     if test is None:
         test = current()
-    test.io.output.exception()
+    test.io.output.exception(exc_type, exc_value, exc_traceback)
 
 def ok(message=None, test=None):
     if test is None:

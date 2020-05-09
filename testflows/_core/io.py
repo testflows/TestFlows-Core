@@ -98,12 +98,12 @@ class TestOutput(object):
         msg = dumps(str(message))
         self.message(Message.INPUT, msg)
 
-    def exception(self):
+    def exception(self, exc_type=None, exc_value=None, exc_traceback=None):
         """Output exception message.
 
         Note: must be called from within finally block
         """
-        msg = dumps(get_exception())
+        msg = dumps(get_exception(exc_type, exc_value, exc_traceback))
         self.message(Message.EXCEPTION, msg)
 
     def test_message(self):
