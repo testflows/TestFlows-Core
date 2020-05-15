@@ -41,6 +41,11 @@ from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import the
 
+try:
+    import testflows.database as database_module
+except:
+    database_module = None
+
 class xfails(dict):
     """xfails container.
 
@@ -248,6 +253,8 @@ class TestBase(object):
             help="path to the log file where test output will be stored, default: uses temporary log file")
         parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
             help="show skipped tests, default: False", default=False)
+        if database_module:
+            database_module.argparser(parser)
         return parser
 
     def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None,
@@ -294,6 +301,9 @@ class TestBase(object):
                 os.remove(settings.write_logfile)
 
             settings.output_format = args.pop("_output")
+
+            if args.get("_database"):
+                settings.database = args.pop("_database")
 
             if args.get("_show_skipped"):
                 settings.show_skipped = True

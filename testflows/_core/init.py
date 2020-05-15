@@ -108,11 +108,7 @@ def stdout_silent_handler():
     """
     pass
 
-def init():
-    """Initialization before we run the first test.
-    """
-    cleanup()
-
+def start_output_handler():
     output_handler_map = {
         "raw": stdout_raw_handler,
         "slick": stdout_slick_handler,
@@ -122,8 +118,25 @@ def init():
         "short": stdout_short_handler,
         "dots": stdout_dots_handler,
     }
-    # start stdout output handler
+
     handler = threading.Thread(target=output_handler_map[settings.output_format])
     handler.name = "tfs-output"
     handler.start()
+
+def start_database_handler():
+    if not settings.database:
+        return
+
+    from testflows.database import database_handler
+
+    handler = threading.Thread(target=database_handler)
+    handler.name = 'tfs-database'
+    handler.start()
+
+def init():
+    """Initialization before we run the first test.
+    """
+    cleanup()
+    start_output_handler()
+    start_database_handler()
     return True
