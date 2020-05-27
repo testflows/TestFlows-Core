@@ -15,7 +15,7 @@
 import threading
 import testflows._core.cli.arg.type as argtype
 
-from testflows._core.message import Message, ResultMessages
+from testflows._core.message import Message
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
@@ -56,7 +56,7 @@ class Handler(HandlerBase):
     class FirstStage(PipelineBase):
         def __init__(self, results, input):
             stop_event = threading.Event()
-            message_types = [Message.TEST] + ResultMessages
+            message_types = [Message.TEST, Message.RESULT]
             command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
             steps = [
                 read_and_filter_transform(input, command=command),

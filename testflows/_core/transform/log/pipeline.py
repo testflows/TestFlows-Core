@@ -14,7 +14,7 @@
 # limitations under the License.
 import threading
 
-from testflows._core.message import Message, ResultMessages
+from testflows._core.message import Message
 from testflows._core.testtype import TestType
 from .read import transform as read_transform
 from .parse import transform as parse_transform
@@ -27,12 +27,12 @@ from .short import transform as short_transform
 from .slick import transform as slick_transform
 from .index import transform as index_transform
 from .read_and_filter import transform as read_and_filter_transform
-from .report.passing import transform as passing_report_transform
-from .report.fails import transform as fails_report_transform
-from .report.totals import transform as totals_report_transform
-from .report.version import transform as version_report_transform
-from .report.results import transform as results_transform
-from .report.map import transform as map_transform
+#from .report.passing import transform as passing_report_transform
+#from .report.fails import transform as fails_report_transform
+#from .report.totals import transform as totals_report_transform
+#from .report.version import transform as version_report_transform
+#from .report.results import transform as results_transform
+#from .report.map import transform as map_transform
 
 class Pipeline(object):
     """Combines multiple steps into a pipeline
@@ -90,8 +90,8 @@ class RawLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail),
-            raw_transform(stop_event),
+            read_transform(input, tail=tail, stop=stop_event),
+            raw_transform(),
             write_transform(output),
             stop_transform(stop_event)
         ]
@@ -106,10 +106,10 @@ class ShortLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 short_transform(),
-                passing_report_transform(stop_event),
-                fails_report_transform(stop_event),
-                totals_report_transform(stop_event),
-                version_report_transform(stop_event),
+                #passing_report_transform(stop_event),
+                #fails_report_transform(stop_event),
+                #totals_report_transform(stop_event),
+                #version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -128,10 +128,10 @@ class NiceLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 nice_transform(stop_event),
-                passing_report_transform(stop_event),
-                fails_report_transform(stop_event),
-                totals_report_transform(stop_event),
-                version_report_transform(stop_event),
+                #passing_report_transform(stop_event),
+                #fails_report_transform(stop_event),
+                #totals_report_transform(stop_event),
+                #version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -150,10 +150,10 @@ class SlickLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 slick_transform(),
-                passing_report_transform(stop_event),
-                fails_report_transform(stop_event),
-                totals_report_transform(stop_event),
-                version_report_transform(stop_event),
+                #passing_report_transform(stop_event),
+                #fails_report_transform(stop_event),
+                #totals_report_transform(stop_event),
+                #version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -172,10 +172,10 @@ class DotsLogPipeline(Pipeline):
             parse_transform(stop_event),
             fanout(
                 dots_transform(stop_event),
-                passing_report_transform(stop_event),
-                fails_report_transform(stop_event),
-                totals_report_transform(stop_event),
-                version_report_transform(stop_event),
+                #passing_report_transform(stop_event),
+                #fails_report_transform(stop_event),
+                #totals_report_transform(stop_event),
+                #version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -189,14 +189,14 @@ class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST] + ResultMessages
+        message_types = [Message.TEST, Message.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                totals_report_transform(stop_event),
+                #totals_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -210,14 +210,14 @@ class FailsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST] + ResultMessages
+        message_types = [Message.TEST, Message.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                fails_report_transform(stop_event),
+                #fails_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -231,14 +231,14 @@ class PassingReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST] + ResultMessages
+        message_types = [Message.TEST, Messge.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                passing_report_transform(stop_event),
+                #passing_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -252,14 +252,14 @@ class VersionReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.VERSION] + ResultMessages
+        message_types = [Message.VERSION, Message.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                version_report_transform(stop_event),
+                #version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -278,7 +278,7 @@ class MapLogPipeline(Pipeline):
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
-            map_transform(maps, stop_event),
+            #map_transform(maps, stop_event),
             stop_transform(stop_event)
         ]
         super(MapLogPipeline, self).__init__(steps)
@@ -286,13 +286,13 @@ class MapLogPipeline(Pipeline):
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results):
         stop_event = threading.Event()
-        message_types = [Message.VERSION, Message.TEST] + ResultMessages
+        message_types = [Message.VERSION, Message.TEST, Message.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
-            results_transform(results, stop_event),
+            #results_transform(results, stop_event),
             stop_transform(stop_event)
         ]
         super(ResultsLogPipeline, self).__init__(steps)
@@ -300,7 +300,7 @@ class ResultsLogPipeline(Pipeline):
 class CompactRawLogPipeline(Pipeline):
     def __init__(self, input, output, steps=True):
         stop_event = threading.Event()
-        message_types = [Message.VERSION, Message.TEST] + ResultMessages
+        message_types = [Message.VERSION, Message.TEST, Message.RESULT]
         test_types = [TestType.Module, TestType.Suite, TestType.Test]
         command = (f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),"
             + (f"\"[^\"]+\",[0-9]+,({'|'.join([str(t) for t in test_types])})," if not steps else "")

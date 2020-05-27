@@ -1,4 +1,5 @@
-# Copyright 2019 Vitaliy Zakaznikov (TestFlows Test Framework http://testflows.com)
+# Copyright 2019 Katteli Inc.
+# TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,8 +18,7 @@ import importlib
 import threading
 
 from .exceptions import ResultException
-from .serialize import dumps
-from .message import Message
+from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket

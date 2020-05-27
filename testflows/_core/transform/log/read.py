@@ -14,20 +14,28 @@
 # limitations under the License.
 import time
 
-def transform(file, tail=False, offset=False):
+from testflows._core.message import Message
+
+def transform(file, tail=False, offset=False, stop=None):
     """Read lines from a file-like object.
 
     :param file: open file handle
     :param tail: tail mode, default: False
     :param offset: include offset with the message, default: False
+    :param stop: stop event
     """
     yield None
     line = ""
     pos = 0
+    stop_keyword = '{"message_keyword":"%s"' % str(Message.STOP)
+    stop_keyword_len = len(stop_keyword)
+
     while True:
         data = file.readline()
         line += data
         if line.endswith("\n"):
+            if stop and line[:stop_keyword_len] == stop_keyword:
+                stop.set()
             if offset:
                 yield (line, pos)
                 pos += len(line.encode("utf-8"))

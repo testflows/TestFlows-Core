@@ -187,16 +187,15 @@ class TestBase(object):
     attributes = []
     requirements = []
     users = []
-    tickets = []
     examples = None
     name = None
     description = None
     node = None
-    map = None
+    map = []
     flags = Flags()
     name_sep = "."
     type = TestType.Test
-    subtype = TestSubType.Empty
+    subtype = None
 
     @classmethod
     def argparser(cls):
@@ -349,7 +348,7 @@ class TestBase(object):
                 args.pop("_end")
 
             if args.get("_tags"):
-                tags = [value for value in args.pop("_tags")]
+                tags = {value for value in args.pop("_tags")}
 
             if args.get("_attrs"):
                 attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
@@ -367,7 +366,7 @@ class TestBase(object):
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
-                 users=None, tickets=None, examples=None, description=None, parent=None,
+                 users=None, examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, node=None, map=None, context=None,
                  _frame=None, _run=True):
@@ -395,21 +394,20 @@ class TestBase(object):
         self.parent = parent
         self.id = get(id, [settings.test_id])
         self.node = get(node, self.node)
-        self.map = get(map, self.map)
+        self.map = get(map, list(self.map))
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
         self.context = get(context, current().context if current() and self.type < TestType.Test else (Context(current().context if current() else None)))
         self.tags = tags
-        self.requirements = get(requirements, self.requirements)
-        self.attributes = get(attributes, self.attributes)
-        self.users = get(users, self.users)
-        self.tickets = get(tickets, self.tickets)
+        self.requirements = get(requirements, list(self.requirements))
+        self.attributes = get(attributes, list(self.attributes))
+        self.users = get(users, list(self.users))
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.args = get(args, {})
         self.args.update({k:v for k, v in cli_args.items() if not k.startswith("_")})
         self._process_args()
-        self.result = Null(self.name)
+        self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
@@ -479,7 +477,7 @@ class TestBase(object):
         current(self)
 
         if self.flags & SKIP:
-            raise ResultException(Skip(self.name, "skip flag set"))
+            raise Skip("skip flag set", test=self.name)
         else:
             if top() is self:
                 self._init = init()
@@ -493,24 +491,23 @@ class TestBase(object):
 
         def process_exception(exc_type, exc_value, exc_traceback):
             if isinstance(exc_value, ResultException):
-                self.result = self.result(exc_value.result)
+                self.result = self.result(exc_value)
             elif isinstance(exc_value, AssertionError):
                 exception(exc_type, exc_value, exc_traceback, test=self)
-                self.result = self.result(Fail(self.name, str(exc_value)))
+                self.result = self.result(Fail(str(exc_value), test=self.name))
             else:
                 exception(exc_type, exc_value, exc_traceback, test=self)
-                result = Error(self.name,
-                    "unexpected %s: %s" % (exc_type.__name__, str(exc_value)))
+                result = Error("unexpected %s: %s" % (exc_type.__name__, str(exc_value)), test=self.name)
                 self.result = self.result(result)
                 if isinstance(exc_value, KeyboardInterrupt):
-                    raise ResultException(result)
+                    raise result
 
         try:
-            if exc_value:
+            if exc_value is not None:
                 process_exception(exc_type, exc_value, exc_traceback)
             else:
                 if isinstance(self.result, Null):
-                    self.result = self.result(OK(self.name))
+                    self.result = self.result(OK(test=self.name))
         finally:
             try:
                 if self.type >= TestType.Test:
@@ -524,6 +521,8 @@ class TestBase(object):
                 previous(self)
                 self._apply_xfails()
                 self.io.output.result(self.result)
+                if top() is self:
+                    self.io.output.stop()
                 self.io.close()
 
             if self.flags & PAUSE_AFTER:
@@ -710,7 +709,7 @@ class _test(object):
         :param kwargs: test's kwargs
         """
         type = kwargs.pop("type", TestType.Test)
-        subtype = kwargs.pop("subtype", TestSubType.Empty)
+        subtype = kwargs.pop("subtype", None)
 
         parent_type = parent.type
 
@@ -768,7 +767,7 @@ class _test(object):
                 __kwargs.pop("name", None)
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
-                __kwargs["subtype"] = TestSubType.Empty
+                __kwargs["subtype"] = None
                 for i in range(self._repeat):
                     with Iteration(name=f"{i}", tags=self._tags, **__kwargs, parent_type=self.test.type):
                         exec(code, frame.f_globals, frame.f_locals)
@@ -804,7 +803,7 @@ class _test(object):
                 result = Error(self.parent.name, self.test.result.message)
 
             if TE not in self.test.flags:
-                raise ResultException(result)
+                raise result
             else:
                 with self.parent.lock:
                     if isinstance(self.parent.result, Error):
@@ -985,7 +984,7 @@ class _testdecorator(object):
                 __kwargs = dict(_kwargs)
                 __kwargs.pop("name")
                 __kwargs["type"] = TestType.Iteration
-                __kwargs["subtype"] = TestSubType.Empty
+                __kwargs["subtype"] = None
                 for i in range(_repeat):
                     with Iteration(name=f"{i}", parent_type=parent_test.type, **__kwargs) as test:
                         self.func(test, **{name: arg.value for name, arg in test.args.items()})
@@ -1125,7 +1124,7 @@ def run(comment=None, test=None, **kwargs):
                                _frame=_frame, _run=False) as parent_test:
             _kwargs = dict(kwargs)
             _kwargs["type"] = TestType.Iteration
-            _kwargs["subtype"] = TestSubType.Empty
+            _kwargs["subtype"] = None
             for i in range(_repeat):
                 with Iteration(test=test, name=f"{i}", **kwargs, _frame=_frame, parent_type=parent_test.type):
                     pass

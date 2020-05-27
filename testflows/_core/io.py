@@ -19,84 +19,96 @@ import threading
 
 import testflows.settings as settings
 
-from .serialize import dumps
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
-from .message import Message
-from .objects import Tag, Node, Map, Metric
+from .message import Message, MessageParentObjectType, MessageParentObjectIds, dumps
+from .objects import Tag, Metric, Example
 from .funcs import top
 from . import __version__
 
-def object_fields(obj):
-    return [getattr(obj, field) for field in obj._fields]
+def object_fields(obj, prefix):
+    return {f"{prefix}_{field}":getattr(obj, field) for field in obj._fields}
 
-def rstrip_list(l, value=[None, []]):
-    """Remove all the items matching the value
-    from the end of the list
-    """
-    while True:
-        if l and l[-1] in value:
-            l.pop(-1)
-            continue
-        break
-    return l
+def str_or_repr(v):
+    try:
+        return str(v)
+    except:
+        return repr(v)
 
 class TestOutput(object):
     """Test output protocol.
 
     :param io: message IO
     """
-    rstrip_nulls = re.compile(r'(,null)+$')
-    protocol_version = "TFSPv1.4"
+    protocol_version = "TFSPv2.1"
 
     def __init__(self, test, io):
         self.io = io
         self.test = test
         self.msg_hash = ""
         self.msg_count = 0
-        self.prefix = dumps([
-            int(self.test.type),
-            int(self.test.subtype),
-            id_sep + id_sep.join(str(n) for n in self.test.id),
-            int(self.test.flags),
-            int(self.test.cflags)
-        ])[1:-1]
+        self.prefix = {
+            "test_type": str(self.test.type),
+            "test_subtype": str(self.test.subtype) if self.test.subtype is not None else None,
+            "test_id": id_sep + id_sep.join(str(n) for n in self.test.id),
+            "test_flags": int(self.test.flags),
+            "test_cflags": int(self.test.cflags)
+        }
 
-    def message(self, keyword, message, rtime=None, stream=None):
+    def message(self, keyword, message, ptype=0, pids=None, stream=None):
         """Output message.
 
         :param keyword: keyword
         :param message: message
-        :param rtime: relative time, default: None
         """
-        rtime = rtime
-        if rtime is None:
-            rtime = round(time.time() - self.test.start_time, settings.time_resolution)
-        msg = f"{self.msg_count},{self.prefix},{dumps(stream)},{rtime:.{settings.time_resolution}f},{str(message)}{end_of_message}"
-        msg = self.rstrip_nulls.sub("", msg)
-        msg_hash = settings.hash_func(f"{self.msg_hash},{keyword},{msg}".encode("utf-8")).hexdigest()[:settings.hash_length]
+        msg_time = time.time()
+
+        msg = {
+            "message_keyword": str(keyword),
+            "message_hash": self.msg_hash,
+            "message_ptype": ptype,
+            "message_num": self.msg_count,
+            "message_stream": stream,
+            "message_time": round(msg_time, settings.time_resolution),
+            "message_rtime": round(msg_time - self.test.start_time, settings.time_resolution)
+        }
+        msg.update(self.prefix)
+        msg.update(message)
+
+        if pids:
+            msg.update(pids._asdict())
+
+        msg = dumps(msg)
+
+        self.msg_hash = settings.hash_func(msg.encode("utf-8")).hexdigest()[:settings.hash_length]
         self.msg_count += 1
-        self.msg_hash = msg_hash
-        self.io.write(f"{keyword},\"{msg_hash}\",{msg}")
+
+        parts = msg.split(",",2)
+        parts[1] = f"\"message_hash\":\"{self.msg_hash}\""
+        self.io.write(f"{parts[0]},{parts[1]},{parts[2]}{end_of_message}")
+
+    def stop(self):
+        """Output stop message."""
+        self.message(Message.STOP, {})
 
     def protocol(self):
         """Output protocol version message.
         """
-        msg = dumps(str(self.protocol_version))
-        self.message(Message.PROTOCOL, msg, rtime=round(self.test.start_time, settings.time_resolution))
+        msg = {"protocol_version": self.protocol_version}
+        self.message(Message.PROTOCOL, msg)
 
     def version(self):
         """Output framework version message.
         """
-        msg = dumps(str(__version__))
-        self.message(Message.VERSION, msg, rtime=round(self.test.start_time, settings.time_resolution))
+        msg = {"framework_version": __version__}
+        self.message(Message.VERSION, msg)
 
     def input(self, message):
         """Output input message.
 
         :param message: message
         """
-        msg = dumps(str(message))
+        msg = {"message": str(message)}
         self.message(Message.INPUT, msg)
 
     def exception(self, exc_type=None, exc_value=None, exc_traceback=None):
@@ -104,86 +116,99 @@ class TestOutput(object):
 
         Note: must be called from within finally block
         """
-        msg = dumps(get_exception(exc_type, exc_value, exc_traceback))
+        msg = {"message": get_exception(exc_type, exc_value, exc_traceback)}
         self.message(Message.EXCEPTION, msg)
 
     def test_message(self):
         """Output test message.
-
-        :param test: test object
         """
-        def str_or_repr(v):
-            try:
-                return str(v)
-            except:
-                return repr(v)
+        ptype = MessageParentObjectType.TEST
+        msg = {
+            "test_name": self.test.name,
+            "test_uid": str(self.test.uid or "") or None,
+            "test_description": str(self.test.description or "") or None,
+        }
 
-        def map_fields(obj, visited):
-            visited.add(obj.node)
-            return rstrip_list([
-                rstrip_list(object_fields(Node.create(obj.node))),
-                rstrip_list([map_fields(
-                    Map(n) if n in visited else getattr(n.func, "map", Map(n)), visited)
-                        for n in obj.nexts]) if obj.nexts else None,
-                rstrip_list([map_fields(
-                    Map(n) if n in visited else getattr(n.func, "map", Map(n)), visited)
-                        for n in obj.ins]) if obj.ins else None,
-                rstrip_list([map_fields(
-                    Map(n) if n in visited else getattr(n.func, "map", Map(n)), visited)
-                        for n in obj.outs]) if obj.outs else None,
-            ])
+        self.message(Message.TEST, msg, ptype=ptype)
 
-        msg = dumps(rstrip_list([
-            self.test.name,
-            round(self.test.start_time, settings.time_resolution),
-            str(self.test.flags) or None,
-            str(self.test.uid or "") or None,
-            str(self.test.description or "") or None,
-            [rstrip_list(object_fields(attr)) for attr in self.test.attributes],
-            [rstrip_list(object_fields(req)) for req in self.test.requirements],
-            [[str_or_repr(a) for a in rstrip_list(object_fields(arg))] for arg in self.test.args.values()],
-            [rstrip_list(object_fields(Tag(tag))) for tag in self.test.tags],
-            [rstrip_list(object_fields(user)) for user in self.test.users],
-            [rstrip_list(object_fields(ticket)) for ticket in self.test.tickets],
-            rstrip_list(object_fields(self.test.examples)) if self.test.examples else None,
-            rstrip_list(object_fields(self.test.node)) if self.test.node else None,
-            map_fields(self.test.map, set()) if (self.test.map and self.test is top()) else None
-        ]))[1:-1]
-        self.message(Message.TEST, msg, rtime=0)
+        [self.attribute(attr, ptype=ptype) for attr in self.test.attributes]
+        [self.requirement(req, ptype=ptype) for req in self.test.requirements]
+        [self.argument(arg, ptype=ptype) for arg in self.test.args.values()]
+        [self.tag(Tag(tag), ptype=ptype) for tag in self.test.tags]
+        [self.user(user, ptype=ptype) for user in self.test.users]
+        [self.example(Example(idx, col, getattr(row, col)), ptype=ptype) for idx, row in enumerate(self.test.examples) for col in row._fields]
+        if self.test.node:
+            self.node(self.test.node, ptype=ptype)
+        if self.test.map:
+            self.map(self.test.map, ptype=ptype)
 
-    def ticket(self, ticket):
-        msg = dumps(rstrip_list(object_fields(ticket)))[1:-1]
-        self.message(Message.TICKET, msg)
+    def attribute(self, attribute, ptype):
+        msg = object_fields(attribute, "attribute")
+        self.message(Message.ATTRIBUTE, msg, ptype=ptype)
 
-    def metric(self, metric):
-        msg = dumps(rstrip_list(object_fields(metric)))[1:-1]
-        self.message(Message.METRIC, msg)
+    def requirement(self, requirement, ptype):
+        msg = object_fields(requirement, "requirement")
+        self.message(Message.REQUIREMENT, msg, ptype=ptype)
 
-    def value(self, value):
-        msg = dumps(rstrip_list(object_fields(value)))[1:-1]
-        self.message(Message.VALUE, msg)
+    def argument(self, argument, ptype):
+        msg = object_fields(argument, "argument")
+        value = msg["argument_value"]
+        if value is not None:
+            msg["argument_value"] = str_or_repr(value)
+        self.message(Message.ARGUMENT, msg, ptype=ptype)
+
+    def tag(self, tag, ptype):
+        msg = object_fields(tag, "tag")
+        self.message(Message.TAG, msg, ptype=ptype)
+
+    def user(self, user, ptype):
+        msg = object_fields(user, "user")
+        self.message(Message.USER, msg, ptype=ptype)
+
+    def example(self, example, ptype):
+        msg = object_fields(example, "example")
+        self.message(Message.EXAMPLE, msg, ptype=ptype)
+
+    def node(self, node, ptype):
+        msg = object_fields(node, "node")
+        self.message(Message.NODE, msg, ptype=ptype)
+
+    def map(self, map, ptype):
+        for node in map:
+            msg = object_fields(node, "node")
+            self.message(Message.MAP, msg, ptype=ptype)
+
+    def ticket(self, ticket, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+        msg = object_fields(ticket, "ticket")
+        self.message(Message.TICKET, msg, ptype=ptype)
+
+    def metric(self, metric, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+        msg = object_fields(metric, "metric")
+        self.message(Message.METRIC, msg, ptype=ptype)
+
+    def value(self, value, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+        msg = object_fields(value, "value")
+        self.message(Message.VALUE, msg, ptype=ptype)
 
     def result(self, result):
         """Output result message.
 
         :param result: result object
         """
-        msg = dumps(rstrip_list([
-            self.test.name,
-            result.message,
-            result.reason,
-            [rstrip_list(object_fields(m)) for m in result.metrics],
-            [rstrip_list(object_fields(t)) for t in result.tickets],
-            [rstrip_list(object_fields(v)) for v in result.values],
-        ]))[1:-1]
-        self.message(getattr(Message, result.__class__.__name__.upper()), msg)
+        ptype = MessageParentObjectType.TEST | MessageParentObjectType.RESULT
+        msg = {
+            "result_message": result.message,
+            "result_reason": result.reason,
+            "result_type": str(result.type),
+        }
+        self.message(Message.RESULT, msg, ptype=ptype)
 
     def note(self, message):
         """Output note message.
 
         :param message: message
         """
-        msg = dumps(str(message))
+        msg = {"message": str(message)}
         self.message(Message.NOTE, msg)
 
     def debug(self, message):
@@ -191,7 +216,7 @@ class TestOutput(object):
 
         :param message: message
         """
-        msg = dumps(str(message))
+        msg = {"message": str(message)}
         self.message(Message.DEBUG, msg)
 
     def trace(self, message):
@@ -199,14 +224,13 @@ class TestOutput(object):
 
         :param message: message
         """
-        msg = dumps(str(message))
+        msg = {"message": str(message)}
         self.message(Message.TRACE, msg)
 
 
 class TestInput(object):
     """Test input.
     """
-
     def __init__(self, test, io):
         self.test = test
         self.io = io
@@ -215,7 +239,6 @@ class TestInput(object):
 class TestIO(object):
     """Test input and output protocol.
     """
-
     def __init__(self, test):
         self.io = MessageIO(LogIO())
         self.output = TestOutput(test, self.io)
@@ -244,7 +267,7 @@ class TestIO(object):
         """
         if not msg:
             return
-        self.output.message(Message.NONE, dumps(str(msg).rstrip()), stream=stream)
+        self.output.message(Message.NONE, dumps({"message":str(msg).rstrip()}), stream=stream)
 
     def flush(self):
         self.io.flush()
@@ -277,15 +300,17 @@ class MessageIO(object):
         """
         if not msg:
             return
-        if not "\n" in msg:
-            self.buffer += msg
-        else:
+        if msg[-1] == "\n" and not self.buffer:
+            self.io.write(msg)
+        elif msg.endswith("\n") or "\n" in msg:
             self.buffer += msg
             messages = self.buffer.split("\n")
             # last message is incomplete
             for message in messages[:-1]:
                 self.io.write(f"{message}\n")
             self.buffer = messages[-1]
+        else:
+            self.buffer += msg
 
     def flush(self):
         """Flush output buffer.
@@ -335,8 +360,8 @@ class NamedMessageIO(MessageIO):
 
 
 class LogReader(object):
-    '''Read messages from the log.
-    '''
+    """Read messages from the log.
+    """
     def __init__(self):
         self.fd = open(settings.read_logfile, "r", buffering=1, encoding="utf-8")
 
@@ -354,25 +379,24 @@ class LogReader(object):
 
 
 class LogWriter(object):
-    '''Singleton log file writer.
-    '''
+    """Singleton log file writer.
+    """
     lock = threading.Lock()
     instance = None
 
     def __new__(cls, *args, **kwargs):
-        if not LogWriter.instance:
-            LogWriter.instance = object.__new__(LogWriter)
-        return LogWriter.instance
+        with cls.lock:
+            if not cls.instance:
+                self = object.__new__(LogWriter)
+                self.fd = open(settings.write_logfile, "a", buffering=1, encoding="utf-8")
+                self.lock = threading.Lock()
+                cls.instance = self
+            return cls.instance
 
     def __init__(self):
-        self.fd = open(settings.write_logfile, "a", buffering=1, encoding="utf-8")
-        self.lock = threading.Lock()
+        pass
 
     def write(self, msg):
-        '''Write line buffered messages.
-
-        :param msg: line buffered messages
-        '''
         with self.lock:
             n = self.fd.write(msg)
             self.fd.flush()
@@ -386,11 +410,11 @@ class LogWriter(object):
         pass
 
 class LogIO(object):
-    '''Log file reader and writer.
+    """Log file reader and writer.
 
     :param read: file descriptor for read
     :param write: file descriptor for write
-    '''
+    """
     def __init__(self):
         self.writer = LogWriter()
         self.reader = LogReader()

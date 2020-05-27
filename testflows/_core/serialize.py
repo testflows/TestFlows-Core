@@ -1,4 +1,5 @@
-# Copyright 2019 Vitaliy Zakaznikov
+# Copyright 2019 Katteli Inc.
+# TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,13 +47,13 @@ def decode_argument(objtype, initargs):
     return getattr(importlib.import_module(module), cls)(*args, **kwargs)
 
 def dumps(o, *args, **kwargs):
-    """Serialize argument value to a JSON formatted string.
+    """Serialize argument.
     """
     cls = kwargs.pop('cls', Encoder)
     return json.dumps(o, cls=cls, separators=(',', ':'), *args, **kwargs)
 
 def loads(s, *args, **kwargs):
-    """Deserializes JSON string to argument value.
+    """Deserializes argument.
     """
     hook = kwargs.pop('object_hook', object_hook)
     return json.loads(s, object_hook=hook, *args, **kwargs)

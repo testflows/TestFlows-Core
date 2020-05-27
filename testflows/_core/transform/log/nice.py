@@ -291,7 +291,7 @@ result_mark = "\u27e5\u27e4"
 formatters = {
     message.RawInput: (format_input, f"{mark} "),
     message.RawTest: (format_test, f"{mark}  "),
-    message.RawDescription: (format_other, f"{mark}    :"),
+    #message.RawDescription: (format_other, f"{mark}    :"),
     message.RawArgument: (format_other, f"{mark}    @"),
     message.RawAttribute: (format_other, f"{mark}    -"),
     message.RawRequirement: (format_other, f"{mark}    ?"),
@@ -303,15 +303,15 @@ formatters = {
     message.RawDebug: (format_other, f"{mark}    [debug]"),
     message.RawTrace: (format_other, f"{mark}    [trace]"),
     message.RawNone: (format_other, "    "),
-    message.RawResultOK: (format_result, f"{result_mark} ", "OK"),
-    message.RawResultFail: (format_result, f"{result_mark} ", "Fail"),
-    message.RawResultError: (format_result, f"{result_mark} ", "Error"),
-    message.RawResultSkip: (format_result, f"{result_mark} ", "Skip"),
-    message.RawResultNull: (format_result, f"{result_mark} ", "Null"),
-    message.RawResultXOK: (format_result, f"{result_mark} ", "XOK"),
-    message.RawResultXFail: (format_result, f"{result_mark} ", "XFail"),
-    message.RawResultXError: (format_result, f"{result_mark} ", "XError"),
-    message.RawResultXNull: (format_result, f"{result_mark} ", "XNull")
+    #message.RawResultOK: (format_result, f"{result_mark} ", "OK"),
+    #message.RawResultFail: (format_result, f"{result_mark} ", "Fail"),
+    #message.RawResultError: (format_result, f"{result_mark} ", "Error"),
+    #message.RawResultSkip: (format_result, f"{result_mark} ", "Skip"),
+    #message.RawResultNull: (format_result, f"{result_mark} ", "Null"),
+    #message.RawResultXOK: (format_result, f"{result_mark} ", "XOK"),
+    #message.RawResultXFail: (format_result, f"{result_mark} ", "XFail"),
+    #message.RawResultXError: (format_result, f"{result_mark} ", "XError"),
+    #message.RawResultXNull: (format_result, f"{result_mark} ", "XNull")
 }
 
 def transform(stop):

@@ -224,15 +224,15 @@ def format_result(msg, result):
 formatters = {
     message.RawInput: (format_input, f""),
     message.RawTest: (format_test, f"", tests_by_parent, tests_by_id),
-    message.RawResultOK: (format_result, f"OK"),
-    message.RawResultFail: (format_result, f"Fail"),
-    message.RawResultError: (format_result, f"Error"),
-    message.RawResultSkip: (format_result, f"Skip"),
-    message.RawResultNull: (format_result, f"Null"),
-    message.RawResultXOK: (format_result, f"XOK"),
-    message.RawResultXFail: (format_result, f"XFail"),
-    message.RawResultXError: (format_result, f"XError"),
-    message.RawResultXNull: (format_result, f"XNull")
+    #message.RawResultOK: (format_result, f"OK"),
+    #message.RawResultFail: (format_result, f"Fail"),
+    #message.RawResultError: (format_result, f"Error"),
+    #message.RawResultSkip: (format_result, f"Skip"),
+    #message.RawResultNull: (format_result, f"Null"),
+    #message.RawResultXOK: (format_result, f"XOK"),
+    #message.RawResultXFail: (format_result, f"XFail"),
+    #message.RawResultXError: (format_result, f"XError"),
+    #message.RawResultXNull: (format_result, f"XNull")
 }
 
 def transform():

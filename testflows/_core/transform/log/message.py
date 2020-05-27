@@ -17,13 +17,8 @@ import inspect
 import testflows._core.objects as objects
 from collections import namedtuple as namedtuple
 
-from testflows._core.message import MessageMap
+from testflows._core.message import MessageMap, namedtuple_with_defaults
 from testflows._core.exceptions import TestFlowsError
-
-def namedtuple_with_defaults(*args, defaults=()):
-    nt = namedtuple(*args)
-    nt.__new__.__defaults__ = defaults
-    return nt
 
 class Message(object):
     __slots__ = ()
@@ -68,51 +63,35 @@ class TestMessage(Message):
     pass
 
 class ResultMessage(Message):
-    def __new__(cls, *args):
-        args = list(args)
-        l = len(args)
-        if l > 13 and args[13]: # metrics
-            args[13] = [RawResultMetric(*m) for m in args[13]]
-        if l > 14 and args[14]: # tickets
-            args[14] = [RawResultTicket(*t) for t in args[14]]
-        if l > 15 and args[15]: # values
-            args[15] = [RawResultValue(*v) for v in args[15]]
-        return super(ResultMessage, cls).__new__(cls, *args)
-
-class OKMessage(ResultMessage):
     pass
 
-class FailMessage(ResultMessage):
+class ProjectMessage(Message):
     pass
 
-class SkipMessage(ResultMessage):
+class EnvironmentMessage(Message):
     pass
 
-class ErrorMessage(ResultMessage):
+class DeviceMessage(Message):
     pass
 
-class NullMessage(ResultMessage):
+class SoftwareMessage(Message):
     pass
 
-class XOKMessage(ResultMessage):
-    pass
-
-class XFailMessage(ResultMessage):
-    pass
-
-class XErrorMessage(ResultMessage):
-    pass
-
-class XNullMessage(ResultMessage):
+class HardwareMessage(Message):
     pass
 
 class Prefix(object):
     __slots__ = ()
-    fields = "p_keyword p_hash p_num p_type p_subtype p_id p_flags p_cflags p_stream p_time "
-    keyword, hash, num, type, subtype, id, flags, cflags, stream, time = list(range(0, 10))
+    fields = "p_keyword p_hash p_ptype, p_num p_stream p_time, p_rtime, p_type p_subtype p_id p_flags p_cflags "
+    keyword, hash, ptype, num, stream, time, rtime, type, subtype, id, flags, cflags = list(range(0, 12))
 
 class RawFormat():
     prefix = Prefix
+
+class RawResult(RawFormat, ResultMessage, namedtuple_with_defaults(
+        "RawResultMessage",
+        RawFormat.prefix.fields + " ".join(objects.Result._fields))):
+    pass
 
 class RawNone(RawFormat, NoneMessage, namedtuple_with_defaults(
         "RawNoneMessage",
@@ -126,38 +105,9 @@ class RawException(RawFormat, ExceptionMessage, namedtuple_with_defaults(
 
 class RawTest(RawFormat, TestMessage, namedtuple_with_defaults(
         "RawTestMessage",
-        RawFormat.prefix.fields + "name started flags uid description attributes requirements " +
+        RawFormat.prefix.fields + "name uid description attributes requirements " +
             "args tags users tickets examples node map",
-        defaults=(None, None, None, [], [], [], [], [], [], None, None, None))):
-
-    def __new__(cls, *args):
-        args = list(args)
-        l = len(args)
-        if l > 14 and args[14]: # description
-            args[14] = RawDescription(args[14])
-        if l > 15 and args[15]: # attributes
-            args[15] = [RawAttribute(*attr) for attr in args[15]]
-        if l > 16 and args[16]: # requirements
-            args[16] = [RawRequirement(*req) for req in args[16]]
-        if l > 17 and args[17]: # args
-            args[17] = [RawArgument(*arg) for arg in args[17]]
-        if l > 18 and args[18]: # tags
-            args[18] = [RawTag(*tag) for tag in args[18]]
-        if l > 19 and args[19]: # users
-            args[19] = [RawUser(*user) for user in args[19]]
-        if l > 20 and args[20]:  # tickets
-            args[20] = [RawTicket(*ticket) for ticket in args[20]]
-        if l > 21 and args[21]:  # examples
-            args[21] = RawExamples(*args[21])
-        if l > 22 and args[22]:  # node
-            args[22] = RawNode(*args[22])
-        if l > 23 and args[23]:  # maps
-            args[23] = RawMap(*args[23])
-        return super(RawTest, cls).__new__(cls, *args)
-
-class RawDescription(namedtuple_with_defaults(
-        "RawDescription",
-        "description")):
+        defaults=(None, [], [], [], [], [], [], None, None, None))):
     pass
 
 class RawTag(namedtuple_with_defaults(
@@ -192,8 +142,8 @@ class RawNode(namedtuple_with_defaults(
 
 class RawMap(namedtuple_with_defaults(
         "RawMap",
-        " ".join(objects.Map._fields),
-        defaults=objects.Map._defaults)):
+        " ".join(objects.Node._fields),
+        defaults=objects.Node._defaults)):
     pass
 
 class RawArgument(namedtuple_with_defaults(
@@ -213,63 +163,6 @@ class RawRequirement(namedtuple_with_defaults(
         " ".join(objects.Requirement._fields),
         defaults=objects.Requirement._defaults)):
     pass
-
-class RawResultOK(RawFormat, OKMessage, namedtuple_with_defaults(
-        "RawResultOKMessage",
-        RawFormat.prefix.fields + " ".join(objects.OK._fields),
-        defaults=(None, None, [], [], []))):
-    name = "OK"
-
-class RawResultFail(RawFormat, FailMessage, namedtuple_with_defaults(
-        "RawResultFailMessage",
-        RawFormat.prefix.fields + " ".join(objects.Fail._fields),
-        defaults=(None, None, [], [], []))):
-    name = "Fail"
-
-class RawResultSkip(RawFormat, SkipMessage, namedtuple_with_defaults(
-        "RawResultSkipMessage",
-        RawFormat.prefix.fields + " ".join(objects.Skip._fields),
-        defaults=(None, None, [], [], []))):
-    name = "Skip"
-
-class RawResultError(RawFormat, ErrorMessage, namedtuple_with_defaults(
-        "RawResultErrorMessage",
-        RawFormat.prefix.fields + " ".join(objects.Error._fields),
-        defaults=(None, None, [], [], []))):
-    name = "Error"
-
-class RawResultNull(RawFormat, NullMessage, namedtuple_with_defaults(
-        "RawResultNullMessage",
-        RawFormat.prefix.fields + " ".join(objects.Null._fields),
-        defaults=(None, None, [], [], []))):
-    name = "Null"
-
-class RawResultXOK(RawFormat, XOKMessage, namedtuple_with_defaults(
-        "RawResultXOKMessage",
-        RawFormat.prefix.fields + " ".join(objects.XOK._fields),
-        defaults=(None, None, [], [], []))):
-    name = "XOK"
-
-class RawResultXFail(RawFormat, XFailMessage, namedtuple_with_defaults(
-        "RawResultXFailMessage",
-        RawFormat.prefix.fields + " ".join(objects.XFail._fields),
-        defaults=(None, None, [], [], []))):
-    name = "XFail"
-
-class RawResultXError(RawFormat, XErrorMessage, namedtuple_with_defaults(
-        "RawResultXErrorMessage",
-        RawFormat.prefix.fields + " ".join(objects.XError._fields),
-        defaults=(None, None, [], [], []))):
-    name = "XError"
-
-class RawResultXNull(RawFormat, XNullMessage, namedtuple_with_defaults(
-        "RawResultXNullMessage",
-        RawFormat.prefix.fields + " ".join(objects.XNull._fields),
-        defaults=(None, None, [], [], []))):
-    name = "XNull"
-
-FailResults = [RawResultFail, RawResultError, RawResultNull]
-XoutResults = [RawResultXFail, RawResultXError, RawResultXOK, RawResultXNull]
 
 class RawNote(RawFormat, NoteMessage, namedtuple_with_defaults(
         "RawNoteMessage",
@@ -319,44 +212,66 @@ class RawTicket(RawFormat, TicketMessage, namedtuple_with_defaults(
         defaults=objects.Ticket._defaults)):
     pass
 
-class RawResultValue(RawFormat, ValueMessage, namedtuple_with_defaults(
-        "RawResultValue",
-        " ".join(objects.Value._fields),
-        defaults=objects.Value._defaults)):
+class RawProject(RawFormat, ProjectMessage, namedtuple_with_defaults(
+        "RawProjectMessage",
+        RawFormat.prefix.fields + " ".join(objects.Project._fields),
+        defaults=objects.Project._defaults)):
     pass
 
-class RawResultMetric(RawFormat, MetricMessage, namedtuple_with_defaults(
-        "RawResultMetric",
-        " ".join(objects.Metric._fields),
-        defaults=objects.Metric._defaults)):
+class RawEnvironment(RawFormat, EnvironmentMessage, namedtuple_with_defaults(
+        "RawEnvironmentMessage",
+        RawFormat.prefix.fields + " ".join(objects.Environment._fields),
+        defaults=objects.Environment._defaults)):
     pass
 
-class RawResultTicket(RawFormat, TicketMessage, namedtuple_with_defaults(
-        "RawResultTicket",
-        " ".join(objects.Ticket._fields),
-        defaults=objects.Ticket._defaults)):
+class RawDevice(RawFormat, DeviceMessage, namedtuple_with_defaults(
+        "RawDeviceMessage",
+        RawFormat.prefix.fields + " ".join(objects.Device._fields),
+        defaults=objects.Device._defaults)):
+    pass
+
+class RawSoftware(RawFormat, SoftwareMessage, namedtuple_with_defaults(
+        "RawSoftwareMessage",
+        RawFormat.prefix.fields + " ".join(objects.Software._fields),
+        defaults=objects.Software._defaults)):
+    pass
+
+class RawHardware(RawFormat, HardwareMessage, namedtuple_with_defaults(
+        "RawHardwareMessage",
+        RawFormat.prefix.fields + " ".join(objects.Hardware._fields),
+        defaults=objects.Hardware._defaults)):
+    pass
+
+class RawStop(RawFormat, namedtuple_with_defaults(
+        "RawStopMessage",
+        RawFormat.prefix.fields)):
     pass
 
 message_map = MessageMap(
-    RawNone, # NONE
-    RawTest, # TEST
-    RawResultNull, # NULL
-    RawResultOK, # OK
-    RawResultFail, # FAIL
-    RawResultSkip, # SKIP
-    RawResultError, # ERROR
-    RawException, # EXCEPTION
-    RawValue, # VALUE
-    RawNote, # NOTE
-    RawDebug, # DEBUG
-    RawTrace, # TRACE
-    RawResultXOK, #XOK
-    RawResultXFail, # XFAIL
-    RawResultXError, # XERROR
-    RawResultXNull, # XNULL
-    RawProtocol, # PROTOCOL
-    RawInput, # INPUT
-    RawVersion, # VERSION
-    RawMetric, # METRIC
-    RawTicket, # TICKET
-)
+     RawNone, # NONE
+     RawTest, # TEST
+     RawResult, # RESULT
+     RawException, # EXCEPTION
+     RawNote, # NOTE
+     RawDebug, # DEBUG
+     RawTrace, # TRACE
+     RawVersion,  # VERSION
+     RawProtocol,  # PROTOCOL
+     RawInput,  # INPUT
+     RawValue,  # VALUE
+     RawMetric,  # METRIC
+     RawTicket,  # TICKET,
+     RawArgument, # ARGUMENT
+     RawTag, # TAG
+     RawAttribute, # ATTRIBUTE
+     RawRequirement, # REQUIREMENT
+     RawUser, # USER
+     RawProject, # PROJECT
+     RawEnvironment, # ENVIRONMENT
+     RawDevice, # DEVICE
+     RawSoftware, # SOFTWARE
+     RawHardware, # HARDWARE
+     RawNode, # NODE
+     RawMap, # MAP
+     RawStop # STOP
+ )

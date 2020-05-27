@@ -1,4 +1,5 @@
-# Copyright 2019 Vitaliy Zakaznikov
+# Copyright 2019 Katteli Inc.
+# TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,19 +12,42 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .exceptions import RequirementError
+from enum import IntEnum
+from collections import namedtuple
+
+from .utils.enum import IntEnum
+from .exceptions import RequirementError, ResultException
 from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
 
-class Result(TestObject):
-    _fields = ("test", "message", "reason", "metrics", "tickets", "values")
-    _defaults = (None,) * 5
+class Result(TestObject, ResultException):
+    _fields = ("message", "reason", "type")
+    _defaults = (None,) * 3
     metrics = []
     tickets = []
     values = []
+    type = None
 
-    def __init__(self, test, message=None, reason=None, metrics=None, tickets=None, values=None):
-        self.test = test
+    class Type(IntEnum):
+        OK = 1
+        Fail = 2
+        Error = 3
+        Null = 4
+        Skip = 5
+        XOK = 6
+        XFail = 7
+        XError = 8
+        XNull = 9
+
+        def __repr__(self):
+            return f"Result.Type.{self._name_}"
+
+    def __init__(self, message=None, reason=None, type=None, test=None, metrics=None, tickets=None, values=None):
+        from .funcs import current
+        self.test = test if test is not None else current().name
+        self.type = get(type, self.type)
+        if self.type is None:
+            raise TypeError("result type must be defined")
         self.message = message
         self.reason = reason
         self.metrics = get(metrics, list(self.metrics))
@@ -31,7 +55,9 @@ class Result(TestObject):
         self.values = get(values, list(self.values))
         return super(Result, self).__init__()
 
-    def __call__(self, result):
+    def __call__(self, result=None):
+        if result is None:
+            result = getattr(self.__module__, str(self.type))
         obj = result.__class__(*[getattr(result, field) for field in result._fields])
         obj.metrics = self.metrics
         obj.tickets = self.tickets
@@ -39,14 +65,19 @@ class Result(TestObject):
         return obj
 
     def xout(self, reason=None):
+        if type(self) in [Result, XResult]:
+            return self().xout(reason=reason)
         return self
+
+    def __str__(self):
+        return str(self.type)
 
     def __bool__(cls):
         return True
 
     def __eq__(self, o):
-        return type(self) == o
-  
+        return self.type == o.type
+
     def __ne__(self, o):
         return not self == o
 
@@ -54,13 +85,16 @@ class XResult(Result):
     pass
 
 class OK(Result):
+    type = Result.Type.OK
     def xout(self, reason):
         return XOK(self.test, self.message, reason)
 
 class XOK(XResult):
+    type = Result.Type.XOK
     pass
 
 class Fail(Result):
+    type = Result.Type.Fail
     def xout(self, reason):
         return XFail(self.test, self.message, reason)
 
@@ -68,12 +102,14 @@ class Fail(Result):
         return False
 
 class XFail(XResult):
-    pass
+    type = Result.Type.XFail
 
 class Skip(Result):
-    pass
+    type = Result.Type.Skip
 
 class Error(Result):
+    type = Result.Type.Error
+
     def xout(self, reason):
         return XError(self.test, self.message, reason)
 
@@ -81,9 +117,11 @@ class Error(Result):
         return False
 
 class XError(XResult):
-    pass
+    type = Result.Type.XError
 
 class Null(Result):
+    type = Result.Type.Null
+
     def xout(self, reason):
         return XNull(self.test, self.message, reason)
 
@@ -91,48 +129,49 @@ class Null(Result):
         return False
 
 class XNull(XResult):
-    pass
+    type = Result.Type.XNull
 
 class Node(TestObject):
-    _fields = ("name", "module", "uid")
-    _defaults = ()
+    _fields = ("name", "module", "uid", "nexts", "ins", "outs")
+    _defaults = (None,) * 3
 
-    def __init__(self, name, module, uid):
+    NodeAttributes = namedtuple("NodeAttributes", "name module uid")
+
+    def __init__(self, name, module, uid, nexts=None, ins=None, outs=None):
         self.name = name
         self.module = module
         self.uid = uid
+        self.nexts = get(nexts, [])
+        self.ins = get(ins, [])
+        self.outs =get(outs, [])
+        return super(Node, self).__init__()
 
     @classmethod
-    def create(cls, test):
+    def attributes(cls, test):
         name = test.name
         module = ".".join([test.__module__, test.name])
         uid = hash(module, short=True)
-        return cls(name, module, uid)
+        return cls.NodeAttributes(name, module, uid)
 
-class Map(TestObject):
-    _fields = ("node", "nexts", "ins", "outs")
-    _defaults = (None,) * 3
-
-    def __init__(self, node, nexts=None, ins=None, outs=None):
-        self.node = node
-        self.nexts = nexts
-        self.ins = ins
-        self.outs = outs
-        return super(Map, self).__init__()
-
-def maps(test, nexts=None, ins=None, outs=None):
-    """Add a node and a map to a test.
+def maps(test, nexts=None, ins=None, outs=None, map=[]):
+    """Map a test.
 
     :param test: test
     :param nexts: next steps
     :param ins: input steps
     :param outs: output steps
     """
-    if getattr(test.func, "map", None) is not None:
+    if getattr(test.func, "node", None) is not None:
         raise ValueError("test has already been mapped")
 
-    test.func.map = Map(test, nexts, ins, outs)
-    test.func.node = Node.create(test)
+    nexts = [Node.attributes(step).uid for step in nexts or []]
+    ins = [Node.attributes(step).uid for step in ins or []]
+    outs = [Node.attributes(step).uid for step in outs or []]
+
+    test.func.node = Node(*Node.attributes(test), nexts, ins, outs)
+
+    map.append(test.func.node)
+    return map
 
 class Tag(TestObject):
     _fields = ("value",)
@@ -143,7 +182,7 @@ class Tag(TestObject):
         return super(Tag, self).__init__()
 
 class Argument(TestObject):
-    _fields = ("name", "value", "group", "type", "uid")
+    _fields = ("name", "value", "type", "group", "uid")
     _defaults = (None,) * 4
     uid = None
     type = None
@@ -224,38 +263,22 @@ class Value(TestObject):
 
     def __init__(self, name, value, type=None, group=None, uid=None):
         self.name = name
-        self.value = value
+        self.value = str(value)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
         return super(Value, self).__init__()
 
-class Output(TestObject):
-    _fields = ("name", "value", "type", "group", "uid")
-    _defaults = (None,) * 3
-    uid = None
-    type = None
-    group = None
-
-    def __init__(self, name, value, type=None, group=None, uid=None):
-        self.name = name
-        self.value = value
-        self.type = get(type, self.type)
-        self.group = get(group, self.group)
-        self.uid = get(uid, self.uid)
-        return super(Output, self).__init__()
-
 class Project(TestObject):
-    _fields = ("name", "type", "group", "uid",
-        "tags", "attributes")
-    _defaults = (None,) * 5
+    _fields = ("name", "type", "group", "uid")
+    _defaults = (None,) * 3
     uid = None
     type = None
     group = None
     tags = []
     attributes = []
     
-    def __init__(self, name, type=None, group=None, tags=None, attributes=None, uid=None):
+    def __init__(self, name, type=None, group=None, uid=None, tags=None, attributes=None):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
@@ -281,8 +304,7 @@ class Ticket(TestObject):
         return super(Ticket, self).__init__()
 
 class User(TestObject):
-    _fields = ("name", "type", "group", "link", "uid",
-        "tags", "attributes")
+    _fields = ("name", "type", "group", "link", "uid")
     _defaults = (None,) * 6
     uid = None
     link = None
@@ -291,20 +313,19 @@ class User(TestObject):
     tags = []
     attributes = []
     
-    def __init__(self, name, link=None, type=None, group=None, tags=None, attributes=None, uid=None):
+    def __init__(self, name, link=None, type=None, group=None, uid=None, tags=None, attributes=None):
         self.name = name
         self.link = get(link, self.link)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
         self.tags = get(tags, list(self.tags))
         self.attributes = get(attributes, list(self.attributes))
-        self.uid = get(uid, self.uid)
         return super(User, self).__init__()
 
 class Environment(TestObject):
-    _fields = ("name", "type", "group", "uid",
-        "tags", "attributes", "devices")
-    _defaults = (None,) * 6
+    _fields = ("name", "type", "group", "uid")
+    _defaults = (None,) * 3
     uid = None
     type = None
     group = None
@@ -312,22 +333,20 @@ class Environment(TestObject):
     attributes = []
     devices = []
 
-    def __init__(self, name, type=None, group=None, tags=None, attributes=None,
-            devices=None, uid=None):
+    def __init__(self, name, type=None, group=None, uid=None,
+            tags=None, attributes=None, devices=None):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
         self.tags = get(tags, list(self.tags))
         self.attributes = get(attributes, list(self.attributes))
         self.devices = get(devices, list(self.devices))
-        self.uid = get(uid, self.uid)
         return super(User, self).__init__()
 
 class Device(TestObject):
-    _fields = ("name", "type", "group", "tags", "uid",
-        "attributes", "requirements",
-        "software", "hardware")
-    _defaults = (None,) * 7
+    _fields = ("name", "type", "group", "uid")
+    _defaults = (None,) * 3
     uid = None
     type = None
     group = None
@@ -337,24 +356,23 @@ class Device(TestObject):
     software = []
     hardware = []
     
-    def __init__(self, name, type=None, group=None, tags=None,
-            attributes=None, requirements=None,
-            software=None, hardware=None, uid=None):
+    def __init__(self, name, type=None, group=None, uid=None,
+            tags=None, attributes=None, requirements=None,
+            software=None, hardware=None):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
         self.tags = get(tags, list(self.tags))
         self.attributes = get(attributes, list(self.attributes))
         self.requirements = get(requirements, list(self.requirements))
         self.software = get(software, list(self.software))
         self.hardware = get(hardware, list(self.hardware))
-        self.uid = get(uid, self.uid)
         return super(Device, self).__init__()
 
 class Software(TestObject):
-    _fields = ("name", "type", "group", "uid",
-        "tags", "attributes", "requirements")
-    _defaults = (None,) * 5
+    _fields = ("name", "type", "group", "uid")
+    _defaults = (None,) * 3
     uid = None
     type = None
     group = None
@@ -362,20 +380,19 @@ class Software(TestObject):
     attributes = []
     requirements = []
 
-    def __init__(self, name, type=None, group=None, tags=None,
-            attributes=None, requirements=None, uid=None):
+    def __init__(self, name, type=None, group=None, uid=None, tags=None,
+            attributes=None, requirements=None):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
         self.tags = get(tags, list(self.tags))
         self.attributes = get(attributes, list(self.attributes))
         self.requirements = get(requirements, list(self.requirements))
-        self.uid = get(uid, self.uid)
         return super(Software, self).__init__()
 
 class Hardware(TestObject):
-    _fields = ("name", "type", "group", "uid",
-        "tags", "attributes", "requirements")
+    _fields = ("name", "type", "group", "uid")
     _defaults = (None,) * 5
     uid = None
     type = None
@@ -389,36 +406,18 @@ class Hardware(TestObject):
         self.name = name
         self.type = get(type, self.type)
         self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
         self.tags = get(tags, list(self.tags))
         self.attributes = get(attributes, list(self.attributes))
         self.requirements = get(requirements, list(self.requirements))
-        self.uid = get(uid, self.uid)
         return super(Hardware, self).__init__()
 
-class Job(TestObject):
-    _fields = ("name", "type", "group",
-        "tags", "user",
-        "attributes", "requirements", "uid")
-    _defaults = (None,) * 5
-    uid = None
-    user = None
-    type = None
-    group = None
-    tags = []
-    attributes = []
-    requirements = []
-    
-    def __init__(self, name, user, type=None, group=None, tags=None,
-            attributes=None, requirements=None, uid=None):
-        self.name = name
-        self.user = user
-        self.type = get(type, self.type)
-        self.group = get(group, self.group)
-        self.tags = get(tags, list(self.tags))
-        self.attributes = get(attributes, list(self.attributes))
-        self.requirements = get(requirements, list(self.requirements))
-        self.uid = get(uid, self.uid)
-        return super(Software, self).__init__()
+class Example(TestObject):
+    _fields = ("row", "column", "value")
+    def __init__(self, row, column, value):
+        self.row = row
+        self.column = column
+        self.value = str(value)
 
 class ExamplesTable(Table):
     _row_type_name = "Example"

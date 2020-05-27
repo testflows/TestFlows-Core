@@ -17,8 +17,7 @@ class TestFlowsException(Exception):
 class ResultException(TestFlowsException):
     """Result exception.
     """
-    def __init__(self, result):
-        self.result = result
+    pass
 
 class DummyTestException(TestFlowsException):
     """Dummy test exception.

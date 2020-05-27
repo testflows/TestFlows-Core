@@ -40,7 +40,7 @@ def calculator(self):
     """
     run(test=two_number_operations)
 
-maps(calculator, ins=[entering_number, entering_operation, entering_equal], outs=[checking_result])
+map = maps(calculator, ins=[entering_number, entering_operation, entering_equal], outs=[checking_result])
 
 if main():
-    run(test=calculator)
+    run(test=calculator, map=map)

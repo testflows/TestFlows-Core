@@ -1,4 +1,5 @@
-# Copyright 2019 Vitaliy Zakaznikov
+# Copyright 2019 Katteli Inc.
+# TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +20,7 @@ InitArgs = namedtuple("InitArgs", "args kwargs")
 def get(a, b):
     """a if not a is None else b.
     """
-    return a if not a is None else b
+    return a if a is not None else b
 
 def hash(*s, short=False):
     """Calculate standard hash.
