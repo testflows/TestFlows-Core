@@ -18,7 +18,7 @@ import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType, TestSubType
-from testflows._core.transform.log import message
+from testflows._core.message import Message
 from testflows._core.objects import ExamplesTable
 from testflows._core.name import split, parentname, basename
 from testflows._core.cli.colors import color, cursor_up
@@ -66,11 +66,11 @@ def color_result(result):
     return color(icon, "cyan", attrs=["bold"])
 
 def format_input(msg, last_test_id, keyword):
-    flags = Flags(msg.p_flags)
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
-    out = f"{indent * (msg.p_id.count('/'))}"
-    out += color("\u270b " + msg.message, "yellow", attrs=["bold"]) + cursor_up() + "\n"
+    out = f"{indent * (msg['test_id'].count('/'))}"
+    out += color("\u270b " + msg["message"], "yellow", attrs=["bold"]) + cursor_up() + "\n\n"
     return out
 
 def format_multiline(text, indent):
@@ -83,27 +83,30 @@ def format_multiline(text, indent):
     return out
 
 def format_type(msg):
-    if msg.p_type == TestType.Module:
+    test_type = getattr(TestType, msg["test_type"])
+    test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
+
+    if test_type == TestType.Module:
         return "Module"
-    elif msg.p_type == TestType.Suite:
-        if msg.p_subtype == TestSubType.Feature:
+    elif test_type == TestType.Suite:
+        if text_subtype == TestSubType.Feature:
             return "Feature"
         else:
             return "Suite"
     else:
-        if msg.p_subtype == TestSubType.Scenario:
+        if test_subtype == TestSubType.Scenario:
             return "Scenario"
-        elif msg.p_subtype == TestSubType.Background:
+        elif test_subtype == TestSubType.Background:
             return "Background"
         else:
             return "Test"
 
 def format_test(msg, last_test_id, keyword):
-    flags = Flags(msg.p_flags)
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if msg.p_type < TestType.Test:
+    if getattr(TestType, msg["test_type"]) < TestType.Test:
         return
 
     icon = '\u27A4 '
@@ -111,59 +114,53 @@ def format_test(msg, last_test_id, keyword):
     keyword += format_type(msg)
 
     _keyword = color_keyword(keyword)
-    _name = color_test_name(split(msg.name)[-1])
-    _indent = indent * (msg.p_id.count('/') - 1)
+    _name = color_test_name(split(msg["test_name"])[-1])
+    _indent = indent * (msg["test_id"].count('/') - 1)
     out = f"{_indent}{icon}{_keyword} {_name}\n"
 
     if last_test_id:
         last_test_id.pop()
-    last_test_id.append(msg.p_id)
+    last_test_id.append(msg["test_id"])
 
     return out
 
-def format_result(msg, last_test_id, result):
-    flags = Flags(msg.p_flags)
+def format_result(msg, last_test_id):
+    result = msg["result_type"]
+
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if msg.p_type < TestType.Test:
+    if getattr(TestType, msg["test_type"]) < TestType.Test:
         return
 
     _result = color_result(result)
-    _test = color_keyword(format_type(msg)) + color_test_name(f" {basename(msg.test)}")
+    _test = color_keyword(format_type(msg)) + color_test_name(f" {basename(msg['result_test'])}")
 
-    _indent = indent * (msg.p_id.count('/') - 1)
+    _indent = indent * (msg["test_id"].count('/') - 1)
     out = f"{_indent}{_result}"
 
-    if last_test_id[-1] == msg.p_id:
+    if last_test_id[-1] == msg["test_id"]:
         out = cursor_up() + "\r" + out
 
-    if msg.name in ("Fail", "Error", "Null"):
+    if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        if msg.message:
+        if msg["result_message"]:
             out += color_test_name(",")
-            out += f" {color(format_multiline(msg.message, _indent).lstrip(), 'yellow', attrs=['bold'])}"
-    elif msg.name.startswith("X"):
+            out += f" {color(format_multiline(msg['result_message'], _indent).lstrip(), 'yellow', attrs=['bold'])}"
+    elif result.startswith("X"):
         out += f" {_test}"
-        if msg.reason:
+        if msg['result_reason']:
             out += color_test_name(",")
-            out += f" {color(msg.reason, 'blue', attrs=['bold'])}"
+            out += f" {color(msg['result_reason'], 'blue', attrs=['bold'])}"
     else:
         out += f" {_test}"
     return out + "\n"
 
 formatters = {
-    message.RawInput: (format_input, f""),
-    message.RawTest: (format_test, f""),
-    #message.RawResultOK: (format_result, f"OK"),
-    #message.RawResultFail: (format_result, f"Fail"),
-    #message.RawResultError: (format_result, f"Error"),
-    #message.RawResultSkip: (format_result, f"Skip"),
-    #message.RawResultNull: (format_result, f"Null"),
-    #message.RawResultXOK: (format_result, f"XOK"),
-    #message.RawResultXFail: (format_result, f"XFail"),
-    #message.RawResultXError: (format_result, f"XError"),
-    #message.RawResultXNull: (format_result, f"XNull")
+    Message.INPUT.name: (format_input, f""),
+    Message.TEST.name: (format_test, f""),
+    Message.RESULT.name: (format_result,)
 }
 
 def transform():
@@ -173,7 +170,7 @@ def transform():
     line = None
     while True:
         if line is not None:
-            formatter = formatters.get(type(line), None)
+            formatter = formatters.get(line["message_keyword"], None)
             if formatter:
                 line = formatter[0](line, last_test_id, *formatter[1:])
             else:
