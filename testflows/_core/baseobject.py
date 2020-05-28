@@ -85,22 +85,34 @@ class Table(TestObject, tuple):
             args=[header, rows, row_format],
             kwargs={})
         obj.header = header
-        obj.row_format = row_format
         obj.rows = obj
         obj.row_type = row_type
+        obj.row_format = get(row_format, Table.default_row_format(row_type._fields, obj[0] if obj else None))
+        return obj
+
+    @staticmethod
+    def default_row_format(fields, row):
         # if no row_formatter is given then use the header as an example
         # or first row, whichever is longer
-        if obj.row_format is None:
-            sample_row = row_type._fields
-            if len(obj) > 0 and len(str(row_type._fields)) < len(str(tuple(obj[0]))):
-                sample_row = obj[0]
-            obj.row_format = " | ".join([f"%-{max(len(str(c)), 3)}s" for c in sample_row])
-        return obj
+        sample_row = fields
+        if row and len(str(fields)) < len(str(tuple(row))):
+            sample_row = row
+        row_format = " | ".join([f"%-{max(len(str(c)), 3)}s" for c in sample_row])
+        return row_format
+
+    @staticmethod
+    def __str_header__(fields, row_format):
+        s = [row_format % fields]
+        s.append(row_format % tuple(["-" * len(field) for field in fields]))
+        return "\n".join(s)
+
+    @staticmethod
+    def __str_row__(row, row_format):
+        return row_format % row
 
     def __str__(self):
         """Return markdown-styled table representation.
         """
-        s = [self.row_format % self.row_type._fields]
-        s.append(self.row_format % tuple(["-" * len(field) for field in self.row_type._fields]))
-        s += [self.row_format % row for row in self]
+        s = [Table.__str_header__(self.row_type._fields, self.row_format)]
+        s += [Table.__str_row__(row, self.row_format) for row in self]
         return "\n".join(s)

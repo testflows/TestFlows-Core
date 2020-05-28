@@ -72,40 +72,59 @@ def format_test_description(msg, indent):
     desc = color(desc, "white", attrs=["dim"])
     return desc + "\n"
 
-def format_requirements(msg, indent):
-    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Requirements')}"]
-    for req in msg.requirements:
-        out.append(color(f"{indent}{' ' * 4}{req.name}", "white", attrs=["dim"]))
-        out.append(color(f"{indent}{' ' * 6}version {req.version}", "white", attrs=["dim"]))
+def format_requirement(msg):
+    out = []
+    _indent = indent * (msg["test_id"].count('/') - 1)
+
+    if last_message[0] and not last_message[0]["message_keyword"] == Message.REQUIREMENT.name:
+        out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Requirements')}"]
+
+    out.append(color(f"{_indent}{' ' * 4}{msg['requirement_name']}", "white", attrs=["dim"]))
+    out.append(color(f"{_indent}{' ' * 6}version {msg['requirement_version']}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
 def format_attribute(msg):
+    out = []
     _indent = indent * (msg["test_id"].count('/') - 1)
+
     if last_message[0] and not last_message[0]["message_keyword"] == Message.ATTRIBUTE.name:
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Attributes')}"]
-    else:
-        out = []
-    out.append(color(f"{indent}{' ' * 2}{msg['attribute_name']}", "white", attrs=["dim"]))
-    out.append(color(f"{indent}{' ' * 4}{msg['attribute_value']}", "white", attrs=["dim"]))
+
+    out.append(color(f"{_indent}{' ' * 4}{msg['attribute_name']}", "white", attrs=["dim"]))
+    out.append(color(f"{_indent}{' ' * 6}{msg['attribute_value']}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
-def format_tags(msg, indent):
-    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Tags')}"]
-    for tag in msg.tags:
-        out.append(color(f"{indent}{' ' * 4}{tag.value}", "white", attrs=["dim"]))
+def format_tag(msg):
+    out = []
+    _indent = indent * (msg["test_id"].count('/') - 1)
+
+    if last_message[0] and not last_message[0]["message_keyword"] == Message.TAG.name:
+        out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Tags')}"]
+
+    out.append(color(f"{_indent}{' ' * 4}{msg['tag_value']}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
-def format_examples(msg, indent):
-    examples = ExamplesTable(*msg.examples)
-    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Examples')}"]
-    out.append(color(textwrap.indent(f"{examples}", prefix=f"{indent}{' ' * 4}"), "white", attrs=["dim"]))
+def format_example(msg):
+    out = []
+    _indent = indent * (msg["test_id"].count('/') - 1)
+
+    row_format = msg["example_row_format"] or ExamplesTable.default_row_format(msg["example_columns"], msg["example_values"])
+    if last_message[0] and not last_message[0]["message_keyword"] == Message.EXAMPLE.name:
+        out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Examples')}"]
+        out.append(color(textwrap.indent(f"{ExamplesTable.__str_header__(tuple(msg['example_columns']), row_format)}", prefix=f"{_indent}{' ' * 4}"), "white", attrs=["dim"]))
+
+    out.append(color(textwrap.indent(f"{ExamplesTable.__str_row__(tuple(msg['example_values']),row_format)}", prefix=f"{_indent}{' ' * 4}"), "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
-def format_arguments(msg, indent):
-    out = [f"{indent}{' ' * 2}{color_secondary_keyword('Arguments')}"]
-    for arg in msg.args:
-        out.append(color(f"{indent}{' ' * 4}{arg.name}", "white", attrs=["dim"]))
-        out.append(color(textwrap.indent(f"{arg.value}", prefix=f"{indent}{' ' * 6}"), "white", attrs=["dim"]))
+def format_argument(msg):
+    out = []
+    _indent = indent * (msg["test_id"].count('/') - 1)
+
+    if last_message[0] and not last_message[0]["message_keyword"] == Message.ARGUMENT.name:
+        out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Arguments')}"]
+
+    out.append(color(f"{_indent}{' ' * 4}{msg['argument_name']}", "white", attrs=["dim"]))
+    out.append(color(textwrap.indent(f"{msg['argument_value']}", prefix=f"{_indent}{' ' * 6}"), "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
 def get_type(msg):
@@ -204,7 +223,11 @@ formatters = {
     Message.INPUT.name: (format_input, f""),
     Message.TEST.name: (format_test, f"", tests_by_parent, tests_by_id),
     Message.RESULT.name: (format_result,),
-    Message.ATTRIBUTE.name: (format_attribute,)
+    Message.ATTRIBUTE.name: (format_attribute,),
+    Message.ARGUMENT.name: (format_argument,),
+    Message.REQUIREMENT.name: (format_requirement,),
+    Message.TAG.name: (format_tag,),
+    Message.EXAMPLE.name: (format_example,)
 }
 
 def transform():
