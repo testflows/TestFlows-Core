@@ -200,6 +200,7 @@ class TestOutput(object):
             "result_message": result.message,
             "result_reason": result.reason,
             "result_type": str(result.type),
+            "result_test": result.test
         }
         self.message(Message.RESULT, msg, ptype=ptype)
 

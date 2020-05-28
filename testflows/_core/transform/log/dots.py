@@ -15,8 +15,8 @@
 import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP
-from testflows._core.transform.log import message
 from testflows._core.cli.colors import color
+from testflows._core.message import Message
 
 width = 70
 count = 0
@@ -38,14 +38,14 @@ def color_result(result):
     else:
         raise ValueError(f"unknown result {result}")
 
-def format_result(msg, result):
+def format_result(msg):
     global count
-    flags = Flags(msg.p_flags)
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
 
     count += 1
-    _result = f"{color_result(result)}"
+    _result = f"{color_result(msg['result_type'])}"
     # wrap if we hit max width
     if count >= width:
         count = 0
@@ -54,15 +54,7 @@ def format_result(msg, result):
     return _result
 
 formatters = {
-    #message.RawResultOK: (format_result, f"OK"),
-    #message.RawResultFail: (format_result, f"Fail"),
-    #message.RawResultError: (format_result, f"Error"),
-    #message.RawResultSkip: (format_result, f"Skip"),
-    #message.RawResultNull: (format_result, f"Null"),
-    #message.RawResultXOK: (format_result, f"XOK"),
-    #message.RawResultXFail: (format_result, f"XFail"),
-    #message.RawResultXError: (format_result, f"XError"),
-    #message.RawResultXNull: (format_result, f"XNull")
+    str(Message.RESULT): (format_result,)
 }
 
 def transform(stop_event):
@@ -71,7 +63,7 @@ def transform(stop_event):
     line = None
     while True:
         if line is not None:
-            formatter = formatters.get(type(line), None)
+            formatter = formatters.get(line["message_keyword"], None)
             if formatter:
                 line = formatter[0](line, *formatter[1:])
                 n = 0

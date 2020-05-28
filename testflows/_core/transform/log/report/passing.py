@@ -17,7 +17,7 @@ import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
-from testflows._core.transform.log import message
+from testflows._core.message import Message
 from testflows._core.name import split
 from testflows._core.cli.colors import color
 
@@ -42,25 +42,18 @@ def color_result(result, attrs=None):
     else:
         raise ValueError(f"unknown result {result}")
 
-def add_result(msg, results, result):
-    if msg.p_type < TestType.Test:
+def add_result(msg, results):
+    result = msg["result_type"]
+    if getattr(TestType, msg["test_type"]) < TestType.Test:
         return
-    flags = Flags(msg.p_flags)
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
     if result in ("OK", "Skip"):
-        results[msg.p_id] = (msg, result)
+        results[msg["test_id"]] = (msg, result)
 
 processors = {
-    message.RawResultOK: (add_result, f"OK"),
-    message.RawResultFail: (add_result, f"Fail"),
-    message.RawResultError: (add_result, f"Error"),
-    message.RawResultSkip: (add_result, f"Skip"),
-    message.RawResultNull: (add_result, f"Null"),
-    message.RawResultXOK: (add_result, f"XOK"),
-    message.RawResultXFail: (add_result, f"XFail"),
-    message.RawResultXError: (add_result, f"XError"),
-    message.RawResultXNull: (add_result, f"XNull")
+    Message.RESULT.name: (add_result,),
 }
 
 def generate(results):
@@ -73,7 +66,7 @@ def generate(results):
     for entry in results:
         msg, result = results[entry]
         _color = color_result(result)
-        passing += _color("\u2714") + f" [ {_color(result)} ] {msg.test}\n"
+        passing += _color("\u2714") + f" [ {_color(result)} ] {msg['result_test']}\n"
     if passing:
         passing = color("\nPassing\n\n", "white", attrs=["bold"]) + passing
 
@@ -88,7 +81,7 @@ def transform(stop):
     results = {}
     while True:
         if line is not None:
-            processor = processors.get(type(line), None)
+            processor = processors.get(line["message_keyword"], None)
             if processor:
                 processor[0](line, results, *processor[1:])
             if stop.is_set():

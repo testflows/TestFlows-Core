@@ -16,7 +16,7 @@ import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType, TestSubType
-from testflows._core.transform.log import message
+from testflows._core.message import Message
 from testflows._core.utils.timefuncs import strftimedelta
 from testflows._core.cli.colors import color
 
@@ -110,70 +110,56 @@ class Counts(object):
         return s
 
 def format_test(msg, counts):
-    flags = Flags(msg.p_flags)
+    flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
-    if msg.p_type == TestType.Module:
+
+    test_type = getattr(TestType, msg["test_type"])
+    test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
+
+    if test_type == TestType.Module:
         counts["module"].units += 1
-    elif msg.p_type == TestType.Suite:
+    elif test_type == TestType.Suite:
         counts["suite"].units += 1
-    elif msg.p_type == TestType.Iteration:
+    elif test_type == TestType.Iteration:
         counts["iteration"].units += 1
-    elif msg.p_type == TestType.Step:
+    elif test_type == TestType.Step:
         counts["step"].units += 1
     else:
-        if msg.p_subtype == TestSubType.Feature:
+        if test_subtype == TestSubType.Feature:
             counts["feature"].units += 1
-        elif msg.p_subtype == TestSubType.Scenario:
+        elif test_subtype == TestSubType.Scenario:
             counts["scenario"].units += 1
         else:
             counts["test"].units += 1
 
 def format_result(msg, counts):
-    if Flags(msg.p_flags) & SKIP and settings.show_skipped is False:
+    if Flags(msg["test_flags"]) & SKIP and settings.show_skipped is False:
         return
 
-    _result_name_map = {
-        message.RawResultOK: "ok",
-        message.RawResultFail: "fail",
-        message.RawResultNull: "null",
-        message.RawResultError: "error",
-        message.RawResultXOK: "xok",
-        message.RawResultXFail: "xfail",
-        message.RawResultXNull: "xnull",
-        message.RawResultXError: "xerror",
-        message.RawResultSkip: "skip"
-    }
+    _name = msg["result_type"].lower()
+    test_type = getattr(TestType, msg["test_type"])
+    test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
 
-    _name = _result_name_map[type(msg)]
-
-    if msg.p_type == TestType.Module:
+    if test_type == TestType.Module:
         setattr(counts["module"], _name, getattr(counts["module"], _name) + 1)
-    elif msg.p_type == TestType.Suite:
+    elif test_type == TestType.Suite:
         setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
-    elif msg.p_type == TestType.Iteration:
+    elif test_type == TestType.Iteration:
         setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
-    elif msg.p_type == TestType.Step:
+    elif test_type == TestType.Step:
         setattr(counts["step"], _name, getattr(counts["step"], _name) + 1)
     else:
-        if msg.p_subtype == TestSubType.Feature:
+        if test_subtype == TestSubType.Feature:
             setattr(counts["feature"], _name, getattr(counts["feature"], _name) + 1)
-        elif msg.p_subtype == TestSubType.Scenario:
+        elif test_subtype == TestSubType.Scenario:
             setattr(counts["scenario"], _name, getattr(counts["scenario"], _name) + 1)
         else:
             setattr(counts["test"], _name, getattr(counts["test"], _name) + 1)
 
 formatters = {
-    message.RawTest: (format_test,),
-    message.RawResultOK: (format_result,),
-    message.RawResultFail: (format_result,),
-    message.RawResultError: (format_result,),
-    message.RawResultSkip: (format_result,),
-    message.RawResultNull: (format_result,),
-    message.RawResultXOK: (format_result,),
-    message.RawResultXFail: (format_result,),
-    message.RawResultXError: (format_result,),
-    message.RawResultXNull: (format_result,)
+    Message.TEST.name: (format_test,),
+    Message.RESULT.name: (format_result,)
 }
 
 def all_counts():
@@ -198,7 +184,7 @@ def transform(stop):
     while True:
         if line is not None:
             msg = line
-            formatter = formatters.get(type(line), None)
+            formatter = formatters.get(line["message_keyword"], None)
             if formatter:
                 formatter[0](line, *formatter[1:], counts=counts)
             line = None
@@ -222,5 +208,5 @@ def transform(stop):
                     line += line_icon + str(counts["iteration"])
                 if counts["step"]:
                     line += line_icon + str(counts["step"])
-                line += color_line(f"\nTotal time {strftimedelta(msg.p_time)}\n")
+                line += color_line(f"\nTotal time {strftimedelta(msg['message_rtime'])}\n")
         line = yield line

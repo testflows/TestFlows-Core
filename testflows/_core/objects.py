@@ -21,7 +21,7 @@ from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
 
 class Result(TestObject, ResultException):
-    _fields = ("message", "reason", "type")
+    _fields = ("message", "reason", "type", "test")
     _defaults = (None,) * 3
     metrics = []
     tickets = []

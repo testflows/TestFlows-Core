@@ -27,10 +27,10 @@ from .short import transform as short_transform
 from .slick import transform as slick_transform
 from .index import transform as index_transform
 from .read_and_filter import transform as read_and_filter_transform
-#from .report.passing import transform as passing_report_transform
-#from .report.fails import transform as fails_report_transform
-#from .report.totals import transform as totals_report_transform
-#from .report.version import transform as version_report_transform
+from .report.passing import transform as passing_report_transform
+from .report.fails import transform as fails_report_transform
+from .report.totals import transform as totals_report_transform
+from .report.version import transform as version_report_transform
 #from .report.results import transform as results_transform
 #from .report.map import transform as map_transform
 
@@ -146,14 +146,14 @@ class SlickLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail),
+            read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
                 slick_transform(),
-                #passing_report_transform(stop_event),
-                #fails_report_transform(stop_event),
-                #totals_report_transform(stop_event),
-                #version_report_transform(stop_event),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -168,14 +168,14 @@ class DotsLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail),
+            read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
                 dots_transform(stop_event),
-                #passing_report_transform(stop_event),
-                #fails_report_transform(stop_event),
-                #totals_report_transform(stop_event),
-                #version_report_transform(stop_event),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -196,7 +196,7 @@ class TotalsReportLogPipeline(Pipeline):
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                #totals_report_transform(stop_event),
+                totals_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -217,7 +217,7 @@ class FailsReportLogPipeline(Pipeline):
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                #fails_report_transform(stop_event),
+                fails_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -238,7 +238,7 @@ class PassingReportLogPipeline(Pipeline):
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                #passing_report_transform(stop_event),
+                passing_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -259,7 +259,7 @@ class VersionReportLogPipeline(Pipeline):
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
             fanout(
-                #version_report_transform(stop_event),
+                version_report_transform(stop_event),
             ),
             fanin(
                 "".join

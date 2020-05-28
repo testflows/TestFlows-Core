@@ -16,7 +16,7 @@ import time
 
 from testflows._core.cli.colors import color
 from testflows._core.utils.timefuncs import localfromtimestamp
-from testflows._core.transform.log import message
+from testflows._core.message import Message
 
 def transform(stop):
     """Transform parsed log line into a nice format.
@@ -28,9 +28,9 @@ def transform(stop):
     version = None
     started = None
     while True:
-        if type(line) == message.RawVersion:
-            version = line.version
-            started = localfromtimestamp(line.p_time)
+        if line and line["message_keyword"] == Message.VERSION.name:
+            version = line["framework_version"]
+            started = localfromtimestamp(line["message_time"])
         if stop.is_set():
             if started is not None and version is not None:
                 line = color(f"{divider}\nExecuted on {started:%b %d,%Y %-H:%M}\nTestFlows Test Framework v{version}\n",
