@@ -49,34 +49,14 @@ class Message(IntEnum):
     REQUIREMENT = 16
     EXAMPLE = 17
     #
-    USER = 18
-    PROJECT = 19
-    ENVIRONMENT = 20
-    DEVICE = 21
-    SOFTWARE = 22
-    HARDWARE = 23
+    NODE = 18
+    MAP = 19
     #
-    NODE = 24
-    MAP = 25
-    #
-    STOP = 26
+    STOP = 20
 
-class MessageParentObjectType(IntEnum):
+class MessageObjectType(IntEnum):
     NONE = 0
     TEST = 1 << 0
-    RESULT = 1 << 1
-    PROJECT = 1 << 2
-    USER = 1 << 3
-    ENVIRONMENT = 1 << 4
-    DEVICE = 1 << 5
-    SOFTWARE = 1 << 6
-    HARDWARE = 1 << 7
-
-MessageParentObjectIds = namedtuple_with_defaults(
-    "MessageParentObjectIds",
-    "project_id user_id environment_id device_id software_id hardware_id product_id",
-    defaults=((None,) * 7)
-)
 
 MessageMap = namedtuple(
         "MessageMap",
@@ -86,7 +66,6 @@ MessageMap = namedtuple(
         "VERSION PROTOCOL "
         "INPUT "
         "VALUE METRIC TICKET ARGUMENT TAG ATTRIBUTE REQUIREMENT "
-        "USER PROJECT ENVIRONMENT DEVICE SOFTWARE HARDWARE "
         "NODE MAP STOP"
     )
 

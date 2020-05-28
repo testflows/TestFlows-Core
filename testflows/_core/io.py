@@ -21,7 +21,7 @@ import testflows.settings as settings
 
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
-from .message import Message, MessageParentObjectType, MessageParentObjectIds, dumps
+from .message import Message, MessageObjectType, dumps
 from .objects import Tag, Metric, Example
 from .funcs import top
 from . import __version__
@@ -55,7 +55,7 @@ class TestOutput(object):
             "test_cflags": int(self.test.cflags)
         }
 
-    def message(self, keyword, message, ptype=0, pids=None, stream=None):
+    def message(self, keyword, message, object_type=0, stream=None):
         """Output message.
 
         :param keyword: keyword
@@ -66,7 +66,7 @@ class TestOutput(object):
         msg = {
             "message_keyword": str(keyword),
             "message_hash": self.msg_hash,
-            "message_ptype": ptype,
+            "message_object": object_type,
             "message_num": self.msg_count,
             "message_stream": stream,
             "message_time": round(msg_time, settings.time_resolution),
@@ -74,9 +74,6 @@ class TestOutput(object):
         }
         msg.update(self.prefix)
         msg.update(message)
-
-        if pids:
-            msg.update(pids._asdict())
 
         msg = dumps(msg)
 
@@ -122,87 +119,80 @@ class TestOutput(object):
     def test_message(self):
         """Output test message.
         """
-        ptype = MessageParentObjectType.TEST
         msg = {
             "test_name": self.test.name,
             "test_uid": str(self.test.uid or "") or None,
             "test_description": str(self.test.description or "") or None,
         }
 
-        self.message(Message.TEST, msg, ptype=ptype)
+        self.message(Message.TEST, msg, object_type=MessageObjectType.TEST)
 
-        [self.attribute(attr, ptype=ptype) for attr in self.test.attributes]
-        [self.requirement(req, ptype=ptype) for req in self.test.requirements]
-        [self.argument(arg, ptype=ptype) for arg in self.test.args.values()]
-        [self.tag(Tag(tag), ptype=ptype) for tag in self.test.tags]
-        [self.user(user, ptype=ptype) for user in self.test.users]
-        [self.example(Example(idx, col, getattr(row, col)), ptype=ptype) for idx, row in enumerate(self.test.examples) for col in row._fields]
+        [self.attribute(attr) for attr in self.test.attributes]
+        [self.requirement(req) for req in self.test.requirements]
+        [self.argument(arg) for arg in self.test.args.values()]
+        [self.tag(Tag(tag)) for tag in self.test.tags]
+        [self.example(Example(idx, col, getattr(row, col))) for idx, row in enumerate(self.test.examples) for col in row._fields]
         if self.test.node:
-            self.node(self.test.node, ptype=ptype)
+            self.node(self.test.node)
         if self.test.map:
-            self.map(self.test.map, ptype=ptype)
+            self.map(self.test.map)
 
-    def attribute(self, attribute, ptype):
+    def attribute(self, attribute, object_type=MessageObjectType.TEST):
         msg = object_fields(attribute, "attribute")
-        self.message(Message.ATTRIBUTE, msg, ptype=ptype)
+        self.message(Message.ATTRIBUTE, msg, object_type=object_type)
 
-    def requirement(self, requirement, ptype):
+    def requirement(self, requirement, object_type=MessageObjectType.TEST):
         msg = object_fields(requirement, "requirement")
-        self.message(Message.REQUIREMENT, msg, ptype=ptype)
+        self.message(Message.REQUIREMENT, msg, object_type=object_type)
 
-    def argument(self, argument, ptype):
+    def argument(self, argument, object_type=MessageObjectType.TEST):
         msg = object_fields(argument, "argument")
         value = msg["argument_value"]
         if value is not None:
             msg["argument_value"] = str_or_repr(value)
-        self.message(Message.ARGUMENT, msg, ptype=ptype)
+        self.message(Message.ARGUMENT, msg, object_type=object_type)
 
-    def tag(self, tag, ptype):
+    def tag(self, tag, object_type=MessageObjectType.TEST):
         msg = object_fields(tag, "tag")
-        self.message(Message.TAG, msg, ptype=ptype)
+        self.message(Message.TAG, msg, object_type=object_type)
 
-    def user(self, user, ptype):
-        msg = object_fields(user, "user")
-        self.message(Message.USER, msg, ptype=ptype)
-
-    def example(self, example, ptype):
+    def example(self, example, object_type=MessageObjectType.TEST):
         msg = object_fields(example, "example")
-        self.message(Message.EXAMPLE, msg, ptype=ptype)
+        self.message(Message.EXAMPLE, msg, object_type=object_type)
 
-    def node(self, node, ptype):
+    def node(self, node, object_type=MessageObjectType.TEST):
         msg = object_fields(node, "node")
-        self.message(Message.NODE, msg, ptype=ptype)
+        self.message(Message.NODE, msg, object_type=object_type)
 
-    def map(self, map, ptype):
+    def map(self, map, object_type=MessageObjectType.TEST):
         for node in map:
             msg = object_fields(node, "node")
-            self.message(Message.MAP, msg, ptype=ptype)
+            self.message(Message.MAP, msg, object_type=object_type)
 
-    def ticket(self, ticket, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+    def ticket(self, ticket, object_type=MessageObjectType.TEST):
         msg = object_fields(ticket, "ticket")
-        self.message(Message.TICKET, msg, ptype=ptype)
+        self.message(Message.TICKET, msg, object_type=object_type)
 
-    def metric(self, metric, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+    def metric(self, metric, object_type=MessageObjectType.TEST):
         msg = object_fields(metric, "metric")
-        self.message(Message.METRIC, msg, ptype=ptype)
+        self.message(Message.METRIC, msg, object_type=object_type)
 
-    def value(self, value, ptype=MessageParentObjectType.TEST | MessageParentObjectType.RESULT):
+    def value(self, value, object_type=MessageObjectType.TEST):
         msg = object_fields(value, "value")
-        self.message(Message.VALUE, msg, ptype=ptype)
+        self.message(Message.VALUE, msg, object_type=object_type)
 
     def result(self, result):
         """Output result message.
 
         :param result: result object
         """
-        ptype = MessageParentObjectType.TEST | MessageParentObjectType.RESULT
         msg = {
             "result_message": result.message,
             "result_reason": result.reason,
             "result_type": str(result.type),
             "result_test": result.test
         }
-        self.message(Message.RESULT, msg, ptype=ptype)
+        self.message(Message.RESULT, msg, object_type=MessageObjectType.TEST)
 
     def note(self, message):
         """Output note message.

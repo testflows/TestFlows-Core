@@ -114,7 +114,6 @@ def start_output_handler():
         "raw": stdout_raw_handler,
         "slick": stdout_slick_handler,
         "nice": stdout_nice_handler,
-        "silent": stdout_silent_handler,
         "quiet": stdout_silent_handler,
         "short": stdout_short_handler,
         "dots": stdout_dots_handler,

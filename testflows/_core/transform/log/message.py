@@ -116,12 +116,6 @@ class RawTag(namedtuple_with_defaults(
         defaults=objects.Tag._defaults)):
     pass
 
-class RawUser(namedtuple_with_defaults(
-        "RawUser",
-        " ".join(objects.User._fields),
-        defaults=objects.User._defaults)):
-    pass
-
 class RawTicket(namedtuple_with_defaults(
         "RawTicket",
         " ".join(objects.Ticket._fields),
@@ -212,36 +206,6 @@ class RawTicket(RawFormat, TicketMessage, namedtuple_with_defaults(
         defaults=objects.Ticket._defaults)):
     pass
 
-class RawProject(RawFormat, ProjectMessage, namedtuple_with_defaults(
-        "RawProjectMessage",
-        RawFormat.prefix.fields + " ".join(objects.Project._fields),
-        defaults=objects.Project._defaults)):
-    pass
-
-class RawEnvironment(RawFormat, EnvironmentMessage, namedtuple_with_defaults(
-        "RawEnvironmentMessage",
-        RawFormat.prefix.fields + " ".join(objects.Environment._fields),
-        defaults=objects.Environment._defaults)):
-    pass
-
-class RawDevice(RawFormat, DeviceMessage, namedtuple_with_defaults(
-        "RawDeviceMessage",
-        RawFormat.prefix.fields + " ".join(objects.Device._fields),
-        defaults=objects.Device._defaults)):
-    pass
-
-class RawSoftware(RawFormat, SoftwareMessage, namedtuple_with_defaults(
-        "RawSoftwareMessage",
-        RawFormat.prefix.fields + " ".join(objects.Software._fields),
-        defaults=objects.Software._defaults)):
-    pass
-
-class RawHardware(RawFormat, HardwareMessage, namedtuple_with_defaults(
-        "RawHardwareMessage",
-        RawFormat.prefix.fields + " ".join(objects.Hardware._fields),
-        defaults=objects.Hardware._defaults)):
-    pass
-
 class RawStop(RawFormat, namedtuple_with_defaults(
         "RawStopMessage",
         RawFormat.prefix.fields)):
@@ -265,12 +229,6 @@ message_map = MessageMap(
      RawTag, # TAG
      RawAttribute, # ATTRIBUTE
      RawRequirement, # REQUIREMENT
-     RawUser, # USER
-     RawProject, # PROJECT
-     RawEnvironment, # ENVIRONMENT
-     RawDevice, # DEVICE
-     RawSoftware, # SOFTWARE
-     RawHardware, # HARDWARE
      RawNode, # NODE
      RawMap, # MAP
      RawStop # STOP

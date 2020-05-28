@@ -186,7 +186,6 @@ class TestBase(object):
     tags = set()
     attributes = []
     requirements = []
-    users = []
     examples = None
     name = None
     description = None
@@ -246,8 +245,8 @@ class TestBase(object):
             help="disable terminal color highlighting", default=False)
         parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
         parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-            choices=["slick", "nice", "quiet", "short", "dots", "raw", "silent"], default="nice",
-            help="""stdout output format, choices are: ['slick','nice','short','dots','quiet','raw','silent'],
+            choices=["slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
+            help="""stdout output format, choices are: ['slick','nice','short','dots','quiet','raw'],
                 default: 'nice'""")
         parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
             help="path to the log file where test output will be stored, default: uses temporary log file")
@@ -366,7 +365,7 @@ class TestBase(object):
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
-                 users=None, examples=None, description=None, parent=None,
+                 examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, node=None, map=None, context=None,
                  _frame=None, _run=True):
@@ -401,7 +400,6 @@ class TestBase(object):
         self.tags = tags
         self.requirements = get(requirements, list(self.requirements))
         self.attributes = get(attributes, list(self.attributes))
-        self.users = get(users, list(self.users))
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.args = get(args, {})
@@ -1079,22 +1077,6 @@ class Uid(object):
 
     def __call__(self, func):
         func.uid = self.uid
-        return func
-
-class Users(object):
-    def __init__(self, *users):
-        self.users = users
-
-    def __call__(self, func):
-        func.users = self.users
-        return func
-
-class Tickets(object):
-    def __init__(self, *tickets):
-        self.tickets = tickets
-
-    def __call__(self, func):
-        func.tickets = self.tickets
         return func
 
 def run(comment=None, test=None, **kwargs):

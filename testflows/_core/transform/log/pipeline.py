@@ -102,14 +102,14 @@ class ShortLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail),
+            read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
                 short_transform(),
-                #passing_report_transform(stop_event),
-                #fails_report_transform(stop_event),
-                #totals_report_transform(stop_event),
-                #version_report_transform(stop_event),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
             ),
             fanin(
                 "".join
@@ -124,14 +124,14 @@ class NiceLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         steps = [
-            read_transform(input, tail=tail),
+            read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
                 nice_transform(stop_event),
-                #passing_report_transform(stop_event),
-                #fails_report_transform(stop_event),
-                #totals_report_transform(stop_event),
-                #version_report_transform(stop_event),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
             ),
             fanin(
                 "".join
