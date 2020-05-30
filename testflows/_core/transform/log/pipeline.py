@@ -25,7 +25,6 @@ from .stop import transform as stop_transform
 from .raw import transform as raw_transform
 from .short import transform as short_transform
 from .slick import transform as slick_transform
-from .index import transform as index_transform
 from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
@@ -313,15 +312,3 @@ class CompactRawLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(CompactRawLogPipeline, self).__init__(steps)
-
-class IndexLogPipeline(Pipeline):
-    def __init__(self, input, output):
-        stop_event = threading.Event()
-
-        steps = [
-            read_and_filter_transform(input, command=f"grep -E '^{Message.TEST},'"),
-            index_transform(stop_event),
-            write_transform(output),
-            stop_transform(stop_event)
-        ]
-        super(IndexLogPipeline, self).__init__(steps)
