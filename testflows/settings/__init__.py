@@ -18,7 +18,7 @@ import hashlib
 #: debug mode
 debug = False
 #: time resolution (decimal places)
-time_resolution = 3
+time_resolution = 6
 #: hash length in bytes
 hash_length = 8
 #: hash function

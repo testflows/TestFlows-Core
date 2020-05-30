@@ -22,7 +22,7 @@ from .baseobject import get, hash
 
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
-    _defaults = (None,) * 3
+    _defaults = (None,) * 4
     metrics = []
     tickets = []
     values = []
@@ -87,7 +87,7 @@ class XResult(Result):
 class OK(Result):
     type = Result.Type.OK
     def xout(self, reason):
-        return XOK(self.test, self.message, reason)
+        return XOK(test=self.test, message=self.message, reason=reason)
 
 class XOK(XResult):
     type = Result.Type.XOK
@@ -96,7 +96,7 @@ class XOK(XResult):
 class Fail(Result):
     type = Result.Type.Fail
     def xout(self, reason):
-        return XFail(self.test, self.message, reason)
+        return XFail(test=self.test, message=self.message, reason=reason)
 
     def __bool__(self):
         return False
@@ -111,7 +111,7 @@ class Error(Result):
     type = Result.Type.Error
 
     def xout(self, reason):
-        return XError(self.test, self.message, reason)
+        return XError(test=self.test, message=self.message, reason=reason)
 
     def __bool__(self):
         return False
@@ -123,7 +123,7 @@ class Null(Result):
     type = Result.Type.Null
 
     def xout(self, reason):
-        return XNull(self.test, self.message, reason)
+        return XNull(test=self.test, message=self.message, reason=reason)
 
     def __bool__(self):
         return False

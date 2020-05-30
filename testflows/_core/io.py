@@ -52,7 +52,8 @@ class TestOutput(object):
             "test_subtype": str(self.test.subtype) if self.test.subtype is not None else None,
             "test_id": id_sep + id_sep.join(str(n) for n in self.test.id),
             "test_flags": int(self.test.flags),
-            "test_cflags": int(self.test.cflags)
+            "test_cflags": int(self.test.cflags),
+            "test_level": len(self.test.id)
         }
 
     def message(self, keyword, message, object_type=0, stream=None):
@@ -69,6 +70,11 @@ class TestOutput(object):
             "message_object": object_type,
             "message_num": self.msg_count,
             "message_stream": stream,
+            "message_level": (
+                len(self.test.id) + 1
+                if keyword not in (Message.TEST, Message.RESULT, Message.PROTOCOL, Message.VERSION)
+                else len(self.test.id)
+            ),
             "message_time": round(msg_time, settings.time_resolution),
             "message_rtime": round(msg_time - self.test.start_time, settings.time_resolution)
         }
@@ -258,7 +264,7 @@ class TestIO(object):
         """
         if not msg:
             return
-        self.output.message(Message.NONE, dumps({"message":str(msg).rstrip()}), stream=stream)
+        self.output.message(Message.NONE, {"message":str(msg).rstrip()}, stream=stream)
 
     def flush(self):
         self.io.flush()
