@@ -15,15 +15,21 @@
 import sys
 import subprocess
 
-def transform(file, command, tail=False):
+from testflows._core.message import Message
+
+def transform(file, command, tail=False, stop=None):
     """Read lines from a file-like object and filter them using
     Unix tail and grep utilities.
 
     :param file: open file handle
-    :pram
+    :param command: filter command (like grep)
     :param tail: tail mode, default: False
+    :param stop: stop event
     """
     yield None
+
+    stop_keyword = '{"message_keyword":"%s"' % str(Message.STOP)
+    stop_keyword_len = len(stop_keyword)
 
     process = subprocess.Popen(command, stdin=file, stdout=subprocess.PIPE, shell=True)
     while True:
@@ -33,5 +39,7 @@ def transform(file, command, tail=False):
                 break
             else:
                 continue
+        if stop and line[:stop_keyword_len] == stop_keyword:
+            stop.set()
         yield line.decode("utf-8")
 
