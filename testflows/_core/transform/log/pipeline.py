@@ -230,7 +230,7 @@ class PassingReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST, Messge.RESULT]
+        message_types = [Message.TEST, Message.RESULT]
         command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
 
         steps = [
@@ -285,13 +285,31 @@ class MapLogPipeline(Pipeline):
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results):
         stop_event = threading.Event()
-        message_types = [Message.VERSION, Message.TEST, Message.RESULT]
-        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
-
+        message_types = [
+            Message.PROTOCOL.name,
+            Message.VERSION.name,
+            Message.TEST.name,
+            Message.RESULT.name,
+            Message.MAP.name,
+            Message.NODE.name,
+            Message.ATTRIBUTE.name,
+            Message.TAG.name,
+            Message.ARGUMENT.name,
+            Message.REQUIREMENT.name,
+            Message.EXAMPLE.name,
+            Message.TICKET.name,
+            Message.VALUE.name,
+            Message.METRIC.name,
+            Message.STOP.name
+        ]
+        command = "grep -E '^{\"message_keyword\":\""
+        command = (f"{command}({'|'.join(message_types)})\""
+            + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
+            + "'")
         steps = [
-            read_and_filter_transform(input, command=command),
+            read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(stop_event),
-            #results_transform(results, stop_event),
+            results_transform(results),
             stop_transform(stop_event)
         ]
         super(ResultsLogPipeline, self).__init__(steps)
@@ -321,7 +339,6 @@ class CompactRawLogPipeline(Pipeline):
         command = (f"{command}({'|'.join(message_types)})\""
             + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
             + "'")
-        print(command)
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             raw_transform(),
