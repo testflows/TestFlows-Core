@@ -299,7 +299,23 @@ class ResultsLogPipeline(Pipeline):
 class CompactRawLogPipeline(Pipeline):
     def __init__(self, input, output, steps=True):
         stop_event = threading.Event()
-        message_types = [Message.VERSION.name, Message.TEST.name, Message.RESULT.name]
+        message_types = [
+            Message.PROTOCOL.name,
+            Message.VERSION.name,
+            Message.TEST.name,
+            Message.RESULT.name,
+            Message.MAP.name,
+            Message.NODE.name,
+            Message.ATTRIBUTE.name,
+            Message.TAG.name,
+            Message.ARGUMENT.name,
+            Message.REQUIREMENT.name,
+            Message.EXAMPLE.name,
+            Message.TICKET.name,
+            Message.VALUE.name,
+            Message.METRIC.name,
+            Message.STOP.name
+        ]
         test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
         command = "grep -E '^{\"message_keyword\":\""
         command = (f"{command}({'|'.join(message_types)})\""
