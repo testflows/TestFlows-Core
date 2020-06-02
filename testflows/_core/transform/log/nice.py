@@ -142,7 +142,7 @@ def and_keyword(msg, parent_id, keyword, subtype):
     prev = tests_by_parent[parent_id][-2] if len(tests_by_parent.get(parent_id, [])) > 1 else None
     if prev and get_subtype(prev) == subtype and tests_by_parent.get(prev["test_id"]) is None:
         keyword = "And"
-    parent = tests_by_id.get(parent_id)
+    parent = tests_by_name.get(parent_id)
     if parent and get_subtype(parent) == subtype and len(tests_by_parent.get(parent_id, [])) == 1:
         keyword = "And"
     return keyword
@@ -226,7 +226,7 @@ def format_result(msg, prefix):
 def format_message(msg, keyword):
     out = msg["message"]
     if msg["message_stream"]:
-        out = f"[{msg['message_stream']}] {message}"
+        out = f"[{msg['message_stream']}] {msg['message']}"
 
     out = textwrap.indent(out, prefix=(indent * (msg['test_id'].count('/') - 1) + " " * 30))
     out = out.lstrip(" ")
