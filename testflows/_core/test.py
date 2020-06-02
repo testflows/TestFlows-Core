@@ -795,10 +795,10 @@ class _test(object):
                 sys.exit(1)
 
             if isinstance(self.test.result, Fail):
-                result = Fail(self.parent.name, self.test.result.message)
+                result = Fail(test=self.parent.name, message=self.test.result.message)
             else:
                 # convert Null into an Error
-                result = Error(self.parent.name, self.test.result.message)
+                result = Error(test=self.parent.name, message=self.test.result.message)
 
             if TE not in self.test.flags:
                 raise result

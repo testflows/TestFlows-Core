@@ -20,14 +20,15 @@ import testflows._core.cli.arg.type as argtype
 
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
-from testflows._core.transform.log.message import message_map
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
-from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
+
+FailResults = ["Fail", "Error", "Null"]
+XoutResults = ["XOK", "XFail", "XError", "XNull"]
 
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
@@ -82,7 +83,7 @@ class Handler(HandlerBase):
         duration = ""
         if results["tests"]:
             result = list(results["tests"].values())[0]["result"]
-            duration = strftimedelta(result.p_time)
+            duration = strftimedelta(result["message_rtime"])
 
         s = (
             "\n\n"
@@ -196,13 +197,13 @@ class Handler(HandlerBase):
         )
         for test in results["tests"].values():
             result = test["result"]
-            if result.p_type < TestType.Test:
+            if getattr(TestType, result["test_type"]) < TestType.Test:
                 continue
-            flags = Flags(result.p_flags)
+            flags = Flags(result["test_flags"])
             if flags & SKIP and settings.show_skipped is False:
                 continue
-            cls = result.name.lower()
-            s += " | ".join([result.test, f'<span class="result result-{cls}">{result.name}</span>', strftimedelta(result.p_time)]) + "\n"
+            cls = result["result_type"].lower()
+            s += " | ".join([result["result_test"], f'<span class="result result-{cls}">{result["result_type"]}</span>', strftimedelta(result["message_rtime"])]) + "\n"
         return s
 
     def artifacts_section(self, link):
@@ -221,18 +222,18 @@ class Handler(HandlerBase):
             return s
         test = next(iter(results["tests"].values()), None)["test"]
 
-        if test.attributes:
+        if test["attributes"]:
             s += "\n\n### Attributes\n"
-            for attr in test.attributes:
-                s += "||" + "||".join([f"**{attr.name}**", f"{attr.value}"]) + "||\n"
+            for attr in test["attributes"]:
+                s += "||" + "||".join([f"**{attr['attribute_name']}**", f"{attr['attribute_value']}"]) + "||\n"
             s += "\n"
 
-        if test.tags:
+        if test["tags"]:
             s += "\n\n### Tags\n"
-            for i, tag in enumerate(test.tags):
+            for i, tag in enumerate(test["tags"]):
                 if i > 0 and i % 3 == 0:
                     s += "||\n"
-                s += f'||<strong class="tag tag-{i % 5}">{tag.value}</strong>'
+                s += f'||<strong class="tag tag-{i % 5}">{tag["tag_value"]}</strong>'
             s += "||\n"
         return s
 
@@ -244,17 +245,17 @@ class Handler(HandlerBase):
         has_fails = False
         for test in results["tests"].values():
             result = test["result"]
-            if result.p_type < TestType.Test:
+            if getattr(TestType, result["test_type"]) < TestType.Test:
                 continue
-            flags = Flags(result.p_flags)
+            flags = Flags(result["test_flags"])
             if flags & SKIP and settings.show_skipped is False:
                 continue
-            if type(result) in FailResults:
-                cls = result.name.lower()
+            if result["result_type"] in FailResults:
+                cls = result["result_type"].lower()
                 s += ("<tr>" +
-                    f'<td>{result.test}</td>' +
-                    f'<td><span class="result result-{cls}">{result.name}</span>  ' + strftimedelta(result.p_time) + '</td>' +
-                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></div></td>'
+                    f'<td>{result["result_test"]}</td>' +
+                    f'<td><span class="result result-{cls}">{result["result_type"]}</span>  ' + strftimedelta(result["message_rtime"]) + '</td>' +
+                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result["result_message"]).replace("|", "\|") + '</pre></div></td>'
                 ) + "</tr>\n"
                 has_fails = True
         s += '<tbody>\n'
@@ -271,17 +272,17 @@ class Handler(HandlerBase):
         has_xfails = False
         for test in results["tests"].values():
             result = test["result"]
-            if result.p_type < TestType.Test:
+            if getattr(TestType, result["test_type"]) < TestType.Test:
                 continue
-            flags = Flags(result.p_flags)
+            flags = Flags(result["test_flags"])
             if flags & SKIP and settings.show_skipped is False:
                 continue
-            if type(result) in XoutResults:
-                cls = result.name.lower()
+            if result["result_type"] in XoutResults:
+                cls = result["result_type"].lower()
                 s += ("<tr>" +
-                    f'<td>{result.test}</td>' +
-                    f'<td><span class="result result-{cls}">{result.name}</span> ' + strftimedelta(result.p_time) + '<br>' + str(result.reason).replace("|", "\|") + '</td>' +
-                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result.message).replace("|", "\|") + '</pre></div></td>'
+                    f'<td>{result["result_test"]}</td>' +
+                    f'<td><span class="result result-{cls}">{result["result_type"]}</span> ' + strftimedelta(result["result_rtime"]) + '<br>' + str(result["result_reason"]).replace("|", "\|") + '</td>' +
+                    '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result["result_message"]).replace("|", "\|") + '</pre></div></td>'
                 ) + "</tr>\n"
                 has_xfails = True
         s += '<tbody>\n'
@@ -294,7 +295,7 @@ class Handler(HandlerBase):
         output = args.output
         artifacts = args.artifacts
         if results["tests"]:
-            name = list(results["tests"].values())[0]["test"].name.lstrip("/").title()
+            name = list(results["tests"].values())[0]["test"]["test_name"].lstrip("/").title()
 
         body = ""
         copyright = ""

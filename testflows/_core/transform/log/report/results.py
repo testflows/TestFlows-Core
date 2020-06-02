@@ -57,10 +57,10 @@ def process_attribute(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["attributes"].append(msg)
 
 def process_tag(msg, results, names, unique):
-    results["tests"][names[msg["test_id"]]]["test"]["tag"].append(msg)
+    results["tests"][names[msg["test_id"]]]["test"]["tags"].append(msg)
 
 def process_requirement(msg, results, names, unique):
-    results["tests"][names[msg["test_id"]]]["test"]["requirement"].append(msg)
+    results["tests"][names[msg["test_id"]]]["test"]["requirements"].append(msg)
 
 def process_argument(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["arguments"].append(msg)
@@ -84,23 +84,23 @@ def process_value(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"]["values"].append(msg)
 
 processors = {
-    message.VERSION.name: process_version,
-    message.PROTOCOL.name: process_protocol,
-    message.TEST.name: process_test,
-    message.RESULT.name: process_result,
-    message.ATTRIBUTE.name: process_attribute,
-    message.TAG.name: process_tag,
-    message.REQUIREMENT.name: process_requirement,
-    message.ARGUMENT.name: process_argument,
-    message.EXAMPLE.name: process_example,
-    message.NODE.name: process_node,
-    message.MAP.name: process_map,
-    message.TICKET.name: process_ticket,
-    message.METRIC.name: process_metric,
-    message.VALUE.name: process_value,
+    Message.VERSION.name: process_version,
+    Message.PROTOCOL.name: process_protocol,
+    Message.TEST.name: process_test,
+    Message.RESULT.name: process_result,
+    Message.ATTRIBUTE.name: process_attribute,
+    Message.TAG.name: process_tag,
+    Message.REQUIREMENT.name: process_requirement,
+    Message.ARGUMENT.name: process_argument,
+    Message.EXAMPLE.name: process_example,
+    Message.NODE.name: process_node,
+    Message.MAP.name: process_map,
+    Message.TICKET.name: process_ticket,
+    Message.METRIC.name: process_metric,
+    Message.VALUE.name: process_value,
 }
 
-def transform(results, stop_event):
+def transform(results):
     """Transform log file into results.
     """
     names = {}

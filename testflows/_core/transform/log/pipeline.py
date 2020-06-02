@@ -30,7 +30,7 @@ from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
-#from .report.results import transform as results_transform
+from .report.results import transform as results_transform
 #from .report.map import transform as map_transform
 
 class Pipeline(object):
