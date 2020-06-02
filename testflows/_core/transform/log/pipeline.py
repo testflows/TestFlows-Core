@@ -209,14 +209,15 @@ class FailsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST, Message.RESULT]
-        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+        message_types = [Message.RESULT.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
-            read_and_filter_transform(input, command=command),
-            parse_transform(stop_event),
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
             fanout(
-                fails_report_transform(stop_event),
+                fails_report_transform(stop_event, divider=""),
             ),
             fanin(
                 "".join
@@ -230,14 +231,14 @@ class PassingReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST, Message.RESULT]
-        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
-
+        message_types = [Message.RESULT.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
-            read_and_filter_transform(input, command=command),
-            parse_transform(stop_event),
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
             fanout(
-                passing_report_transform(stop_event),
+                passing_report_transform(stop_event, divider=""),
             ),
             fanin(
                 "".join
@@ -251,14 +252,14 @@ class VersionReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.VERSION, Message.RESULT]
-        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
-
+        message_types = [Message.VERSION.name, Message.STOP.name]
+        grep = "grep -m2 -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
-            read_and_filter_transform(input, command=command),
-            parse_transform(stop_event),
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
             fanout(
-                version_report_transform(stop_event),
+                version_report_transform(stop_event, divider=""),
             ),
             fanin(
                 "".join
@@ -273,7 +274,6 @@ class MapLogPipeline(Pipeline):
         stop_event = threading.Event()
         message_types = [Message.TEST]
         command = f"grep -m1 -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
-
         steps = [
             read_and_filter_transform(input, command=command),
             parse_transform(stop_event),
@@ -302,10 +302,8 @@ class ResultsLogPipeline(Pipeline):
             Message.METRIC.name,
             Message.STOP.name
         ]
-        command = "grep -E '^{\"message_keyword\":\""
-        command = (f"{command}({'|'.join(message_types)})\""
-            + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
-            + "'")
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(stop_event),

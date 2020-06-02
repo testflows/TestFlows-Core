@@ -56,7 +56,7 @@ processors = {
     Message.RESULT.name: (add_result,),
 }
 
-def generate(results):
+def generate(results, divider):
     """Generate report"""
     if not results:
         return
@@ -68,13 +68,13 @@ def generate(results):
         _color = color_result(result)
         passing += _color("\u2714") + f" [ {_color(result)} ] {msg['result_test']}\n"
     if passing:
-        passing = color("\nPassing\n\n", "white", attrs=["bold"]) + passing
+        passing = color(f"{divider}Passing\n\n", "white", attrs=["bold"]) + passing
 
     report = f"{passing}"
 
     return report or None
 
-def transform(stop):
+def transform(stop, divider="\n"):
     """Transform parsed log line into a short format.
     """
     line = None
@@ -85,7 +85,7 @@ def transform(stop):
             if processor:
                 processor[0](line, results, *processor[1:])
             if stop.is_set():
-                line = generate(results)
+                line = generate(results, divider)
             else:
                 line = None
         line = yield line

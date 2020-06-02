@@ -57,7 +57,7 @@ processors = {
     Message.RESULT.name: (add_result,),
 }
 
-def generate(results):
+def generate(results, divider):
     """Generate report"""
     if not results:
         return
@@ -82,13 +82,13 @@ def generate(results):
             continue
         fails += _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}\n"
     if fails:
-        fails = color("\nFailing\n\n", "white", attrs=["bold"]) + fails
+        fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
 
     report = f"{xfails}{fails}"
 
     return report or None
 
-def transform(stop):
+def transform(stop, divider="\n"):
     """Transform parsed log line into a short format.
     """
     line = None
@@ -99,7 +99,7 @@ def transform(stop):
             if processor:
                 processor[0](line, results, *processor[1:])
             if stop.is_set():
-                line = generate(results)
+                line = generate(results, divider)
             else:
                 line = None
         line = yield line
