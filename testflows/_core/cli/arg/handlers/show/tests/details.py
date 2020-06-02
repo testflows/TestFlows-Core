@@ -19,14 +19,13 @@ from testflows._core.message import Message
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.testtype import TestType
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
 from testflows._core.transform.log.report.results import transform as results_transform
 from testflows._core.transform.log.values import transform as values_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
-
-from testflows._core.testtype import TestType
 
 def test_details_transform():
     """Transform parsed log line into a short format.
@@ -35,8 +34,8 @@ def test_details_transform():
     while True:
         line = None
         if test is not None:
-            if test["test"].p_type >= TestType.Test:
-                line = f"{test['test'].name}\n"
+            if getattr(TestType, test["test"]["test_type"]) >= TestType.Test:
+                line = f"{test['test']['test_name']}\n"
         test = yield line
 
 class Handler(HandlerBase):
@@ -56,12 +55,15 @@ class Handler(HandlerBase):
     class FirstStage(PipelineBase):
         def __init__(self, results, input):
             stop_event = threading.Event()
-            message_types = [Message.TEST, Message.RESULT]
-            command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+
+            message_types = [Message.TEST.name]
+            grep = "grep -E '^{\"message_keyword\":\""
+            command = f"{grep}({'|'.join(message_types)})\"'"
+
             steps = [
                 read_and_filter_transform(input, command=command),
                 parse_transform(stop_event),
-                results_transform(results, stop_event),
+                results_transform(results),
             ]
             super(Handler.FirstStage, self).__init__(steps)
 
