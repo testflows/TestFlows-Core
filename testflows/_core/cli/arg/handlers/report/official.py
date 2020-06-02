@@ -281,7 +281,7 @@ class Handler(HandlerBase):
                 cls = result["result_type"].lower()
                 s += ("<tr>" +
                     f'<td>{result["result_test"]}</td>' +
-                    f'<td><span class="result result-{cls}">{result["result_type"]}</span> ' + strftimedelta(result["result_rtime"]) + '<br>' + str(result["result_reason"]).replace("|", "\|") + '</td>' +
+                    f'<td><span class="result result-{cls}">{result["result_type"]}</span> ' + strftimedelta(result["message_rtime"]) + '<br>' + str(result["result_reason"]).replace("|", "\|") + '</td>' +
                     '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>' + str(result["result_message"]).replace("|", "\|") + '</pre></div></td>'
                 ) + "</tr>\n"
                 has_xfails = True
