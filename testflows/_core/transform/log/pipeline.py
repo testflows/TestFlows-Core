@@ -126,7 +126,7 @@ class NiceLogPipeline(Pipeline):
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                nice_transform(stop_event),
+                nice_transform(),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 totals_report_transform(stop_event),

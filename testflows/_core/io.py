@@ -51,6 +51,7 @@ class TestOutput(object):
             "test_type": str(self.test.type),
             "test_subtype": str(self.test.subtype) if self.test.subtype is not None else None,
             "test_id": id_sep + id_sep.join(str(n) for n in self.test.id),
+            "test_name": self.test.name,
             "test_flags": int(self.test.flags),
             "test_cflags": int(self.test.cflags),
             "test_level": len(self.test.id)

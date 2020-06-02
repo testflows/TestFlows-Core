@@ -276,10 +276,8 @@ formatters = {
     Message.RESULT.name: (format_result, f"{result_mark} "),
 }
 
-def transform(stop):
+def transform():
     """Transform parsed log line into a nice format.
-
-    :param stop: stop event
     """
     line = None
 

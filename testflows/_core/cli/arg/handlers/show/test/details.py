@@ -43,10 +43,10 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = f"grep -E '^1,.*,\"{name}[^/]*\",' -m 1"
+            command = "grep -E '\"message_object\":1,.+\"test_name\":\"%s\"'" % name
             steps = [
-                read_and_filter_transform(input, command=command, tail=tail),
-                parse_transform(stop_event),
+                read_and_filter_transform(input, command=command, tail=tail, stop=stop_event),
+                parse_transform(),
                 short_transform(),
                 write_transform(output),
             ]

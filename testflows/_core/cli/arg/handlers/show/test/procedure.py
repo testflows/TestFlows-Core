@@ -18,9 +18,10 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
-from testflows._core.transform.log.short import transform as short_transform
+from testflows._core.transform.log.procedure import transform as procedure_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
 
@@ -43,11 +44,12 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = f"grep -E '^1,' | grep -E \',\"{name}.*\",\'"
+            command = "grep -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
+            command += ".+,\"test_name\":\"%s.*?\",'" % name
             steps = [
                 read_and_filter_transform(input, command=command, tail=tail),
                 parse_transform(stop_event),
-                short_transform(),
+                procedure_transform(),
                 write_transform(output),
             ]
             super(Handler.Pipeline, self).__init__(steps)

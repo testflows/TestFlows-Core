@@ -21,6 +21,7 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
 from testflows._core.transform.log.nice import transform as nice_transform
@@ -46,17 +47,18 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = f"grep -E \',\"{name}.*\",\'"
+            command = f"grep -E \',\"test_id\":\"%s\",'" % name
             steps = [
                 read_and_filter_transform(input, command=command, tail=tail),
                 parse_transform(stop_event),
-                nice_transform(stop_event),
+                nice_transform(),
                 write_transform(output),
             ]
             super(Handler.Pipeline, self).__init__(steps)
 
     def convert_name_to_id(self, name, input):
-        command = f"grep  --byte-offset -E '^1,.*,\"{name}[^/]*\",' -m 1"
+        command = "grep --byte-offset -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
+        command += ".+\"test_name\":\"%s\"' -m 1" % name
         process = subprocess.Popen(command, stdin=input, stdout=subprocess.PIPE, shell=True)
         process.wait()
         parse_generator = parse_transform(None)
@@ -65,7 +67,7 @@ class Handler(HandlerBase):
         if not line:
             raise ValueError("test not found")
         offset, msg = line.split(":", 1)
-        return (parse_generator.send(msg).p_id, offset)
+        return (parse_generator.send(msg)["test_id"], offset)
 
     def handle(self, args):
         try:
