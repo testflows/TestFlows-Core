@@ -173,7 +173,7 @@ def all_counts():
         "scenario": Counts("scenarios", *([0] * 10))
     }
 
-def transform(stop):
+def transform(stop, divider="\n"):
     """Totals report.
 
     :param stop: stop event
@@ -192,7 +192,7 @@ def transform(stop):
             if stop.is_set():
                 if line is None:
                     line = ""
-                line += "\n"
+                line += divider
                 line_icon = "" #"\u27a4 "
                 if counts["module"]:
                     line += line_icon + str(counts["module"])

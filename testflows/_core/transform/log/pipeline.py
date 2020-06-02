@@ -188,14 +188,15 @@ class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST, Message.RESULT]
-        command = f"grep -E '^({'|'.join([str(int(i)) for i in message_types])}),'"
+        message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
-            read_and_filter_transform(input, command=command),
-            parse_transform(stop_event),
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
             fanout(
-                totals_report_transform(stop_event),
+                totals_report_transform(stop_event, divider=""),
             ),
             fanin(
                 "".join
