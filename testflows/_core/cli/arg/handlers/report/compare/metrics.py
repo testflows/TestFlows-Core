@@ -51,7 +51,7 @@ class Formatter(FormatterBase):
         for row in table["rows"]:
             name, *results = row
             s += " | ".join([name] + [
-                span % {'cls': result.name.lower() if result else 'na', 'value': table["value"](result) if result else '-'} for result in results
+                span % {'cls': result["result_type"].lower() if result else 'na', 'value': table["value"](result) if result else '-'} for result in results
             ]) + "\n"
         return s
 
@@ -103,16 +103,16 @@ class Handler(HandlerBase):
             metrics = []
             for name in args.name:
                 if name == "test-time":
-                   metrics.append(strftimedelta(result.p_time))
+                   metrics.append(strftimedelta(result["message_rtime"]))
                 else:
-                    for metric in result.metrics:
-                        if metric.name == name:
-                            if metric.units == "ms":
-                                metrics.append(f'{(int(metric.value) / 1000.0)}s')
-                            elif metric.units == "bytes":
-                                metrics.append(f'{bytesize(int(metric.value))}')
+                    for metric in result["metrics"]:
+                        if metric["metric_name"] == name:
+                            if metric["metric_units"] == "ms":
+                                metrics.append(f'{(int(metric["metric_value"]) / 1000.0)}s')
+                            elif metric["metric_units"] == "bytes":
+                                metrics.append(f'{bytesize(int(metric["metric_value"]))}')
                             else:
-                                metrics.append(f'{metric.value} {metric.units}')
+                                metrics.append(f'{metric["metric_value"]} {metric["metric_units"]}')
             return str("<br>".join(metrics)) if metrics else "-"
 
         d["table"]["value"] = table_value

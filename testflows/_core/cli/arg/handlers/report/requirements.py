@@ -47,8 +47,6 @@ testflows_em = testflows.replace("[", "").replace("]", "")
 FailResults = ["Fail", "Error", "Null"]
 XoutResults = ["XOK", "XFail", "XError", "XNull"]
 
-settings.no_colors = True
-
 template = f"""
 <section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
 

@@ -28,12 +28,10 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core import __version__
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
-from testflows._core.transform.log.message import message_map
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
-from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.utils.sort import human
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 from testflows._core.filters import the
@@ -113,7 +111,7 @@ class Formatter:
         for row in table["rows"]:
             name, *results = row
             s += " | ".join([name] + [
-                span % {'cls': result.name.lower() if result else 'na', 'name': result.name if result else '-'} for result in results
+                span % {'cls': result["result_type"].lower() if result else 'na', 'name': result["result_type"] if result else '-'} for result in results
             ]) + "\n"
         return s
 
@@ -249,9 +247,9 @@ class Handler(HandlerBase):
             return default
 
         test = tests[0]["test"]
-        for attr in test.attributes:
-            if attr.name == name:
-                return attr.value
+        for attr in test["attributes"]:
+            if attr["attribute_name"] == name:
+                return attr["attribute_value"]
 
         return default
 
@@ -285,7 +283,7 @@ class Handler(HandlerBase):
             for testname in tests:
                 test = result["tests"].get(testname)
                 if test and test.get("result"):
-                    _name = test["result"].name.lower()
+                    _name = test["result"]["result_type"].lower()
                     setattr(_counts, _name, getattr(_counts, _name) + 1)
                 _counts.units += 1
 
@@ -323,7 +321,7 @@ class Handler(HandlerBase):
         tests = []
         for r in results.values():
             for uname, test in r["tests"].items():
-                if test["test"].p_type < TestType.Test:
+                if getattr(TestType, test["test"]["test_type"]) < TestType.Test:
                     continue
                 tests.append(uname)
         return human(list(set(tests)))
