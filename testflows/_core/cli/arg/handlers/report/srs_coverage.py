@@ -166,12 +166,12 @@ class Handler(HandlerBase):
                     _color = None
                     _priority = 0
                     for test, result in tested.get(heading.name):
-                        _tests.append(f"{indent}  [ {color_result(result.name)(result.name)} ] "
-                            f"{color_secondary()(strftimedelta(result.p_time))} "
-                            f"{color_secondary()(test.name)}\n")
-                        if result_priority(result.name) > _priority:
-                            _color = color_result(result.name)
-                            _priority = result_priority(result.name)
+                        _tests.append(f"{indent}  [ {color_result(result['result_type'])(result['result_type'])} ] "
+                            f"{color_secondary()(strftimedelta(result['message_rtime']))} "
+                            f"{color_secondary()(test['test_name'])}\n")
+                        if result_priority(result["result_type"]) > _priority:
+                            _color = color_result(result["result_type"])
+                            _priority = result_priority(result["result_type"])
                     icon = "\u2714"
                     _include = True
                     if _priority > 2:
@@ -207,10 +207,10 @@ class Handler(HandlerBase):
 
         for result in results["tests"]:
             test, result = results["tests"][result].values()
-            for req in test.requirements:
-                if tested.get(req.name) is None:
-                    tested[req.name] = []
-                tested[req.name].append((test, result))
+            for req in test["requirements"]:
+                if tested.get(req["requirement_name"]) is None:
+                    tested[req["requirement_name"]] = []
+                tested[req["requirement_name"]].append((test, result))
         # generate report
         with args.output as output:
             self.generate(output, headings, tested, args.only)
