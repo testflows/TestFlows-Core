@@ -28,13 +28,11 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core import __version__
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
-from testflows._core.transform.log.message import message_map
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
-from testflows._core.transform.log.message import FailResults, XoutResults
 from testflows._core.transform.log.short import format_test, format_result
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 from testflows._core.filters import the
@@ -45,6 +43,11 @@ from testflows._core.objects import Requirement
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
 testflows_em = testflows.replace("[", "").replace("]", "")
+
+FailResults = ["Fail", "Error", "Null"]
+XoutResults = ["XOK", "XFail", "XError", "XNull"]
+
+settings.no_colors = True
 
 template = f"""
 <section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
@@ -184,8 +187,8 @@ class Formatter:
                 s += f'\n<div markdown="1" class="requirement-description hidden">\n{description}\n</div>'
             for test in r["tests"]:
                 result = test["result"]
-                cls = result.name.lower()
-                s += f'\n<div class="test"><span class="result result-inline result-{cls}">{result.name}</span><span class="time time-inline">{strftimedelta(result.p_time)}</span>{test["test"].name}</div>'
+                cls = result["result_type"].lower()
+                s += f'\n<div class="test"><span class="result result-inline result-{cls}">{result["result_type"]}</span><span class="time time-inline">{strftimedelta(result["message_rtime"])}</span>{test["test"]["test_name"]}</div>'
                 s += f'\n<div class="test-procedure hidden">\n```testflows\n{test["messages"]}\n```\n</div>'
             if not r["tests"]:
                 s += f'\n<div class="no-tests">\n<span class="result-inline">\u270E</span>\nNo tests\n</div>'
@@ -251,9 +254,9 @@ class Handler(HandlerBase):
             return default
 
         test = tests[0]["test"]
-        for attr in test.attributes:
-            if attr.name == name:
-                return attr.value
+        for attr in test["attributes"]:
+            if attr["attribute_name"] == name:
+                return attr["attribute_value"]
 
         return default
 
@@ -285,34 +288,34 @@ class Handler(HandlerBase):
         return _requirements
 
     def add_test_messages(self, test, idx, tests, tests_by_parent, tests_by_id):
-        started = test["test"].started
-        ended = started + test["result"].p_time
+        started = test["test"]["message_time"]
+        ended = test["result"]["message_time"]
 
         messages = [format_test(test["test"], "", tests_by_parent, tests_by_id)]
 
-        if test["test"].p_type > TestType.Test:
+        if getattr(TestType, test["test"]["test_type"]) > TestType.Test:
             for t in tests[idx + 1:]:
-                flags = Flags(t["test"].p_flags)
+                flags = Flags(t["test"]["test_flags"])
                 if flags & SKIP and settings.show_skipped is False:
                     continue
-                if t["test"].started > ended:
+                if t["test"]["message_time"] > ended:
                     break
-                if t["test"].p_type >= TestType.Test \
-                        and t["test"].p_id.startswith(test["test"].p_id):
+                if getattr(TestType, t["test"]["test_type"]) >= TestType.Test \
+                        and t["test"]["test_id"].startswith(test["test"]["test_id"]):
                     messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id))
-                    messages.append(format_result(t["result"], t["result"].name))
+                    messages.append(format_result(t["result"]))
         else:
             for t in tests[idx + 1:]:
-                flags = Flags(t["test"].p_flags)
+                flags = Flags(t["test"]["test_flags"])
                 if flags & SKIP and settings.show_skipped is False:
                     continue
-                if t["test"].started > ended:
+                if t["test"]["message_time"] > ended:
                     break
-                if t["test"].p_id.startswith(test["test"].p_id):
+                if t["test"]["test_id"].startswith(test["test"]["test_id"]):
                     messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id))
-                    messages.append(format_result(t["result"], t["result"].name))
+                    messages.append(format_result(t["result"]))
 
-        messages.append(format_result(test["result"], test["result"].name))
+        messages.append(format_result(test["result"]))
 
         test["messages"] = "".join(messages)
         return test
@@ -320,15 +323,15 @@ class Handler(HandlerBase):
     def add_tests(self, requirements, results):
         tests = list(results["tests"].values())
         for i, test in enumerate(tests):
-            flags = Flags(test["test"].p_flags)
+            flags = Flags(test["test"]["test_flags"])
             if flags & SKIP and settings.show_skipped is False:
                 continue
             result = test["result"]
-            if result.p_type < TestType.Test:
+            if getattr(TestType, result["test_type"]) < TestType.Test:
                 continue
-            for requirement in test["test"].requirements:
-                if requirement.name in requirements:
-                    requirements[requirement.name]["tests"].append(self.add_test_messages(test, i, tests, results["tests_by_parent"], results["tests_by_id"]))
+            for requirement in test["test"]["requirements"]:
+                if requirement["requirement_name"] in requirements:
+                    requirements[requirement["requirement_name"]]["tests"].append(self.add_test_messages(test, i, tests, results["tests_by_parent"], results["tests_by_id"]))
         return requirements
 
     def counts(self, requirements):
@@ -344,7 +347,7 @@ class Handler(HandlerBase):
                 satisfied = True
                 for test in tests:
                     result = test["result"]
-                    if result.name != "OK":
+                    if result["result_type"] != "OK":
                         satisfied = False
                 if satisfied:
                     counts.satisfied += 1
