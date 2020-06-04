@@ -21,6 +21,7 @@ import threading
 
 import testflows.settings as settings
 
+from .compress import CompressedFile
 from .transform.log.pipeline import RawLogPipeline
 from .transform.log.pipeline import NiceLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
@@ -68,7 +69,7 @@ def stdout_raw_handler():
     """Handler to output messages to sys.stdout
     using "raw" format.
     """
-    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+    with CompressedFile(settings.read_logfile) as log:
         log.seek(0)
         RawLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -76,7 +77,7 @@ def stdout_slick_handler():
     """Handler to output messages to sys.stdout
     using "slick" format.
     """
-    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+    with CompressedFile(settings.read_logfile) as log:
         log.seek(0)
         SlickLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -84,7 +85,7 @@ def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
     """
-    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+    with CompressedFile(settings.read_logfile) as log:
         log.seek(0)
         ShortLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -92,7 +93,7 @@ def stdout_nice_handler():
     """Handler to output messages to sys.stdout
     using "nice" format.
     """
-    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+    with CompressedFile(settings.read_logfile) as log:
         log.seek(0)
         NiceLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -100,7 +101,7 @@ def stdout_dots_handler():
     """Handler to output messages to sys.stdout
     using "dots" format.
     """
-    with open(settings.read_logfile, "a+", buffering=1, encoding="utf-8") as log:
+    with CompressedFile(settings.read_logfile) as log:
         log.seek(0)
         DotsLogPipeline(log, sys.stdout, tail=True).run()
 

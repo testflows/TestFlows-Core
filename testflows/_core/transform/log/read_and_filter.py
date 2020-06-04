@@ -31,7 +31,7 @@ def transform(file, command, tail=False, stop=None):
     stop_keyword = ('{"message_keyword":"%s"' % str(Message.STOP)).encode("utf-8")
     stop_keyword_len = len(stop_keyword)
 
-    process = subprocess.Popen(command, stdin=file, stdout=subprocess.PIPE, shell=True)
+    process = subprocess.Popen(f"tfs transform raw | {command}", stdin=file, stdout=subprocess.PIPE, shell=True)
     while True:
         line = process.stdout.readline()
         if line == b"":

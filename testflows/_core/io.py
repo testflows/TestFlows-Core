@@ -19,6 +19,7 @@ import threading
 
 import testflows.settings as settings
 
+from .compress import compress
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message, MessageObjectType, dumps
@@ -270,8 +271,8 @@ class TestIO(object):
     def flush(self):
         self.io.flush()
 
-    def close(self):
-        self.io.close()
+    def close(self, final=False):
+        self.io.close(final=final)
 
 class MessageIO(object):
     """Message input and output.
@@ -317,8 +318,8 @@ class MessageIO(object):
             self.io.write(f"{self.buffer}\n")
         self.buffer = ""
 
-    def close(self):
-        self.io.close()
+    def close(self, final=False):
+        self.io.close(final=final)
 
 class NamedMessageIO(MessageIO):
     """Message input and output.
@@ -372,7 +373,7 @@ class LogReader(object):
     def read(self, topic, timeout=None):
         raise NotImplementedError
 
-    def close(self):
+    def close(self, final=False):
         self.fd.close()
 
 
@@ -381,13 +382,17 @@ class LogWriter(object):
     """
     lock = threading.Lock()
     instance = None
+    auto_flush_interval = 0.15
 
     def __new__(cls, *args, **kwargs):
         with cls.lock:
             if not cls.instance:
                 self = object.__new__(LogWriter)
-                self.fd = open(settings.write_logfile, "a", buffering=1, encoding="utf-8")
+                self.fd = open(settings.write_logfile, "ab", buffering=1)
                 self.lock = threading.Lock()
+                self.buffer = []
+                self.timer = threading.Timer(cls.auto_flush_interval, self.flush, (True))
+                self.timer.start()
                 cls.instance = self
             return cls.instance
 
@@ -396,16 +401,27 @@ class LogWriter(object):
 
     def write(self, msg):
         with self.lock:
-            n = self.fd.write(msg)
-            self.fd.flush()
-            return n
+            self.buffer.append(msg.encode("utf-8"))
+            return len(msg)
 
-    def flush(self):
+    def flush(self, force=False, final=False):
+        if not force:
+            return
+
         with self.lock:
-            return self.fd.flush()
+            self.timer.cancel()
+            if self.buffer:
+                self.fd.write(compress(b"".join(self.buffer)))
+                self.fd.flush()
+                del self.buffer[:]
+            if not final:
+                self.timer = threading.Timer(self.auto_flush_interval, self.flush, (True))
+                self.timer.start()
 
-    def close(self):
-        pass
+    def close(self, final=False):
+        if final:
+            self.flush(force=True, final=True)
+            self.fd.close()
 
 class LogIO(object):
     """Log file reader and writer.
@@ -432,7 +448,7 @@ class LogIO(object):
     def read(self, topic, timeout=None):
         return self.reader.read(topic, timeout)
 
-    def close(self):
-        self.writer.close()
-        self.reader.close()
+    def close(self, final=False):
+        self.writer.close(final=final)
+        self.reader.close(final=final)
 

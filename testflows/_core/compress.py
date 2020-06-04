@@ -14,9 +14,15 @@
 # limitations under the License.
 import io
 import os
+import sys
 import lzma
 import builtins
 import _compression
+
+from lzma import compress, decompress
+
+Compressor = lzma.LZMACompressor
+Decompressor = lzma.LZMADecompressor
 
 class TrailingDecompressReader(_compression.DecompressReader):
     def read(self, size=-1):
@@ -30,26 +36,26 @@ class TrailingDecompressReader(_compression.DecompressReader):
         # return any data. In this case, try again after reading another block.
         while True:
             if self._decompressor.eof:
-                rawblock = (self._decompressor.unused_data or
+                self.rawblock = (self._decompressor.unused_data or
                             self._fp.read(_compression.BUFFER_SIZE))
-                if not rawblock:
+                if not self.rawblock:
                     continue
                 # Continue to next stream.
                 self._decompressor = self._decomp_factory(
                     **self._decomp_args)
                 try:
-                    data = self._decompressor.decompress(rawblock, size)
+                    data = self._decompressor.decompress(self.rawblock, size)
                 except self._trailing_error:
                     # Trailing data isn't a valid compressed stream; ignore it.
                     break
             else:
                 if self._decompressor.needs_input:
-                    rawblock = self._fp.read(_compression.BUFFER_SIZE)
-                    if not rawblock:
+                    self.rawblock = self._fp.read(_compression.BUFFER_SIZE)
+                    if not self.rawblock:
                         continue
                 else:
-                    rawblock = b""
-                data = self._decompressor.decompress(rawblock, size)
+                    self.rawblock = b""
+                data = self._decompressor.decompress(self.rawblock, size)
             if data:
                 break
         if not data:
@@ -60,12 +66,13 @@ class TrailingDecompressReader(_compression.DecompressReader):
         return data
 
 
-class LogFileReader(lzma.LZMAFile):
+class CompressedFile(lzma.LZMAFile):
     def __init__(self, filename=None, mode="r", *,
             format=None, check=-1, preset=None, filters=None):
         self._fp = None
         self._closefp = False
         self._mode = lzma._MODE_CLOSED
+        self._raw_mode = False
 
         if mode in ("r", "rb"):
             if check != -1:
@@ -87,7 +94,11 @@ class LogFileReader(lzma.LZMAFile):
         else:
             raise ValueError("Invalid mode: {!r}".format(mode))
 
-        if isinstance(filename, (str, bytes, os.PathLike)):
+        if filename is sys.stdin.buffer:
+            self._fp = filename
+            self._closefp = False
+            self._mode = mode_code
+        elif isinstance(filename, (str, bytes, os.PathLike)):
             if "b" not in mode:
                 mode += "b"
             self._fp = builtins.open(filename, mode)
@@ -100,9 +111,21 @@ class LogFileReader(lzma.LZMAFile):
             raise TypeError("filename must be a str, bytes, file or PathLike object")
 
         if self._mode == lzma._MODE_READ:
-            raw = TrailingDecompressReader(self._fp, lzma.LZMADecompressor,
+            self.raw = TrailingDecompressReader(self._fp, lzma.LZMADecompressor,
                 trailing_error=lzma.LZMAError, format=format, filters=filters)
-            self._buffer = io.BufferedReader(raw)
+            self._buffer = io.BufferedReader(self.raw)
 
-    def readline(self, size=-1):
-        return super(LogFileReader, self).readline(size=size).decode("utf-8")
+    def read1(self, size=-1):
+        self._check_can_read()
+        if size < 0:
+            size = io.DEFAULT_BUFFER_SIZE
+        if self._raw_mode:
+            return self._fp.read1(size)
+        try:
+            return self._buffer.read1(size)
+        except lzma.LZMAError as e:
+            # fall back to raw mode if we can't decompress data
+            if "Input format not supported by decoder" in str(e):
+                self._raw_mode = True
+                return self.raw.rawblock
+            raise

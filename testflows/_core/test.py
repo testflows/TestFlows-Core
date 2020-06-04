@@ -521,7 +521,9 @@ class TestBase(object):
                 self.io.output.result(self.result)
                 if top() is self:
                     self.io.output.stop()
-                self.io.close()
+                    self.io.close(final=True)
+                else:
+                    self.io.close()
 
             if self.flags & PAUSE_AFTER:
                 pause()

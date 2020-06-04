@@ -36,5 +36,5 @@ def transform(stop=None):
                     if stop and m["test_id"] == stop_id:
                         stop.set()
             except (IndexError, Exception):
-                raise message.InvalidMessageError(f"invalid message: {msg}\n")
+                raise ValueError(f"invalid message: {msg}\n")
         msg = yield m

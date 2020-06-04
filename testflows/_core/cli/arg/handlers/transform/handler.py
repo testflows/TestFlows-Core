@@ -20,6 +20,7 @@ from testflows._core.cli.arg.handlers.transform.short import Handler as short_ha
 from testflows._core.cli.arg.handlers.transform.dots import Handler as dots_handler
 from testflows._core.cli.arg.handlers.transform.compact import Handler as compact_handler
 from testflows._core.cli.arg.handlers.transform.slick import Handler as slick_handler
+from testflows._core.cli.arg.handlers.transform.raw import Handler as raw_handler
 
 class Handler(HandlerBase):
     @classmethod
@@ -31,6 +32,7 @@ class Handler(HandlerBase):
         transform_commands = parser.add_subparsers(title="commands", metavar="command",
             description=None, help=None)
         transform_commands.required = True
+        raw_handler.add_command(transform_commands)
         nice_handler.add_command(transform_commands)
         short_handler.add_command(transform_commands)
         slick_handler.add_command(transform_commands)
