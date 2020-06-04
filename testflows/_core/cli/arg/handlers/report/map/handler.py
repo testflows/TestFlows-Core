@@ -30,7 +30,6 @@ from testflows._core.testtype import TestType
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
-from testflows._core.transform.log.message import RawMap, RawNode
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
@@ -111,9 +110,9 @@ class Formatter:
                 links = []
                 l = len(path)
                 for i, step in enumerate(path):
-                    nodes.append(step.uid)
+                    nodes.append(step["node_uid"])
                     if i + 1 < l:
-                        links.append({"source": step.uid, "target": path[i + 1].uid})
+                        links.append({"source": step["node_uid"], "target": path[i + 1]["node_uid"]})
                 return {"nodes": nodes, "links": links}
 
             for test, path in paths.items():
@@ -128,46 +127,15 @@ class Formatter:
         return s + "\n"
 
     def format_map(self, data):
-
-        def make_node(nodes, maps):
-            if not isinstance(maps, RawMap):
-                maps = RawMap(*maps)
-
-            node = RawNode(*maps.node)
-
-            if node.uid not in nodes:
-                nodes[node.uid] = {
-                    "node": RawNode(*maps.node),
-                    "nexts": [],
-                    "ins": [],
-                    "outs": []
-                }
-            return nodes[node.uid]
-
-        def generate_nodes(nodes, maps):
-            if not isinstance(maps, RawMap):
-                maps = RawMap(*maps)
-
-            node = make_node(nodes, maps)
-
-            if maps.nexts:
-                [nodes[node["node"].uid]["nexts"].append(generate_nodes(nodes, n)) for n in maps.nexts]
-            if maps.ins:
-                [nodes[node["node"].uid]["ins"].append(generate_nodes(nodes, n)) for n in maps.ins]
-            if maps.outs:
-                [nodes[node["node"].uid]["outs"].append(generate_nodes(nodes, n)) for n in maps.outs]
-
-            return node
-
-        def gather_links(nodes, gnodes):
+        def gather_links(map_nodes, gnodes):
             links = []
-            for node in nodes.values():
-                for n in node["nexts"]:
-                    links.append({"source": node["node"].uid, "target": n["node"].uid, "type": "link"})
-                for n in node["ins"]:
-                    links.append({"source": node["node"].uid, "target": n["node"].uid, "type": "inner link"})
-                for n in node["outs"]:
-                    links.append({"source": n["node"].uid, "target": node["node"].uid, "type": "inner link"})
+            for map_node in map_nodes:
+                for n in map_node["node_nexts"]:
+                    links.append({"source": map_node["node_uid"], "target": n, "type": "link"})
+                for n in map_node["node_ins"]:
+                    links.append({"source": map_node["node_uid"], "target": n, "type": "inner link"})
+                for n in map_node["node_outs"]:
+                    links.append({"source": n, "target": map_node["node_uid"], "type": "inner link"})
 
             for link in links:
                 for node in gnodes:
@@ -181,43 +149,50 @@ class Formatter:
 
             return links
 
-        def gather_nodes(nodes):
+        def gather_nodes(map_nodes):
             gnodes = []
-            for node in nodes.values():
+            for map_node in map_nodes:
                 gnodes.append({
-                    "id": node["node"].uid,
+                    "id": map_node["node_uid"],
                     "type": "unvisited",
-                    "name": node["node"].name,
-                    "module": node["node"].module,
-                    "next": [n["node"].uid for n in node["nexts"]],
+                    "name": map_node["node_name"],
+                    "module": map_node["node_module"],
+                    "next": [n for n in map_node["node_nexts"]],
                     "children": {
                         "nodes": set(),
                         "links": []
                     }
                 })
 
+                def find_map_node(node):
+                    for map_node in map_nodes:
+                        if map_node["node_uid"] == node:
+                            return map_node
+                    return None
+
                 def find_all_children(node, start, children):
-                    if node["node"].uid in children:
+                    if node in children:
                         return
-                    if node is start:
+                    if node == start["node_uid"]:
                         return
-                    children.add(node["node"].uid)
-                    if node["ins"] or node["outs"]:
+                    children.add(node)
+
+                    map_node = find_map_node(node)
+                    if not map_node or map_node["node_ins"] or map_node["node_outs"]:
                         return
-                    for n in node["nexts"]:
+                    for n in map_node["node_nexts"]:
                         find_all_children(n, start, children)
 
-                for n in node["ins"] + node["outs"]:
-                    find_all_children(n, node, gnodes[-1]["children"]["nodes"])
+                for n in map_node["node_ins"] + map_node["node_outs"]:
+                    find_all_children(n, map_node, gnodes[-1]["children"]["nodes"])
                 gnodes[-1]["children"]["nodes"] = list(gnodes[-1]["children"]["nodes"])
 
             return gnodes
 
-        nodes = {}
-        generate_nodes(nodes, data["map"])
+        map_nodes = data["map"]
 
-        gnodes = gather_nodes(nodes)
-        glinks = gather_links(nodes, gnodes)
+        gnodes = gather_nodes(map_nodes)
+        glinks = gather_links(map_nodes, gnodes)
 
         chart_nodes = json.dumps(gnodes, indent=2)
         chart_links = json.dumps(glinks, indent=2)
@@ -287,28 +262,28 @@ class Handler(HandlerBase):
         tests = list(results["tests"].values())
 
         def get_path(test, idx):
-            started = test["test"].started
-            ended = started + test["result"].p_time
+            started = test["test"]["message_time"]
+            ended = test["result"]["message_time"]
             path = []
 
             for t in tests[idx:]:
-                flags = Flags(t["test"].p_flags)
+                flags = Flags(t["test"]["test_flags"])
                 if flags & SKIP and settings.show_skipped is False:
                     continue
-                if t["test"].started > ended:
+                if t["test"]["message_time"] > ended:
                     break
-                if t["test"].p_id.startswith(test["test"].p_id):
-                    if t["test"].node:
-                        path.append(t["test"].node)
+                if t["test"]["test_id"].startswith(test["test"]["test_id"]):
+                    if t["test"]["node"]:
+                        path.append(t["test"]["node"])
 
             return path
 
         for idx, name in enumerate(results["tests"]):
             test = results["tests"][name]
-            flags = Flags(test["test"].p_flags)
+            flags = Flags(test["test"]["test_flags"])
             if flags & SKIP and settings.show_skipped is False:
                 continue
-            if test["test"].p_type < TestType.Test:
+            if getattr(TestType, test["test"]["test_type"]) < TestType.Test:
                 continue
             d[name] = get_path(test, idx)
 
@@ -318,7 +293,7 @@ class Handler(HandlerBase):
         d = dict()
         d["metadata"] = self.metadata()
         d["company"] = self.company(args)
-        d["map"] = list(results["tests"].values())[0]["test"].map
+        d["map"] = list(results["tests"].values())[0]["test"]["map"]
         d["paths"] = self.paths(results)
         return d
 
