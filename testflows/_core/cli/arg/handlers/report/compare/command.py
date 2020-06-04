@@ -206,7 +206,7 @@ class Handler(HandlerBase):
 
     @classmethod
     def add_arguments(cls, parser):
-        parser.add_argument("--log", metavar="pattern", type=argtype.file("r", bufsize=1, encoding="utf-8"),
+        parser.add_argument("--log", metavar="pattern", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
             nargs="+", help="log file pattern", required=True)
         parser.add_argument("--log-link", metavar="attribute",
             help="attribute that is used as a link for the log, default: job.url",

@@ -27,9 +27,9 @@ class Handler(HandlerBase):
             formatter_class=HelpFormatter)
 
         parser.add_argument("--with-steps", action="store_true", help="include test steps, default: False")
-        parser.add_argument("input", metavar="input", type=argtype.file("r", bufsize=1, encoding="utf-8"),
+        parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
+        parser.add_argument("output", metavar="output", type=argtype.logfile("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
 
         parser.set_defaults(func=cls())

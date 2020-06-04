@@ -16,6 +16,7 @@ import io
 import sys
 import argparse
 
+from argparse import FileType
 from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
@@ -24,7 +25,7 @@ from testflows._core.compress import CompressedFile
 
 KeyValue = namedtuple("KeyValue", "key value")
 
-class FileType(object):
+class LogFileType(object):
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
         self._mode = mode
         self._encoding = encoding
@@ -64,6 +65,10 @@ class FileType(object):
 def file(*args, **kwargs):
     """File type."""
     return FileType(*args, **kwargs)
+
+def logfile(*args, **kwargs):
+    """Log file type."""
+    return LogFileType(*args, **kwargs)
 
 def key_value(s, sep='='):
     """Parse a key, value pair using a seperator (default: '=').
