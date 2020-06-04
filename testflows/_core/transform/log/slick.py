@@ -89,7 +89,7 @@ def format_type(msg):
     if test_type == TestType.Module:
         return "Module"
     elif test_type == TestType.Suite:
-        if text_subtype == TestSubType.Feature:
+        if test_subtype == TestSubType.Feature:
             return "Feature"
         else:
             return "Suite"
