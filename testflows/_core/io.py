@@ -391,7 +391,7 @@ class LogWriter(object):
                 self.fd = open(settings.write_logfile, "ab", buffering=1)
                 self.lock = threading.Lock()
                 self.buffer = []
-                self.timer = threading.Timer(cls.auto_flush_interval, self.flush, (True))
+                self.timer = threading.Timer(cls.auto_flush_interval, self.flush, (True,))
                 self.timer.start()
                 cls.instance = self
             return cls.instance
@@ -415,7 +415,7 @@ class LogWriter(object):
                 self.fd.flush()
                 del self.buffer[:]
             if not final:
-                self.timer = threading.Timer(self.auto_flush_interval, self.flush, (True))
+                self.timer = threading.Timer(self.auto_flush_interval, self.flush, (True,))
                 self.timer.start()
 
     def close(self, final=False):

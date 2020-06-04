@@ -32,6 +32,8 @@ def transform(file, tail=False, offset=False, stop=None):
 
     while True:
         data = file.readline()
+        if type(data) is bytes:
+            data = data.decode("utf-8")
         line += data
         if line.endswith("\n"):
             if stop and line[:stop_keyword_len] == stop_keyword:
