@@ -115,6 +115,10 @@ class CompressedFile(lzma.LZMAFile):
                 trailing_error=lzma.LZMAError, format=format, filters=filters)
             self._buffer = io.BufferedReader(self.raw)
 
+    @property
+    def name(self):
+        return getattr(self._fp, "name", None)
+
     def read1(self, size=-1):
         self._check_can_read()
         if size < 0:
