@@ -27,7 +27,7 @@ def two_number_operation(self, a, op, b, equals):
         (1234234, '+', 0, 1234234),
         (1234567890, '*', 0, 0),
         (4, '/', 2, 2)
-    ]
+    ], "%-12s %-5s %-5s %-12s"
 )
 def two_number_operations(self):
     for example in self.examples:
