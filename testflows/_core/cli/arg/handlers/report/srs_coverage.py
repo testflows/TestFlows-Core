@@ -153,9 +153,9 @@ class Handler(HandlerBase):
         counts = Counts("requirements", *([0] * 4))
 
         for heading in headings:
-            counts.units += 1
             indent = "  " * (heading.level - 1)
             if isinstance(heading, Requirement):
+                counts.units += 1
                 if tested.get(heading.name) is None:
                     counts.untested += 1
                     if "untested" in only:

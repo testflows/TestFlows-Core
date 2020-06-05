@@ -294,6 +294,7 @@ class Handler(HandlerBase):
     def generate(self, results, args):
         output = args.output
         artifacts = args.artifacts
+        name = ""
         if results["tests"]:
             name = list(results["tests"].values())[0]["test"]["test_name"].lstrip("/").title()
 

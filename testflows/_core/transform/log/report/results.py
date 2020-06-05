@@ -119,6 +119,12 @@ def transform(results):
     if results.get("counts") is None:
         results["counts"] = all_counts()
 
+    if results.get("started") is None:
+        results["started"] = 0
+
+    if results.get("version") is None:
+        results["version"] = ""
+
     line = None
     while True:
         if line is not None:

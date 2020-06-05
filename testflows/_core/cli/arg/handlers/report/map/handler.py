@@ -293,7 +293,7 @@ class Handler(HandlerBase):
         d = dict()
         d["metadata"] = self.metadata()
         d["company"] = self.company(args)
-        d["map"] = list(results["tests"].values())[0]["test"]["map"]
+        d["map"] = list(results["tests"].values())[0]["test"]["map"] if results["tests"] else []
         d["paths"] = self.paths(results)
         return d
 

@@ -128,6 +128,19 @@ class CompressedFile(lzma.LZMAFile):
     def name(self):
         return getattr(self._fp, "name", None)
 
+    def read(self, size=-1):
+        self._check_can_read()
+        if self._raw_mode:
+            return self._fp.read(size)
+        try:
+            return self._buffer.read(size)
+        except lzma.LZMAError as e:
+            # fall back to raw mode if we can't decompress data
+            if "Input format not supported by decoder" in str(e):
+                self._raw_mode = True
+                return self.raw.rawblock
+            raise
+
     def read1(self, size=-1):
         self._check_can_read()
         if size < 0:
