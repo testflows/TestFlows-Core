@@ -25,7 +25,7 @@ from contextlib import ExitStack, contextmanager
 
 import testflows.settings as settings
 
-from .exceptions import DummyTestException, ArgumentError, ResultException, RepeatTestException
+from .exceptions import DummyTestException, ResultException, RepeatTestException
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
@@ -402,13 +402,12 @@ class TestBase(object):
         self.subtype = get(subtype, self.subtype)
         self.context = get(context, current().context if current() and self.type < TestType.Test else (Context(current().context if current() else None)))
         self.tags = tags
-        self.requirements = get(requirements, list(self.requirements))
-        self.attributes = get(attributes, list(self.attributes))
+        self.requirements = {r.name: r for r in get(requirements, list(self.requirements))}
+        self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
+        self.attributes.update({k: Attribute(k, v) for k, v in cli_args.items() if not k.startswith("_")})
+        self.args = {k: Argument(k,v) for k,v in get(args, {}).items()}
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
-        self.args = get(args, {})
-        self.args.update({k:v for k, v in cli_args.items() if not k.startswith("_")})
-        self._process_args()
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
@@ -440,30 +439,6 @@ class TestBase(object):
     @classmethod
     def make_tags(cls, tags):
         return set(get(tags, cls.tags))
-
-    def _process_args(self):
-        """Process arguments by converting
-        them into a dictionary of
-        "name:Argument" pairs
-        """
-        args = []
-        try:
-            for name in dict(self.args):
-                value = self.args.get(name)
-                if not isinstance(value, Argument):
-                    value = Argument(name=name, value=value)
-                args.append(value)
-
-            self.args = {}
-
-            for arg in args:
-                if not isinstance(arg, Argument):
-                    raise ValueError(f"not an argument {arg}")
-                self.args[arg.name] = arg
-        except ArgumentError:
-            raise
-        except Exception as e:
-            raise ArgumentError(str(e))
 
     def __enter__(self):
         self.io = TestIO(self)
