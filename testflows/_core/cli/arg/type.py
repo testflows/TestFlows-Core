@@ -16,7 +16,6 @@ import io
 import sys
 import argparse
 
-from argparse import FileType
 from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
@@ -24,6 +23,44 @@ from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
 
 KeyValue = namedtuple("KeyValue", "key value")
+
+class FileType(object):
+    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
+        self._mode = mode
+        self._bufsize = bufsize
+        self._encoding = encoding
+        self._errors = errors
+
+    def __call__(self, string):
+        # the special argument "-" means sys.std{in,out}
+        if string == '-':
+            if 'r' in self._mode:
+                if 'b' in self._mode:
+                    return sys.stdin.buffer
+                return sys.stdin
+            elif 'w' in self._mode:
+                if 'b' in self._mode:
+                    return sys.stdout.buffer
+                return sys.stdout
+            else:
+                msg = argparse._('argument "-" with mode %r') % self._mode
+                raise ValueError(msg)
+
+        # all other arguments are used as file names
+        try:
+            return open(string, self._mode, self._bufsize, self._encoding,
+                        self._errors)
+        except OSError as e:
+            message = argparse._("can't open '%s': %s")
+            raise ArgumentTypeError(message % (string, e))
+
+    def __repr__(self):
+        args = self._mode, self._bufsize
+        kwargs = [('encoding', self._encoding), ('errors', self._errors)]
+        args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
+                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
+                              if arg is not None])
+        return '%s(%s)' % (type(self).__name__, args_str)
 
 class LogFileType(object):
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
@@ -35,16 +72,25 @@ class LogFileType(object):
         # the special argument "-" means sys.std{in,out}
         if string == '-':
             if 'r' in self._mode:
-                return io.TextIOWrapper(CompressedFile(sys.stdin.buffer, self._mode), self._encoding, self._errors)
+                fp = CompressedFile(sys.stdin.buffer, self._mode)
+                if self._encoding:
+                    return io.TextIOWrapper(fp, self._encoding, self._errors)
+                return fp
             elif 'w' in self._mode:
-                return sys.stdout
+                fp = CompressedFile(sys.stdout.buffer, self._mode)
+                if self._encoding:
+                    return io.TextIOWrapper(fp, self._encoding, self._errors)
+                return fp
             else:
                 msg = argparse._('argument "-" with mode %r') % self._mode
                 raise ValueError(msg)
 
         # all other arguments are used as file names
         try:
-            return io.TextIOWrapper(CompressedFile(string, self._mode), self._encoding, self._errors)
+            fp = CompressedFile(string, self._mode)
+            if self._encoding:
+                return io.TextIOWrapper(fp, self._encoding, self._errors)
+            return fp
         except OSError as e:
             message = argparse._("can't open '%s': %s")
             raise ArgumentTypeError(message % (string, e))

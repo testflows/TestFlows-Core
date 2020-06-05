@@ -17,6 +17,7 @@ import threading
 from testflows._core.message import Message
 from testflows._core.testtype import TestType
 from .read import transform as read_transform
+from .read_raw import transform as read_raw_transform
 from .parse import transform as parse_transform
 from .nice import transform as nice_transform
 from .dots import transform as dots_transform
@@ -95,6 +96,17 @@ class RawLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(RawLogPipeline, self).__init__(steps)
+
+class ReadRawLogPipeline(Pipeline):
+    def __init__(self, input, output, encoding=None):
+        stop_event = threading.Event()
+
+        steps = [
+            read_raw_transform(input, stop=stop_event, encoding=encoding),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(ReadRawLogPipeline, self).__init__(steps)
 
 class ShortLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False):
