@@ -113,6 +113,10 @@ class Context(object):
         self._state = get(state, {})
         self._cleanups = []
 
+    @property
+    def parent(self):
+        return self._parent
+
     def cleanup(self, func, *args, **kwargs):
         def func_wrapper():
             func(*args, **kwargs)
