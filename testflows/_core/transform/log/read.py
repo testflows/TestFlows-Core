@@ -45,4 +45,6 @@ def transform(file, tail=False, offset=False, stop=None):
                 yield line
             line = ""
         if data == "":
+            if not tail:
+                break
             time.sleep(0.15)

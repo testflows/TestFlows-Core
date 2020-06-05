@@ -69,7 +69,7 @@ def stdout_raw_handler():
     """Handler to output messages to sys.stdout
     using "raw" format.
     """
-    with CompressedFile(settings.read_logfile) as log:
+    with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         RawLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -77,7 +77,7 @@ def stdout_slick_handler():
     """Handler to output messages to sys.stdout
     using "slick" format.
     """
-    with CompressedFile(settings.read_logfile) as log:
+    with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         SlickLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -85,7 +85,7 @@ def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
     """
-    with CompressedFile(settings.read_logfile) as log:
+    with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         ShortLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -93,7 +93,7 @@ def stdout_nice_handler():
     """Handler to output messages to sys.stdout
     using "nice" format.
     """
-    with CompressedFile(settings.read_logfile) as log:
+    with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         NiceLogPipeline(log, sys.stdout, tail=True).run()
 
@@ -101,7 +101,7 @@ def stdout_dots_handler():
     """Handler to output messages to sys.stdout
     using "dots" format.
     """
-    with CompressedFile(settings.read_logfile) as log:
+    with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         DotsLogPipeline(log, sys.stdout, tail=True).run()
 

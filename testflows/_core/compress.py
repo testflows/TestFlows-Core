@@ -24,7 +24,11 @@ from lzma import compress, decompress
 Compressor = lzma.LZMACompressor
 Decompressor = lzma.LZMADecompressor
 
-class TrailingDecompressReader(_compression.DecompressReader):
+class TailingDecompressReader(_compression.DecompressReader):
+    def __init__(self, *args, **kwargs):
+        self._tail = kwargs.pop("tail", True)
+        super(TailingDecompressReader, self).__init__(*args, **kwargs)
+
     def read(self, size=-1):
         if size < 0:
             return self.readall()
@@ -39,6 +43,8 @@ class TrailingDecompressReader(_compression.DecompressReader):
                 self.rawblock = (self._decompressor.unused_data or
                             self._fp.read(_compression.BUFFER_SIZE))
                 if not self.rawblock:
+                    if not self._tail:
+                        break
                     continue
                 # Continue to next stream.
                 self._decompressor = self._decomp_factory(
@@ -52,6 +58,8 @@ class TrailingDecompressReader(_compression.DecompressReader):
                 if self._decompressor.needs_input:
                     self.rawblock = self._fp.read(_compression.BUFFER_SIZE)
                     if not self.rawblock:
+                        if not self._tail:
+                            break
                         continue
                 else:
                     self.rawblock = b""
@@ -68,11 +76,12 @@ class TrailingDecompressReader(_compression.DecompressReader):
 
 class CompressedFile(lzma.LZMAFile):
     def __init__(self, filename=None, mode="r", *,
-            format=None, check=-1, preset=None, filters=None):
+            format=None, check=-1, preset=None, filters=None, tail=False):
         self._fp = None
         self._closefp = False
         self._mode = lzma._MODE_CLOSED
         self._raw_mode = False
+        self._tail = tail
 
         if mode in ("r", "rb"):
             if check != -1:
@@ -111,8 +120,8 @@ class CompressedFile(lzma.LZMAFile):
             raise TypeError("filename must be a str, bytes, file or PathLike object")
 
         if self._mode == lzma._MODE_READ:
-            self.raw = TrailingDecompressReader(self._fp, lzma.LZMADecompressor,
-                trailing_error=lzma.LZMAError, format=format, filters=filters)
+            self.raw = TailingDecompressReader(self._fp, lzma.LZMADecompressor,
+                trailing_error=lzma.LZMAError, format=format, filters=filters, tail=self._tail)
             self._buffer = io.BufferedReader(self.raw)
 
     @property

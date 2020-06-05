@@ -17,4 +17,8 @@ def transform():
     """
     msg = None
     while True:
+        if msg is not None:
+            if msg[0] != "{" and msg[-1] != "}":
+                msg = None
+                continue
         msg = yield msg

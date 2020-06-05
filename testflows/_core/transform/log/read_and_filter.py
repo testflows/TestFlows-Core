@@ -35,6 +35,8 @@ def transform(file, command, tail=False, stop=None):
     while True:
         line = process.stdout.readline()
         if line == b"":
+            if not tail:
+                break
             if process.poll() is not None:
                 break
             else:

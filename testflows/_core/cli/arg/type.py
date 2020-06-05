@@ -35,11 +35,7 @@ class LogFileType(object):
         # the special argument "-" means sys.std{in,out}
         if string == '-':
             if 'r' in self._mode:
-                try:
-                    return io.TextIOWrapper(CompressedFile(sys.stdin.buffer, self._mode), self._encoding, self._errors)
-                except Exception as e:
-                    print(exception())
-                    raise
+                return io.TextIOWrapper(CompressedFile(sys.stdin.buffer, self._mode), self._encoding, self._errors)
             elif 'w' in self._mode:
                 return sys.stdout
             else:
