@@ -159,56 +159,56 @@ def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
 def ok(message=None, test=None):
     if test is None:
         test = current()
-    test.result = OK(test.name, message)
-    raise ResultException(test.result)
+    test.result = OK(test=test.name, message=message)
+    raise test.result
 
 def fail(message=None, test=None):
     if test is None:
         test = current()
-    test.result = Fail(test.name, message)
-    raise ResultException(test.result)
+    test.result = Fail(test=test.name, message=message)
+    raise test.result
 
 def skip(message=None, test=None):
     if test is None:
         test = current()
-    test.result = Skip(test.name, message)
-    raise ResultException(test.result)
+    test.result = Skip(test=test.name, message=message)
+    raise test.result
 
 def error(message=None, test=None):
     if test is None:
         test = current()
-    test.result = Error(test.name, message)
-    raise ResultException(test.result)
+    test.result = Error(test=test.name, message=message)
+    raise test.result
 
-def null(test=None):
+def null(message=None, test=None):
     if test is None:
         test = current()
-    test.result = Null(test.name)
-    raise ResultException(test.result)
+    test.result = Null(test=test.name, message=message)
+    raise test.result
 
-def xok(message=None, test=None):
+def xok(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XOK(test.name, message)
-    raise ResultException(test.result)
+    test.result = XOK(test=test.name, message=message, reason=reason)
+    raise test.result
 
-def xfail(message=None, test=None):
+def xfail(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XFail(test.name, message)
-    raise ResultException(test.result)
+    test.result = XFail(test=test.name, message=message, reason=reason)
+    raise test.result
 
-def xerror(message=None, test=None):
+def xerror(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XError(test.name, message)
-    raise ResultException(test.result)
+    test.result = XError(test=test.name, message=message, reason=reason)
+    raise test.result
 
-def xnull(test=None):
+def xnull(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XNull(test.name)
-    raise ResultException(test.result)
+    test.result = XNull(test=test.name, message=message, reason=reason)
+    raise test.result
 
 def pause(test=None):
     if test is None:
