@@ -404,8 +404,8 @@ class TestBase(object):
         self.tags = tags
         self.requirements = {r.name: r for r in get(requirements, list(self.requirements))}
         self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
-        self.attributes.update({k: Attribute(k, v) for k, v in cli_args.items() if not k.startswith("_")})
-        self.args = {k: Argument(k,v) for k,v in get(args, {}).items()}
+        self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}
+        self.args.update({k: Argument(k, v) for k, v in cli_args.items() if not k.startswith("_")})
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.result = Null(test=self.name)
