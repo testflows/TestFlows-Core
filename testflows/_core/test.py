@@ -804,7 +804,7 @@ class TestDefinition(object):
                     lines[(self._with_block_start_lineno - index)+1:(self._with_block_end_lineno - index) + 1]))
                 code = compile(source, self._with_frame.f_code.co_filename, mode="exec")
                 frame.f_locals["repeat"] = True
-                __kwargs = dict(self._kwargs)
+                __kwargs = dict(self.kwargs)
                 __kwargs.pop("name", None)
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
