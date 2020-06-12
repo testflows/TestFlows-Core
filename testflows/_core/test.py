@@ -371,10 +371,9 @@ class TestBase(object):
                  examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, node=None, map=None, context=None,
-                 _frame=None, _run=True):
+                 _frame=None):
 
         self.lock = threading.Lock()
-        self._run = _run
 
         cli_args = {}
         if current() is None:
@@ -442,7 +441,7 @@ class TestBase(object):
     def make_tags(cls, tags):
         return set(get(tags, cls.tags))
 
-    def __enter__(self):
+    def _enter(self):
         self.io = TestIO(self)
         if top() is self:
             self.io.output.protocol()
@@ -460,11 +459,9 @@ class TestBase(object):
         else:
             if top() is self:
                 self._init = init()
-            if self._run:
-                self.run(**{name: arg.value for name, arg in self.args.items()})
             return self
 
-    def __exit__(self, exc_type, exc_value, exc_traceback):
+    def _exit(self, exc_type, exc_value, exc_traceback):
         if top() is self and not self._init:
             return False
 
@@ -521,9 +518,6 @@ class TestBase(object):
                     if isinstance(self.result, result):
                         self.result = self.result.xout(reason)
 
-    def run(self, **args):
-        pass
-
     def bind(self, func):
         """Bind function to the current test.
 
@@ -561,20 +555,28 @@ class TestDefinition(object):
         if name is not None:
             kwargs["name"] = name
 
-        def inherit_kwargs(test, new_kwargs):
-            kwargs = dict(test.func.kwargs)
-            kwargs["args"] = dict(kwargs["args"])
-            kwargs.update(new_kwargs)
-            kwargs["test"] = test
-            return kwargs
+        def inherit_kwargs(**from_kwargs):
+            _kwargs = from_kwargs
+            _kwargs["args"] = dict(_kwargs["args"])
+            _kwargs.update(kwargs)
+            return _kwargs
 
-        if run and isinstance(run, TestDecorator):
-            kwargs = inherit_kwargs(run, kwargs)
+        if run:
+            if isinstance(run, TestDecorator):
+                kwargs = inherit_kwargs(**run.func.kwargs)
+                kwargs["test"] = run
+            elif isinstance(run, TestDefinition):
+                kwargs = inherit_kwargs(**run.kwargs, **({"name": run.name} if run.name is not None else {}))
+            else:
+                kwargs["test"] = run
             return cls.__create__(**kwargs)()
 
         if test:
             if isinstance(test, TestDecorator):
-                kwargs = inherit_kwargs(test, kwargs)
+                kwargs = inherit_kwargs(**test.func.kwargs)
+                kwargs["test"] = test
+            elif isinstance(test, TestDefinition):
+                kwargs = inherit_kwargs(**test.kwargs, **({"name": test.name} if test.name is not None else {}))
             else:
                 kwargs["test"] = test
 
@@ -593,6 +595,7 @@ class TestDefinition(object):
 
     def __call__(self, **args):
         test = self.kwargs.get("test", None)
+        self.kwargs["args"] = self.kwargs.get("args", {})
         self.kwargs["args"].update(args)
 
         if test and isinstance(test, TestDecorator):
@@ -610,7 +613,7 @@ class TestDefinition(object):
         try:
             self._set_current_top_previous()
 
-            kwargs = dict(self.kwargs)
+            kwargs = self.kwargs
             keep_type = kwargs.pop("keep_type", None)
 
             self.parent = kwargs.pop("parent", None) or current()
@@ -620,6 +623,8 @@ class TestDefinition(object):
             if test and isinstance(test, TestDecorator):
                 test = test.func.kwargs.get("test", None)
             test = test if test is not None else TestBase
+            if not issubclass(test, TestBase):
+                raise TypeError(f"'Test {test} must be subclass of TestBase")
             name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", None))
 
             if parent:
@@ -677,7 +682,7 @@ class TestDefinition(object):
                 sys.settrace(dummy)
                 sys._getframe(1).f_trace = functools.partial(self.__repeat__, None, None, None)
             else:
-                return self.test.__enter__()
+                return self.test._enter()
 
         except (KeyboardInterrupt, Exception):
             self.trace = sys.gettrace()
@@ -793,9 +798,12 @@ class TestDefinition(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         frame = inspect.currentframe().f_back
 
+        if self.test is None:
+            return
+
         if isinstance(exception_value, RepeatTestException) and not frame.f_locals.get("repeat") and top() != self.test:
             try:
-                self.test.__enter__()
+                self.test._enter()
                 self._with_block_end = frame.f_lasti
                 self._with_block_end_lineno = self._with_frame.f_lineno
                 lines, index = self._with_source
@@ -815,21 +823,21 @@ class TestDefinition(object):
                 frame.f_locals.pop("repeat")
             except:
                 try:
-                    test__exit__ = self.test.__exit__(*sys.exc_info())
+                    test__exit__ = self.test._exit(*sys.exc_info())
                 except(KeyboardInterrupt, Exception):
                     raise
             else:
                 try:
-                    test__exit__ = self.test.__exit__(None, None, None)
+                    test__exit__ = self.test._exit(None, None, None)
                 except(KeyboardInterrupt, Exception):
                     raise
         else:
             try:
-                test__exit__ = self.test.__exit__(exception_type, exception_value, exception_traceback)
+                test__exit__ = self.test._exit(exception_type, exception_value, exception_traceback)
             except (KeyboardInterrupt, Exception):
                 raise
 
-        # if test did not handle the exception in __exit__ then re-raise it
+        # if test did not handle the exception in _exit then re-raise it
         if exception_value and not test__exit__:
             raise exception_value.with_traceback(exception_traceback)
 
@@ -891,8 +899,10 @@ class Iteration(TestDefinition):
 
     def __new__(cls, name, **kwargs):
         kwargs["type"] = TestType.Iteration
-        kwargs["_parent_type"] = kwargs.pop("_parent_type", TestType.Test)
-        return super(Iteration, cls).__new__(cls, name, **kwargs)
+        parent_type = kwargs.pop("parent_type", TestType.Test)
+        self = super(Iteration, cls).__new__(cls, name, **kwargs)
+        self.parent_type = parent_type
+        return self
 
 class Step(TestDefinition):
     """Step definition."""
