@@ -47,7 +47,7 @@ try:
 except:
     database_module = None
 
-class xfails(dict):
+class XFails(dict):
     """xfails container.
 
     xfails = {
@@ -65,7 +65,7 @@ class xfails(dict):
         self[pattern] = results
         return self
 
-class xflags(dict):
+class XFlags(dict):
     """xflags container.
 
     xflags = {
@@ -357,7 +357,6 @@ class TestBase(object):
                 attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
 
         except (ExitException, KeyboardInterrupt, Exception) as exc:
-            #if settings.debug:
             sys.stderr.write(warning(get_exception(), eol='\n'))
             sys.stderr.write(danger("error: " + str(exc).strip()))
             if isinstance(exc, ExitException):
@@ -422,13 +421,16 @@ class TestBase(object):
         self.caller_test = None
 
     @classmethod
-    def make_name(cls, name, parent=None):
+    def make_name(cls, name, parent=None, args=None):
         """Make full name.
 
         :param name: name
         :param parent: parent name
+        :param args: arguments to the test
         """
-        name = name % {"name": cls.name} if name is not None else cls.name
+        if args is None:
+            args = dict()
+        name = name.format(**{"$name": cls.name}, **args) if name is not None else cls.name
         if name is None:
             raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
@@ -544,14 +546,148 @@ class TestBase(object):
         """
         return self.io.message_io(name=name)
 
-class _test(object):
+class TestDefinition(object):
     """Test definition.
 
     :param name: name of the test
-    :param test: test class (optional), default: Test
     :param **kwargs: test class arguments
     """
-    def __init__(self, name, **kwargs):
+    type = TestType.Test
+
+    def __new__(cls, name=None, **kwargs):
+        run = kwargs.pop("run", None)
+        test = kwargs.pop("test", None)
+
+        if name is not None:
+            kwargs["name"] = name
+
+        def inherit_kwargs(test, new_kwargs):
+            kwargs = dict(test.func.kwargs)
+            kwargs["args"] = dict(kwargs["args"])
+            kwargs.update(new_kwargs)
+            kwargs["test"] = test
+            return kwargs
+
+        if run and isinstance(run, TestDecorator):
+            kwargs = inherit_kwargs(run, kwargs)
+            return cls.__create__(**kwargs)()
+
+        if test:
+            if isinstance(test, TestDecorator):
+                kwargs = inherit_kwargs(test, kwargs)
+            else:
+                kwargs["test"] = test
+
+        return cls.__create__(**kwargs)
+
+    @classmethod
+    def __create__(cls,  **kwargs):
+        self = super(TestDefinition, cls).__new__(cls)
+        self.name = kwargs.pop("name", None)
+        self.test = None
+        self.parent = None
+        self.kwargs = kwargs
+        self.repeat = None
+        self.tags = None
+        return self
+
+    def __call__(self, **args):
+        test = self.kwargs.get("test", None)
+        self.kwargs["args"].update(args)
+
+        if test and isinstance(test, TestDecorator):
+            with self as _test:
+                test(**args)
+            return _test
+        else:
+            with self as _test:
+                pass
+            return _test
+
+    def __enter__(self):
+        def dummy(*args, **kwargs):
+            pass
+        try:
+            self._set_current_top_previous()
+
+            kwargs = dict(self.kwargs)
+            keep_type = kwargs.pop("keep_type", None)
+
+            self.parent = kwargs.pop("parent", None) or current()
+            parent = self.parent
+
+            test = kwargs.pop("test", None)
+            if test and isinstance(test, TestDecorator):
+                test = test.func.kwargs.get("test", None)
+            test = test if test is not None else TestBase
+            name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", None))
+
+            if parent:
+                kwargs["parent"] = parent.name
+                kwargs["id"] = parent.id + [parent.child_count]
+                kwargs["cflags"] = parent.cflags
+                # propagate xfails, xflags, only and skip that prefix match the name of the test
+                kwargs["xfails"] = XFails({
+                    k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
+                }) or kwargs.get("xfails")
+                kwargs["xflags"] = XFlags({
+                    k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
+                }) or kwargs.get("xflags")
+                kwargs["only"] = parent.only or kwargs.get("only")
+                kwargs["skip"] = parent.skip or kwargs.get("skip")
+                kwargs["start"] = parent.start or kwargs.get("start")
+                kwargs["end"] = parent.end or kwargs.get("end")
+                # handle parent test type propagation
+                if keep_type is None:
+                    self._parent_type_propagation(parent, kwargs)
+                with parent.lock:
+                    parent.child_count += 1
+
+            tags = test.make_tags(kwargs.pop("tags", None))
+
+            # anchor all patterns
+            kwargs["xfails"] = XFails({
+                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xfails") or {}).items()
+            }) or None
+            kwargs["xflags"] = XFlags({
+                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xflags") or {}).items()
+            }) or None
+            kwargs["only"] = [f.at(name if name else name_sep) for f in kwargs.get("only") or []] or None
+            kwargs["skip"] = [f.at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
+            kwargs["start"] = kwargs.get("start").at(name if name else name_sep) if kwargs.get("start") else None
+            kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
+
+            self._apply_xflags(name, kwargs)
+            self._apply_only(name, tags, kwargs)
+            self._apply_skip(name, tags, kwargs)
+            self._apply_start(name, tags, parent, kwargs)
+            self._apply_end(name, tags, parent, kwargs)
+            self.repeat = kwargs.pop("repeat", None)
+            self.tags = tags
+
+            self.test = test(name, tags=tags, **kwargs)
+            if getattr(self, "parent_type", None):
+                self.test.parent_type = self.parent_type
+
+            if self.repeat is not None:
+                self._with_frame = inspect.currentframe().f_back
+                self._with_block_start_lineno = self._with_frame.f_lineno
+                self._with_source = inspect.getsourcelines(self._with_frame)
+                self.trace = sys.gettrace()
+                sys.settrace(dummy)
+                sys._getframe(1).f_trace = functools.partial(self.__repeat__, None, None, None)
+            else:
+                return self.test.__enter__()
+
+        except (KeyboardInterrupt, Exception):
+            self.trace = sys.gettrace()
+            sys.settrace(dummy)
+            sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
+
+    def _set_current_top_previous(self):
+        """Set current, top and previous
+        using the parent thread if needed.
+        """
         current_thread = threading.current_thread()
         if getattr(current_thread, "_parent", None):
             parent_current = current(thread=current_thread._parent)
@@ -561,62 +697,6 @@ class _test(object):
                 current(value=parent_current)
                 top(value=parent_top)
                 previous(value=parent_previous)
-
-        parent = kwargs.pop("parent", None) or current()
-        test = kwargs.pop("test", None)
-        keep_type = kwargs.pop("keep_type", None)
-
-        test = test if test is not None else TestBase
-
-        if parent:
-            name = test.make_name(name, parent.name)
-            kwargs["parent"] = parent.name
-            kwargs["id"] = parent.id + [parent.child_count]
-            kwargs["cflags"] = parent.cflags
-            # propagate xfails, xflags, only and skip that prefix match the name of the test
-            kwargs["xfails"] = xfails({
-                    k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
-                }) or kwargs.get("xfails")
-            kwargs["xflags"] = xflags({
-                    k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
-                }) or kwargs.get("xflags")
-            kwargs["only"] = parent.only or kwargs.get("only")
-            kwargs["skip"] = parent.skip or kwargs.get("skip")
-            kwargs["start"] = parent.start or kwargs.get("start")
-            kwargs["end"] = parent.end or kwargs.get("end")
-            # handle parent test type propagation
-            if keep_type is None:
-                self._parent_type_propagation(parent, kwargs)
-            with parent.lock:
-                parent.child_count += 1
-        else:
-            name = test.make_name(name)
-        tags = test.make_tags(kwargs.pop("tags", None))
-
-        # anchor all patterns
-        kwargs["xfails"] = xfails({
-                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xfails") or {}).items()
-            }) or None
-        kwargs["xflags"] = xflags({
-                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xflags") or {}).items()
-            }) or None
-        kwargs["only"] = [f.at(name if name else name_sep) for f in kwargs.get("only") or []] or None
-        kwargs["skip"] = [f.at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
-        kwargs["start"] = kwargs.get("start").at(name if name else name_sep) if kwargs.get("start") else None
-        kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
-
-        self.parent = parent
-        self._apply_xflags(name, kwargs)
-        self._apply_only(name, tags, kwargs)
-        self._apply_skip(name, tags, kwargs)
-        self._apply_start(name, tags, parent, kwargs)
-        self._apply_end(name, tags, parent, kwargs)
-        self._repeat = kwargs.pop("repeat", None)
-        self._tags = tags
-        self._kwargs = dict(kwargs)
-        self.test = test(name, tags=tags, **kwargs)
-        if getattr(self, "parent_type", None):
-            self.test.parent_type = self.parent_type
 
     def _apply_end(self, name, tags, parent, kwargs):
         end = kwargs.get("end")
@@ -702,24 +782,6 @@ class _test(object):
         kwargs["subtype"] = subtype
         kwargs["type"] = type
 
-    def __enter__(self):
-        def dummy(*args, **kwargs):
-            pass
-        try:
-            if self._repeat is not None:
-                self._with_frame = inspect.currentframe().f_back
-                self._with_block_start_lineno = self._with_frame.f_lineno
-                self._with_source = inspect.getsourcelines(self._with_frame)
-                self.trace = sys.gettrace()
-                sys.settrace(dummy)
-                sys._getframe(1).f_trace = functools.partial(self.__repeat__, None, None, None)
-            else:
-                return self.test.__enter__()
-        except (KeyboardInterrupt, Exception):
-            self.trace = sys.gettrace()
-            sys.settrace(dummy)
-            sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
-
     def __repeat__(self, *args):
         sys.settrace(self.trace)
         raise RepeatTestException()
@@ -731,7 +793,7 @@ class _test(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         frame = inspect.currentframe().f_back
 
-        if isinstance(exception_value, RepeatTestException) and not frame.f_locals.get("_repeat") and top() != self.test:
+        if isinstance(exception_value, RepeatTestException) and not frame.f_locals.get("repeat") and top() != self.test:
             try:
                 self.test.__enter__()
                 self._with_block_end = frame.f_lasti
@@ -741,16 +803,16 @@ class _test(object):
                 source = textwrap.dedent("".join(
                     lines[(self._with_block_start_lineno - index)+1:(self._with_block_end_lineno - index) + 1]))
                 code = compile(source, self._with_frame.f_code.co_filename, mode="exec")
-                frame.f_locals["_repeat"] = True
+                frame.f_locals["repeat"] = True
                 __kwargs = dict(self._kwargs)
                 __kwargs.pop("name", None)
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
                 __kwargs["subtype"] = None
-                for i in range(self._repeat):
-                    with Iteration(name=f"{i}", tags=self._tags, **__kwargs, parent_type=self.test.type):
+                for i in range(self.repeat):
+                    with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type):
                         exec(code, frame.f_globals, frame.f_locals)
-                frame.f_locals.pop("_repeat")
+                frame.f_locals.pop("repeat")
             except:
                 try:
                     test__exit__ = self.test.__exit__(*sys.exc_info())
@@ -799,55 +861,67 @@ class _test(object):
                         pass
         return True
 
-class Module(_test):
+class Module(TestDefinition):
     """Module definition."""
-    def __init__(self, name, **kwargs):
+    type = TestType.Module
+
+    def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Module
-        return super(Module, self).__init__(name, **kwargs)
+        return super(Module, cls).__new__(cls, name, **kwargs)
 
-class Suite(_test):
+class Suite(TestDefinition):
     """Suite definition."""
-    def __init__(self, name, **kwargs):
+    type = TestType.Suite
+
+    def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Suite
-        return super(Suite, self).__init__(name, **kwargs)
+        return super(Suite, cls).__new__(cls, name, **kwargs)
 
-class Test(_test):
+class Test(TestDefinition):
     """Test definition."""
-    def __init__(self, name, **kwargs):
+    type = TestType.Test
+
+    def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Test
-        return super(Test, self).__init__(name, **kwargs)
+        return super(Test, cls).__new__(cls, name, **kwargs)
 
-class Iteration(_test):
+class Iteration(TestDefinition):
     """Test iteration definition."""
-    def __init__(self, name, **kwargs):
-        kwargs["type"] = TestType.Iteration
-        self.parent_type = kwargs.pop("parent_type", TestType.Test)
-        return super(Iteration, self).__init__(name, **kwargs)
+    type = TestType.Iteration
 
-class Step(_test):
+    def __new__(cls, name, **kwargs):
+        kwargs["type"] = TestType.Iteration
+        kwargs["_parent_type"] = kwargs.pop("_parent_type", TestType.Test)
+        return super(Iteration, cls).__new__(cls, name, **kwargs)
+
+class Step(TestDefinition):
     """Step definition."""
-    def __init__(self, name, **kwargs):
-        kwargs["type"] = TestType.Step
-        return super(Step, self).__init__(name, **kwargs)
+    type = TestType.Step
+    subtype = None
+
+    def __new__(cls, name=None, **kwargs):
+        kwargs["type"] = kwargs.pop("type", cls.type)
+        kwargs["subtype"] = kwargs.pop("subtype", cls.subtype)
+        return super(Step, cls).__new__(cls, name, **kwargs)
 
 # support for BDD
 class Feature(Suite):
-    def __init__(self, name, **kwargs):
+    def __new__(cls, name, **kwargs):
         kwargs["subtype"] = TestSubType.Feature
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Feature, self).__init__(name, **kwargs)
+        return super(Feature, cls).__new__(cls, name, **kwargs)
 
 class Scenario(Test):
-    def __init__(self, name, **kwargs):
+    def __new__(cls, name=None, **kwargs):
         kwargs["subtype"] = TestSubType.Scenario
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Scenario, self).__init__(name, **kwargs)
+        return super(Scenario, cls).__new__(cls, name, **kwargs)
 
 class _background(Test):
-    def __init__(self, name, **kwargs):
+    def __new__(cls, name, **kwargs):
         kwargs["subtype"] = TestSubType.Background
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back.f_back)
-        return super(_background, self).__init__(name, **kwargs)
+        return super(_background, cls).__new__(cls, name, **kwargs)
 
 class Steps(ExitStack):
     def __init__(self, *args, **kwargs):
@@ -872,61 +946,26 @@ def Background(name, **kwargs):
             bg.stack = stack
             yield bg
 
-def Given(step, **kwargs):
-    kwargs["subtype"] = TestSubType.Given
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class Given(Step):
+    subtype = TestSubType.Given
 
-def When(step, **kwargs):
-    kwargs["subtype"] = TestSubType.When
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class When(Step):
+    subtype = TestSubType.When
 
-def Then(step, **kwargs):
-    kwargs["subtype"] = TestSubType.Then
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class Then(Step):
+    subtype = TestSubType.Then
 
-def And(step, **kwargs):
-    kwargs["subtype"] = TestSubType.And
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class And(Step):
+    subtype = TestSubType.And
 
-def But(step, **kwargs):
-    kwargs["subtype"] = TestSubType.But
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class But(Step):
+    subtype = TestSubType.But
 
-def By(step, **kwargs):
-    kwargs["subtype"] = TestSubType.By
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class By(Step):
+    subtype = TestSubType.By
 
-def Finally(step, **kwargs):
-    kwargs["subtype"] = TestSubType.Finally
-    kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-    if isinstance(step, TestStep):
-        return step(**kwargs)
-    else:
-        return Step(step, **kwargs)
+class Finally(Step):
+    subtype = TestSubType.Finally
 
 class NullStep():
     def __enter__(self):
@@ -936,64 +975,89 @@ class NullStep():
         return False
 
 # decorators
-class _testdecorator(object):
+class TestDecorator(object):
     type = Test
+
     def __init__(self, func):
-        func.name = getattr(func, "name", func.__name__.replace("_", " "))
-        func.description = getattr(func, "description", func.__doc__)
         self.func = func
-        functools.update_wrapper(self, func)
+        functools.update_wrapper(self, self.func)
 
-    def __call__(self, **kwargs):
-        frame = kwargs.pop("_frame", inspect.currentframe().f_back)
-        _kwargs = dict(vars(self.func))
-        _name = kwargs.pop("name", None)
-        _repeat = kwargs.pop("repeat", None)
-        if kwargs.get("args") is None:
-            # use function signature to get default argument values
-            # and set them as args
-            signature = inspect.signature(self.func)
-            kwargs["args"] = { p.name:p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty }
-        if _name is not None:
-            kwargs["name"] = _name % (_kwargs)
-        _kwargs.update(kwargs)
-        # handle repeats
-        if _repeat is not None:
-            with self.type(**_kwargs, _frame=frame, _run=False) as parent_test:
-                __kwargs = dict(_kwargs)
-                __kwargs.pop("name")
-                __kwargs["type"] = TestType.Iteration
-                __kwargs["subtype"] = None
-                for i in range(_repeat):
-                    with Iteration(name=f"{i}", parent_type=parent_test.type, **__kwargs) as test:
-                        self.func(test, **{name: arg.value for name, arg in test.args.items()})
-            return parent_test
+        self.func.type = self.type.type
+        self.func._frame = inspect.currentframe().f_back
+        self.func.name = getattr(self.func, "name", self.func.__name__.replace("_", " "))
+        self.func.description = getattr(self.func, "description", self.func.__doc__)
+
+        kwargs = dict(vars(self.func))
+        signature = inspect.signature(self.func)
+        kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty}
+        
+        self.func.kwargs = kwargs
+
+    def __call__(self, **args):
+        return self.__run__(**args)
+
+    def __run__(self, **args):
+        test = current()
+
+        def run(test):
+            r = self.func(test, **args)
+            def run_generator():
+                return next(r)
+            if inspect.isgenerator(r):
+                run_generator()
+                test.context.cleanup(run_generator)
+            return r
+
+        if test is None or (test is not None and test.type > self.type.type):
+            kwargs = dict(self.func.kwargs)
+            kwargs["args"] = dict(kwargs.get("args", {}))
+            kwargs["args"].update(args)
+            with self.type(**kwargs) as test:
+                return run(test)
         else:
-            with self.type(**_kwargs, _frame=frame) as test:
-                r = self.func(test, **{name: arg.value for name, arg in test.args.items()})
-                def run_generator():
-                    return next(r)
-                if inspect.isgenerator(r):
-                    run_generator()
-                    test.context.cleanup(run_generator)
-            return test
+            return run(test)
 
-class TestStep(_testdecorator):
+class TestStep(TestDecorator):
     type = Step
+    subtype = None
 
-class TestCase(_testdecorator):
+    def __init__(self, func_or_subtype=None):
+        self.func = None
+
+        if inspect.isfunction(func_or_subtype):
+            self.func = func_or_subtype
+        elif func_or_subtype is not None:
+            self.subtype = func_or_subtype.subtype
+
+        if self.func:
+            TestDecorator.__init__(self, self.func)
+
+    def __call__(self, *args, **kwargs):
+        if not self.func:
+            self.func = args[0]
+            if self.subtype is not None:
+                self.func.subtype = self.subtype
+            TestDecorator.__init__(self, self.func)
+            return self
+
+        if args:
+            raise TypeError(f"{self.func.__name__}() takes only named arguments")
+
+        return self.__run__(**kwargs)
+
+class TestCase(TestDecorator):
     type = Test
 
 class TestScenario(TestCase):
     type = Scenario
 
-class TestSuite(_testdecorator):
+class TestSuite(TestDecorator):
     type = Suite
 
 class TestFeature(TestSuite):
     type = Feature
 
-class TestModule(_testdecorator):
+class TestModule(TestDecorator):
     type = Module
 
 class TestClass(object):
@@ -1060,39 +1124,51 @@ class Uid(object):
         func.uid = self.uid
         return func
 
-def run(comment=None, test=None, **kwargs):
-    """Run a test.
+def tests(module=None, *types, frame=None):
+    if module is None:
+        if frame is None:
+            frame = inspect.currentframe().f_back
+        module = sys.modules[frame.f_globals["__name__"]]
+    if not types:
+        types = (TestDecorator,)
 
-    :param comment: comment
-    :param test: test
-    :param **kwargs: other test arguments
-    """
-    if test is None:
-        raise TypeError("run() test argument must be specified")
-    if inspect.isclass(test) and issubclass(test, TestBase):
-        test = test
-    elif issubclass(type(test), _testdecorator):
-        return test(**kwargs, _frame=inspect.currentframe().f_back)
-    elif inspect.isfunction(test):
-        return test(**kwargs)
-    elif inspect.ismethod(test):
-        return test(**kwargs)
-    else:
-        raise TypeError(f"invalid test type '{type(test)}'")
+    def is_type(member):
+        return isinstance(member, types)
 
-    _frame = inspect.currentframe().f_back
-    _repeat = kwargs.pop("repeat", None)
-    if _repeat is not None:
-        with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs,
-                               _frame=_frame, _run=False) as parent_test:
-            _kwargs = dict(kwargs)
-            _kwargs["type"] = TestType.Iteration
-            _kwargs["subtype"] = None
-            for i in range(_repeat):
-                with Iteration(test=test, name=f"{i}", **kwargs, _frame=_frame, parent_type=parent_test.type):
-                    pass
-        return parent_test.result
-    else:
-        with globals()["Test"](test=test, name=kwargs.pop("name", None), **kwargs, _frame=frame) as test:
-            pass
-        return test.result
+    return [test for name, test in inspect.getmembers(module, is_type)]
+
+def cases(module=None, *types, frame=None):
+    if not types:
+        types = (TestCase,)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return tests(module, *types, frame=frame)
+
+def suites(module=None, *types, frame=None):
+    if not types:
+        types = (TestSuite,)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return tests(module, *types, frame=frame)
+
+def scenarios(module=None, *types, frame=None):
+    if not types:
+        types = (TestScenario,)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return tests(module, *types, frame=frame)
+
+def features(module=None, *types, frame=None):
+    if not types:
+        types = (TestFeatures,)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return tests(module, *types, frame=frame)
+
+
+def steps(module=None, *types, frame=None):
+    if not types:
+        types = (TestStep,)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return tests(module, *types, frame=frame)

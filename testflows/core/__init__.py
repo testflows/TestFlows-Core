@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from testflows._core.test import TestBase
-from testflows._core.test import Module, Suite, Test, Step, NullStep, run
+from testflows._core.test import Module, Suite, Test, Step, NullStep
 from testflows._core.test import TestStep, TestCase, TestSuite, TestModule
 from testflows._core.test import Attributes, Requirements, Examples
 from testflows._core.test import Name, Description, Uid, Tags, TestClass, Context
@@ -21,6 +21,7 @@ from testflows._core.test import Feature, Cleanup, Background, Scenario
 from testflows._core.test import Given, When, Then, And, But, By, Finally
 from testflows._core.test import Steps
 from testflows._core.test import TestFeature, TestScenario
+from testflows._core.test import tests, cases, scenarios, steps, suites, features
 from testflows._core.funcs import *
 from testflows._core.filters import the
 from testflows._core.objects import *
