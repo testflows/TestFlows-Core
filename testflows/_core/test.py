@@ -37,7 +37,7 @@ from .funcs import current, top, previous, main, skip, ok, fail, error, exceptio
 from .init import init
 from .cli.arg.parser import ArgumentParser
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type
+from .cli.arg.type import key_value as key_value_type, filter_type, repeat_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import the
@@ -233,8 +233,12 @@ class TestBase(object):
             help="test run attributes", type=key_value_type, required=False)
         parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
             help="run only selected tests", type=str, required=False)
-        parser.add_argument("--skip", dest="_skip", metavar="pattern", nargs="+",
-            help="skip selected tests", type=str, required=False)
+        parser.add_argument("--skip", dest="_skip", metavar="pattern[,type]",
+            help=("skip selected tests.\n"
+                  "Where `pattern` is test name pattern, "
+                  "and `type` is test type either {'test', 'suite', 'module'} "
+                  "(default: 'test')"),
+            type=filter_type, nargs="+", required=False)
         parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
             help="start at the selected test", type=str, required=False)
         parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
@@ -256,12 +260,20 @@ class TestBase(object):
             help="path to the log file where test output will be stored, default: uses temporary log file")
         parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
             help="show skipped tests, default: False", default=False)
+        parser.add_argument("--repeat", dest="_repeat",
+            help=("number of times to repeat a test until it either passes or fails.\n"
+                  "Where `number` is a number times to repeat the test, "
+                  "`pattern` is a test name pattern (default: '*'), "
+                  "`until` repeat until condition either {'pass', 'fail'} (default: 'pass'), "
+                  "and `type` is test type either {'test', 'suite', 'module'} "
+                  "(default: 'test')"),
+            type=repeat_type, metavar="number[,pattern[,until[,type]]]", nargs="+", required=False)
         if database_module:
             database_module.argparser(parser)
         return parser
 
     def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None,
-            name=None, tags=None, attributes=None):
+            name=None, tags=None, attributes=None, repeat=None):
         """Parse command line arguments.
 
         :return: parsed known arguments
@@ -314,7 +326,7 @@ class TestBase(object):
 
             if args.get("_pause_before"):
                 if not xflags:
-                    xflags = globals()["xflags"]()
+                    xflags = globals()["XFlags"]()
                 for pattern in args.get("_pause_before"):
                     pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
@@ -323,7 +335,7 @@ class TestBase(object):
 
             if args.get("_pause_after"):
                 if not xflags:
-                    xflags = globals()["xflags"]()
+                    xflags = globals()["XFlags"]()
                 for pattern in args.get("_pause_after"):
                     pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
@@ -337,10 +349,9 @@ class TestBase(object):
                 args.pop("_only")
 
             if args.get("_skip"):
-                skip = [] # clear whatever was passed
-                for pattern in args.get("_skip"):
-                    only.append(the(pattern).at(name))
-                args.pop("_skip")
+                skip = {TestType.Test: [], TestType.Suite: [], TestType.Module: []}
+                for item in args.pop("_skip"):
+                    skip[item.type].append(item)
 
             if args.get("_start"):
                 start = the(args.get("_start")[0]).at(name)
@@ -356,6 +367,11 @@ class TestBase(object):
             if args.get("_attrs"):
                 attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
 
+            if args.get("_repeat"):
+                repeat = {TestType.Test: [], TestType.Suite: [], TestType.Module: []}
+                for item in args.pop("_repeat"):
+                    repeat[item.type].append(item)
+
         except (ExitException, KeyboardInterrupt, Exception) as exc:
             sys.stderr.write(warning(get_exception(), eol='\n'))
             sys.stderr.write(danger("error: " + str(exc).strip()))
@@ -364,14 +380,14 @@ class TestBase(object):
             else:
                 sys.exit(1)
 
-        return args, xflags, only, skip, start, end, name, tags, attributes
+        return args, xflags, only, skip, start, end, name, tags, attributes, repeat
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
                  examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, args=None, id=None, node=None, map=None, context=None,
-                 _frame=None):
+                 repeat=None, _frame=None):
 
         self.lock = threading.Lock()
 
@@ -384,8 +400,8 @@ class TestBase(object):
             self._init= False
             frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
             if main(frame):
-                cli_args, xflags, only, skip, start, end, name, tags, attributes = self.parse_cli_args(
-                    xflags, only, skip, start, end, name, tags, attributes)
+                cli_args, xflags, only, skip, start, end, name, tags, attributes, repeat = self.parse_cli_args(
+                    xflags, only, skip, start, end, name, tags, attributes, repeat)
 
         self.name = name
         if self.name is None:
@@ -414,9 +430,10 @@ class TestBase(object):
         self.xfails = get(xfails, {})
         self.xflags = get(xflags, {})
         self.only = get(only, [])
-        self.skip = get(skip, [])
+        self.skip = get(skip, None)
         self.start = get(start, None)
         self.end = get(end, None)
+        self.repeat = get(repeat, None)
         self.caller_test = None
 
     @classmethod
@@ -589,8 +606,9 @@ class TestDefinition(object):
         self.test = None
         self.parent = None
         self.kwargs = kwargs
-        self.repeat = None
         self.tags = None
+        self.repeat = None
+        self.repeatable_func = None
         return self
 
     def __call__(self, **args):
@@ -599,6 +617,7 @@ class TestDefinition(object):
         self.kwargs["args"].update(args)
 
         if test and isinstance(test, TestDecorator):
+            self.repeatable_func = test
             with self as _test:
                 test(**args)
             return _test
@@ -618,6 +637,7 @@ class TestDefinition(object):
 
             self.parent = kwargs.pop("parent", None) or current()
             parent = self.parent
+            repeat = None
 
             test = kwargs.pop("test", None)
             if test and isinstance(test, TestDecorator):
@@ -642,6 +662,22 @@ class TestDefinition(object):
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
                 kwargs["start"] = parent.start or kwargs.get("start")
                 kwargs["end"] = parent.end or kwargs.get("end")
+                # propagate repeat
+                if parent.repeat and parent.type > TestType.Test:
+                    if self.type is TestType.Module:
+                        repeat = parent.repeat
+                    elif self.type is TestType.Suite:
+                        repeat = {
+                            TestType.Module:[],
+                            TestType.Suite: parent.repeat[TestType.Suite],
+                            TestType.Test: parent.repeat[TestType.Test]
+                        }
+                    elif self.type is TestType.Test:
+                        repeat = {
+                            TestType.Module: [],
+                            TestType.Suite: [],
+                            TestType.Test: parent.repeat[TestType.Test]
+                        }
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
@@ -658,31 +694,29 @@ class TestDefinition(object):
                 absname(k, name if name else name_sep): v for k, v in (kwargs.get("xflags") or {}).items()
             }) or None
             kwargs["only"] = [f.at(name if name else name_sep) for f in kwargs.get("only") or []] or None
-            kwargs["skip"] = [f.at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
             kwargs["start"] = kwargs.get("start").at(name if name else name_sep) if kwargs.get("start") else None
             kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
 
             self._apply_xflags(name, kwargs)
             self._apply_only(name, tags, kwargs)
-            self._apply_skip(name, tags, kwargs)
+            self._apply_skip(name, tags, parent, kwargs)
             self._apply_start(name, tags, parent, kwargs)
             self._apply_end(name, tags, parent, kwargs)
-            self.repeat = kwargs.pop("repeat", None)
             self.tags = tags
+            self.repeat = repeat
 
-            self.test = test(name, tags=tags, **kwargs)
+            self.test = test(name, tags=tags, repeat=repeat, **kwargs)
             if getattr(self, "parent_type", None):
                 self.test.parent_type = self.parent_type
 
-            if self.repeat is not None:
-                self._with_frame = inspect.currentframe().f_back
-                self._with_block_start_lineno = self._with_frame.f_lineno
-                self._with_source = inspect.getsourcelines(self._with_frame)
-                self.trace = sys.gettrace()
-                sys.settrace(dummy)
-                sys._getframe(1).f_trace = functools.partial(self.__repeat__, None, None, None)
-            else:
-                return self.test._enter()
+            if repeat is not None:
+                count = self._apply_repeat(name, tags, parent, repeat)
+                if count:
+                    self.trace = sys.gettrace()
+                    sys.settrace(dummy)
+                    sys._getframe(1).f_trace = functools.partial(self.__repeat__, count, None, None, None)
+                    return
+            return self.test._enter()
 
         except (KeyboardInterrupt, Exception):
             self.trace = sys.gettrace()
@@ -727,6 +761,17 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.start = None
 
+    def _apply_repeat(self, name, tags, parent, repeat):
+        if not repeat:
+            return False
+
+        items = repeat.get(self.type, [])
+        for item in items:
+            if the(item.pattern).at(parent.name).match(name, tags, prefix=False):
+                return item.number
+
+        return False
+
     def _apply_only(self, name, tags, kwargs):
         only = kwargs.get("only")
         if not only:
@@ -747,13 +792,14 @@ class TestDefinition(object):
         else:
             kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
 
-    def _apply_skip(self, name, tags, kwargs):
+    def _apply_skip(self, name, tags, parent, kwargs):
         skip = kwargs.get("skip")
         if not skip:
             return
 
-        for item in skip:
-            if item.match(name, tags, prefix=False):
+        items = skip.get(self.type, [])
+        for item in items:
+            if the(item.pattern).at(parent.name).match(name, tags, prefix=False):
                 kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
                 break
 
@@ -787,9 +833,9 @@ class TestDefinition(object):
         kwargs["subtype"] = subtype
         kwargs["type"] = type
 
-    def __repeat__(self, *args):
+    def __repeat__(self, count=None, *args):
         sys.settrace(self.trace)
-        raise RepeatTestException()
+        raise RepeatTestException(count)
 
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
         sys.settrace(self.trace)
@@ -801,26 +847,20 @@ class TestDefinition(object):
         if self.test is None:
             return
 
-        if isinstance(exception_value, RepeatTestException) and not frame.f_locals.get("repeat") and top() != self.test:
+        if isinstance(exception_value, RepeatTestException):
             try:
+                count = exception_value.count
                 self.test._enter()
-                self._with_block_end = frame.f_lasti
-                self._with_block_end_lineno = self._with_frame.f_lineno
-                lines, index = self._with_source
-                index = max(1, index)
-                source = textwrap.dedent("".join(
-                    lines[(self._with_block_start_lineno - index)+1:(self._with_block_end_lineno - index) + 1]))
-                code = compile(source, self._with_frame.f_code.co_filename, mode="exec")
-                frame.f_locals["repeat"] = True
+                if self.repeatable_func is None:
+                    raise Error("not repeatable")
                 __kwargs = dict(self.kwargs)
                 __kwargs.pop("name", None)
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
-                __kwargs["subtype"] = None
-                for i in range(self.repeat):
+                __args = __kwargs.pop("args", {})
+                for i in range(count):
                     with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type):
-                        exec(code, frame.f_globals, frame.f_locals)
-                frame.f_locals.pop("repeat")
+                        self.repeatable_func(**__args)
             except:
                 try:
                     test__exit__ = self.test._exit(*sys.exc_info())
@@ -1023,8 +1063,7 @@ class TestDecorator(object):
             kwargs = dict(self.func.kwargs)
             kwargs["args"] = dict(kwargs.get("args", {}))
             kwargs["args"].update(args)
-            with self.type(**kwargs) as test:
-                return run(test)
+            return self.type(**kwargs, run=self)
         else:
             return run(test)
 
