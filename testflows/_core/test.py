@@ -398,7 +398,7 @@ class TestBase(object):
         self.map = get(map, list(self.map))
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
-        self.context = get(context, current().context if current() and self.type < TestType.Test else (Context(current().context if current() else None)))
+        self.context = get(context, current().context if current() and self.type < TestType.Iteration else (Context(current().context if current() else None)))
         self.tags = tags
         self.requirements = {r.name: r for r in get(requirements, list(self.requirements))}
         self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
