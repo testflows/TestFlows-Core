@@ -96,8 +96,6 @@ def format_type(msg):
     else:
         if test_subtype == TestSubType.Scenario:
             return "Scenario"
-        elif test_subtype == TestSubType.Background:
-            return "Background"
         else:
             return "Test"
 

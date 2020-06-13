@@ -624,7 +624,7 @@ class TestDefinition(object):
                 test = test.func.kwargs.get("test", None)
             test = test if test is not None else TestBase
             if not issubclass(test, TestBase):
-                raise TypeError(f"'Test {test} must be subclass of TestBase")
+                raise TypeError(f"{test} must be subclass of TestBase")
             name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", None))
 
             if parent:
@@ -733,7 +733,7 @@ class TestDefinition(object):
             return
 
         # only should not skip Given and Finally steps
-        if kwargs.get("subtype") in (TestSubType.Given, TestSubType.Finally):
+        if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
             only.append(the(join(name, "*")))
 
         found = False
@@ -875,6 +875,7 @@ class Module(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Module
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Module, cls).__new__(cls, name, **kwargs)
 
 class Suite(TestDefinition):
@@ -883,6 +884,7 @@ class Suite(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Suite
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Suite, cls).__new__(cls, name, **kwargs)
 
 class Test(TestDefinition):
@@ -891,6 +893,7 @@ class Test(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Test
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Test, cls).__new__(cls, name, **kwargs)
 
 class Iteration(TestDefinition):
@@ -912,6 +915,7 @@ class Step(TestDefinition):
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = kwargs.pop("type", cls.type)
         kwargs["subtype"] = kwargs.pop("subtype", cls.subtype)
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Step, cls).__new__(cls, name, **kwargs)
 
 # support for BDD
@@ -927,11 +931,30 @@ class Scenario(Test):
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Scenario, cls).__new__(cls, name, **kwargs)
 
-class _background(Test):
-    def __new__(cls, name, **kwargs):
-        kwargs["subtype"] = TestSubType.Background
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back.f_back)
-        return super(_background, cls).__new__(cls, name, **kwargs)
+class BackgroundTest(TestBase):
+    def __init__(self, *args, **kwargs):
+        self.contexts = []
+        super(BackgroundTest, self).__init__(*args, **kwargs)
+
+    def _enter(self):
+        self.stack = ExitStack().__enter__()
+        self.context.cleanup(self.stack.__exit__, None, None, None)
+        return super(BackgroundTest, self)._enter()
+
+    def append(self, ctx_manager):
+        ctx = self.stack.enter_context(ctx_manager)
+        self.contexts.append(ctx)
+        return ctx
+
+    def __iter__(self):
+        return iter(self.contexts)
+
+class Background(Step):
+    subtype = TestSubType.Background
+
+    def __new__(cls, name=None, **kwargs):
+        kwargs["test"] = kwargs.pop("test", BackgroundTest)
+        return super(Background, cls).__new__(cls, name, **kwargs)
 
 class Steps(ExitStack):
     def __init__(self, *args, **kwargs):
@@ -948,13 +971,6 @@ def Cleanup(callback, *args, **kwargs):
     test = kwargs.pop("_test", current())
     test.context.cleanup(callback, *args, **kwargs)
     yield
-
-@contextmanager
-def Background(name, **kwargs):
-    with _background(name, **kwargs) as bg:
-        with ExitStack() as stack:
-            bg.stack = stack
-            yield bg
 
 class Given(Step):
     subtype = TestSubType.Given
@@ -1011,11 +1027,12 @@ class TestDecorator(object):
 
         def run(test):
             r = self.func(test, **args)
-            def run_generator():
+            def run_generator(r):
                 return next(r)
             if inspect.isgenerator(r):
-                run_generator()
-                test.context.cleanup(run_generator)
+                res = run_generator(r)
+                test.context.cleanup(run_generator, r)
+                r = res
             return r
 
         if test is None or (test is not None and test.type > self.type.type):
@@ -1069,6 +1086,15 @@ class TestFeature(TestSuite):
 
 class TestModule(TestDecorator):
     type = Module
+
+class TestBackground(TestDecorator):
+    type = Background
+
+    def __init__(self, func):
+        func.test = getattr(func, "test", BackgroundTest)
+        if not issubclass(func.test, BackgroundTest):
+            raise TypeError(f"{func.test} must be subclass of BackgroundTest")
+        return super(TestBackground, self).__init__(func)
 
 class TestClass(object):
     def __init__(self, test):

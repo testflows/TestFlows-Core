@@ -189,13 +189,13 @@ def format_test(msg, keyword):
             keyword += and_keyword(msg, parent, "But", TestSubType.But)
         elif test_subtype == TestSubType.Finally:
             keyword += and_keyword(msg, parent, "Finally", TestSubType.Finally)
+        elif test_subtype == TestSubType.Background:
+            keyword += and_keyword(msg, parent, "Background", TestSubType.Background)
         else:
             keyword += "Step"
     else:
         if test_subtype == TestSubType.Scenario:
             keyword += "Scenario"
-        elif test_subtype == TestSubType.Background:
-            keyword += "Background"
         else:
             keyword += "Test"
 

@@ -216,13 +216,6 @@ def pause(test=None):
     test.io.output.input("Paused, enter any key to continue...")
     input()
 
-def enter_context(cm, test=None):
-    if test is None:
-        test = current()
-    if not test.caller_test or test.caller_test.subtype != TestSubType.Background:
-        raise TypeError("not inside a background test")
-    return test.caller_test.stack.enter_context(cm)
-
 def getsattr(obj, name, *default):
     """Get attribute or set it to the default value.
     """

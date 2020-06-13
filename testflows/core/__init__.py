@@ -14,7 +14,7 @@
 # limitations under the License.
 from testflows._core.test import TestBase
 from testflows._core.test import Module, Suite, Test, Step, NullStep
-from testflows._core.test import TestStep, TestCase, TestSuite, TestModule
+from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, TestBackground
 from testflows._core.test import Attributes, Requirements, Examples
 from testflows._core.test import Name, Description, Uid, Tags, TestClass, Context
 from testflows._core.test import Feature, Cleanup, Background, Scenario
