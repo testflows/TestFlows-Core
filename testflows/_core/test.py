@@ -956,22 +956,6 @@ class Background(Step):
         kwargs["test"] = kwargs.pop("test", BackgroundTest)
         return super(Background, cls).__new__(cls, name, **kwargs)
 
-class Steps(ExitStack):
-    def __init__(self, *args, **kwargs):
-        self.values = []
-        super(Steps, self).__init__(*args, **kwargs)
-
-    def __call__(self, ctx):
-        step = self.enter_context(ctx)
-        self.values.append(step)
-        return step
-
-@contextmanager
-def Cleanup(callback, *args, **kwargs):
-    test = kwargs.pop("_test", current())
-    test.context.cleanup(callback, *args, **kwargs)
-    yield
-
 class Given(Step):
     subtype = TestSubType.Given
 
