@@ -76,7 +76,7 @@ def translate(pat, prefix=False):
 
     However it would not match any path prefix
     that ends with '/' such as 'A/', or 'A/B/'
-    as these paths are treated as incompleted.
+    as these paths are treated as incomplete.
     If you need to match such path you need to
     rstrip() the '/' before matching.
 

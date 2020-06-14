@@ -29,15 +29,16 @@ from .exceptions import DummyTestException, ResultException, RepeatTestException
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, Argument, Attribute, ExamplesTable
+from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
 from .funcs import current, top, previous, main, skip, ok, fail, error, exception, pause, load
+from .funcs import xfails, xflags, repeat
 from .init import init
 from .cli.arg.parser import ArgumentParser
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type, filter_type, repeat_type
+from .cli.arg.type import key_value as key_value_type, repeat as repeat_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import the
@@ -46,42 +47,6 @@ try:
     import testflows.database as database_module
 except:
     database_module = None
-
-class XFails(dict):
-    """xfails container.
-
-    xfails = {
-        "pattern": [("result", "reason")],
-        ...
-        }
-    """
-    def add(self, pattern, *results):
-        """Add an entry to the xfails.
-
-        :param pattern: test name pattern to match
-        :param *results: one or more results to cross out
-            where each result is a two-tuple of (result, reason)
-        """
-        self[pattern] = results
-        return self
-
-class XFlags(dict):
-    """xflags container.
-
-    xflags = {
-        "filter": (set_flags, clear_flags),
-        ... 
-    }
-    """
-    def add(self, pattern, set_flags=0, clear_flags=0):
-        """Add an entry to the xflags.
-
-        :param pattern: test name pattern to match
-        :param set_flags: flags to set
-        :param clear_flags: flags to clear, default: None
-        """
-        self[pattern] = [Flags(set_flags), Flags(clear_flags)]
-        return self
 
 class DummyTest(object):
     """Base class for dummy tests.
@@ -211,14 +176,16 @@ class TestBase(object):
         Option values
         
         pattern 
-          used to match test names using a unix-like file path pattern that supports wildcards
+          used to match test names using a unix-like file path pattern
+          that supports wildcards
             '/' path level separator
             '*' matches everything
             '?' matches any single character
             '[seq]' matches any character in seq
             '[!seq]' matches any character not in seq
             ':' matches anything at the current path level
-          for example: "suiteA/*" selects all the tests in 'suiteA'
+          for a literal match, wrap the meta-characters in brackets
+          where '[?]' matches the character '?'.
         """
         parser = ArgumentParser(
                 prog=sys.argv[0],
@@ -233,12 +200,8 @@ class TestBase(object):
             help="test run attributes", type=key_value_type, required=False)
         parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
             help="run only selected tests", type=str, required=False)
-        parser.add_argument("--skip", dest="_skip", metavar="pattern[,type]",
-            help=("skip selected tests.\n"
-                  "Where `pattern` is test name pattern, "
-                  "and `type` is test type either {'test', 'suite', 'module'} "
-                  "(default: 'test')"),
-            type=filter_type, nargs="+", required=False)
+        parser.add_argument("--skip", dest="_skip", metavar="pattern",
+            help="skip selected tests", type=str, nargs="+", required=False)
         parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
             help="start at the selected test", type=str, required=False)
         parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
@@ -261,13 +224,11 @@ class TestBase(object):
         parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
             help="show skipped tests, default: False", default=False)
         parser.add_argument("--repeat", dest="_repeat",
-            help=("number of times to repeat a test until it either passes or fails.\n"
-                  "Where `number` is a number times to repeat the test, "
-                  "`pattern` is a test name pattern (default: '*'), "
-                  "`until` repeat until condition either {'pass', 'fail'} (default: 'pass'), "
-                  "and `type` is test type either {'test', 'suite', 'module'} "
-                  "(default: 'test')"),
-            type=repeat_type, metavar="number[,pattern[,until[,type]]]", nargs="+", required=False)
+            help=("number of times to repeat a test until it either fails or passes.\n"
+                  "Where the `pattern` is a test name pattern, "
+                  "the `number` is a number times to repeat the test, "
+                  "the `until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
+            type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
         if database_module:
             database_module.argparser(parser)
         return parser
@@ -326,7 +287,7 @@ class TestBase(object):
 
             if args.get("_pause_before"):
                 if not xflags:
-                    xflags = globals()["XFlags"]()
+                    xflags = globals()["xflags"]()
                 for pattern in args.get("_pause_before"):
                     pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
@@ -335,7 +296,7 @@ class TestBase(object):
 
             if args.get("_pause_after"):
                 if not xflags:
-                    xflags = globals()["XFlags"]()
+                    xflags = globals()["xflags"]()
                 for pattern in args.get("_pause_after"):
                     pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
@@ -343,23 +304,22 @@ class TestBase(object):
                 args.pop("_pause_after")
 
             if args.get("_only"):
-                only = [] # clear whatever was passed
-                for pattern in args.get("_only"):
+                only = []
+                for pattern in args.pop("_only"):
                     only.append(the(pattern).at(name))
-                args.pop("_only")
 
             if args.get("_skip"):
-                skip = {TestType.Test: [], TestType.Suite: [], TestType.Module: []}
-                for item in args.pop("_skip"):
-                    skip[item.type].append(item)
+                skip = []
+                for pattern in args.pop("_skip"):
+                    skip.append(the(pattern).at(name))
 
             if args.get("_start"):
-                start = the(args.get("_start")[0]).at(name)
-                args.pop("_start")
+                pattern = args.pop("_start")[0]
+                start = the(pattern).at(name)
 
             if args.get("_end"):
-                end = the(args.get("_end")[0]).at(name)
-                args.pop("_end")
+                pattern = args.pop("_end")[0]
+                end = the(pattern).at(name)
 
             if args.get("_tags"):
                 tags = {value for value in args.pop("_tags")}
@@ -368,9 +328,10 @@ class TestBase(object):
                 attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
 
             if args.get("_repeat"):
-                repeat = {TestType.Test: [], TestType.Suite: [], TestType.Module: []}
+                repeat = []
                 for item in args.pop("_repeat"):
-                    repeat[item.type].append(item)
+                    item.pattern.at(name)
+                    repeat.append(item)
 
         except (ExitException, KeyboardInterrupt, Exception) as exc:
             sys.stderr.write(warning(get_exception(), eol='\n'))
@@ -427,9 +388,9 @@ class TestBase(object):
             self.flags = Flags(flags)
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
         self.uid = get(uid, self.uid)
-        self.xfails = get(xfails, {})
-        self.xflags = get(xflags, {})
-        self.only = get(only, [])
+        self.xfails = get(xfails, None)
+        self.xflags = get(xflags, None)
+        self.only = get(only, None)
         self.skip = get(skip, None)
         self.start = get(start, None)
         self.end = get(end, None)
@@ -446,7 +407,7 @@ class TestBase(object):
         """
         if args is None:
             args = dict()
-        name = name.format(**{"$name": cls.name}, **args) if name is not None else cls.name
+        name = name.format(**{"$cls": cls}, **args) if name is not None else cls.name
         if name is None:
             raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
@@ -528,6 +489,9 @@ class TestBase(object):
     def _apply_xfails(self):
         """Apply xfails to self.result.
         """
+        if not self.xfails:
+            return
+
         for pattern, xouts in self.xfails.items():
             if match(self.name, pattern):
                 for xout in xouts:
@@ -637,7 +601,6 @@ class TestDefinition(object):
 
             self.parent = kwargs.pop("parent", None) or current()
             parent = self.parent
-            repeat = None
 
             test = kwargs.pop("test", None)
             if test and isinstance(test, TestDecorator):
@@ -651,33 +614,21 @@ class TestDefinition(object):
                 kwargs["parent"] = parent.name
                 kwargs["id"] = parent.id + [parent.child_count]
                 kwargs["cflags"] = parent.cflags
-                # propagate xfails, xflags, only and skip that prefix match the name of the test
-                kwargs["xfails"] = XFails({
+                # propagate xfails, xflags that prefix match the name of the test
+                kwargs["xfails"] = xfails({
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
-                }) or kwargs.get("xfails")
-                kwargs["xflags"] = XFlags({
+                }) if parent.xfails else None or kwargs.get("xfails")
+                kwargs["xflags"] = xflags({
                     k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
-                }) or kwargs.get("xflags")
+                }) if parent.xfails else None or kwargs.get("xflags")
+                # propagate only, skip, start, and end
                 kwargs["only"] = parent.only or kwargs.get("only")
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
                 kwargs["start"] = parent.start or kwargs.get("start")
                 kwargs["end"] = parent.end or kwargs.get("end")
                 # propagate repeat
-                if parent.repeat and parent.type > TestType.Test:
-                    if self.type is TestType.Module:
-                        repeat = parent.repeat
-                    elif self.type is TestType.Suite:
-                        repeat = {
-                            TestType.Module:[],
-                            TestType.Suite: parent.repeat[TestType.Suite],
-                            TestType.Test: parent.repeat[TestType.Test]
-                        }
-                    elif self.type is TestType.Test:
-                        repeat = {
-                            TestType.Module: [],
-                            TestType.Suite: [],
-                            TestType.Test: parent.repeat[TestType.Test]
-                        }
+                if parent.repeat and parent.type > TestType.Test and self.type >= TestType.Test:
+                    kwargs["repeat"] = parent.repeat
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
@@ -687,34 +638,36 @@ class TestDefinition(object):
             tags = test.make_tags(kwargs.pop("tags", None))
 
             # anchor all patterns
-            kwargs["xfails"] = XFails({
+            kwargs["xfails"] = xfails({
                 absname(k, name if name else name_sep): v for k, v in (kwargs.get("xfails") or {}).items()
             }) or None
-            kwargs["xflags"] = XFlags({
+            kwargs["xflags"] = xflags({
                 absname(k, name if name else name_sep): v for k, v in (kwargs.get("xflags") or {}).items()
             }) or None
             kwargs["only"] = [f.at(name if name else name_sep) for f in kwargs.get("only") or []] or None
+            kwargs["skip"] = [f.at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
             kwargs["start"] = kwargs.get("start").at(name if name else name_sep) if kwargs.get("start") else None
             kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
+            kwargs["repeat"] = [globals()["repeat"](r.pattern.at(name if name else name_sep),r.number,r.until) for r in kwargs.get("repeat", [])] or None
 
             self._apply_xflags(name, kwargs)
-            self._apply_only(name, tags, kwargs)
-            self._apply_skip(name, tags, parent, kwargs)
             self._apply_start(name, tags, parent, kwargs)
+            self._apply_skip(name, tags, kwargs)
+            self._apply_only(name, tags, kwargs)
             self._apply_end(name, tags, parent, kwargs)
             self.tags = tags
-            self.repeat = repeat
+            self.repeat = kwargs.pop("repeat", None)
 
-            self.test = test(name, tags=tags, repeat=repeat, **kwargs)
+            self.test = test(name, tags=self.tags, repeat=self.repeat, **kwargs)
             if getattr(self, "parent_type", None):
                 self.test.parent_type = self.parent_type
 
-            if repeat is not None:
-                count = self._apply_repeat(name, tags, parent, repeat)
-                if count:
+            if self.repeat is not None:
+                repeat = self._apply_repeat(name, tags, self.repeat)
+                if repeat is not None:
                     self.trace = sys.gettrace()
                     sys.settrace(dummy)
-                    sys._getframe(1).f_trace = functools.partial(self.__repeat__, count, None, None, None)
+                    sys._getframe(1).f_trace = functools.partial(self.__repeat__, repeat, None, None, None)
                     return
             return self.test._enter()
 
@@ -761,23 +714,20 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.start = None
 
-    def _apply_repeat(self, name, tags, parent, repeat):
+    def _apply_repeat(self, name, tags, repeat):
         if not repeat:
-            return False
+            return
 
-        items = repeat.get(self.type, [])
-        for item in items:
-            if the(item.pattern).at(parent.name).match(name, tags, prefix=False):
-                return item.number
-
-        return False
+        for item in repeat:
+            if item.pattern.match(name, tags, prefix=False):
+                return item
 
     def _apply_only(self, name, tags, kwargs):
         only = kwargs.get("only")
         if not only:
             return
 
-        # only should not skip Given and Finally steps
+        # only should not skip Background, Given and Finally steps
         if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
             only.append(the(join(name, "*")))
 
@@ -789,17 +739,14 @@ class TestDefinition(object):
 
         if not found:
             kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
-        else:
-            kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
 
-    def _apply_skip(self, name, tags, parent, kwargs):
+    def _apply_skip(self, name, tags, kwargs):
         skip = kwargs.get("skip")
         if not skip:
             return
 
-        items = skip.get(self.type, [])
-        for item in items:
-            if the(item.pattern).at(parent.name).match(name, tags, prefix=False):
+        for item in skip:
+            if item.match(name, tags, prefix=False):
                 kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
                 break
 
@@ -807,6 +754,7 @@ class TestDefinition(object):
         xflags = kwargs.get("xflags")
         if not xflags:
             return
+
         for pattern, item in xflags.items():
             if match(name, pattern):
                 set_flags, clear_flags = item
@@ -833,9 +781,9 @@ class TestDefinition(object):
         kwargs["subtype"] = subtype
         kwargs["type"] = type
 
-    def __repeat__(self, count=None, *args):
+    def __repeat__(self, repeat=None, *args):
         sys.settrace(self.trace)
-        raise RepeatTestException(count)
+        raise RepeatTestException(repeat)
 
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
         sys.settrace(self.trace)
@@ -849,7 +797,7 @@ class TestDefinition(object):
 
         if isinstance(exception_value, RepeatTestException):
             try:
-                count = exception_value.count
+                repeat = exception_value.repeat
                 self.test._enter()
                 if self.repeatable_func is None:
                     raise Error("not repeatable")
@@ -858,9 +806,16 @@ class TestDefinition(object):
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
                 __args = __kwargs.pop("args", {})
-                for i in range(count):
-                    with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type):
+                if repeat.until == "fail":
+                    __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
+                else:
+                    # pass or complete
+                    __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+                for i in range(repeat.number):
+                    with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
                         self.repeatable_func(**__args)
+                    if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+                        break
             except:
                 try:
                     test__exit__ = self.test._exit(*sys.exc_info())

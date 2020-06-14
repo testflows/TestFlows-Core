@@ -27,8 +27,8 @@ class DummyTestException(TestFlowsException):
 class RepeatTestException(TestFlowsException):
     """Repeat test exception.
     """
-    def __init__(self, count, *args, **kwargs):
-        self.count = count
+    def __init__(self, repeat, *args, **kwargs):
+        self.repeat = repeat
         super(RepeatTestException, self).__init__(*args, **kwargs)
 
 class TestFlowsError(TestFlowsException):

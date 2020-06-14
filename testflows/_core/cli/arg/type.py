@@ -20,8 +20,8 @@ import argparse
 from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
-from testflows._core.testtype import TestType
 from testflows._core.compress import CompressedFile
+from testflows._core.funcs import repeat as Repeat
 
 KeyValue = namedtuple("KeyValue", "key value")
 
@@ -121,7 +121,7 @@ def key_value(s, sep='='):
     key, value= s.split(sep, 1)
     return KeyValue(key.strip(), value.strip())
 
-def limit(value):
+def count(value):
     try:
         value = int(value)
         assert value >= 0
@@ -129,50 +129,10 @@ def limit(value):
         raise ArgumentTypeError(f"{value} is not a positive number")
     return value
 
-def filter_type(value):
-    class FilterOption(namedtuple("FilterOption", "pattern type", defaults=(TestType.Test,))):
-        def __new__(cls, *args):
-            args = list(args)
-            l = len(args)
-            if l > 0:
-                args[0] = str(args[0])
-            if l > 1:
-                assert args[1] in ("test", "suite", "module", "feature", "scenario")
-                args[1] = getattr(TestType, args[1].capitalize())
-            return super(FilterOption, cls).__new__(cls, *args)
-
+def repeat(value):
     try:
         fields = list(csv.reader([value],"unix"))[-1]
-        option = FilterOption(*fields)
+        option = Repeat(*fields)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
-
-    return option
-
-def repeat_type(value):
-    class RepeatOption(namedtuple("RepeatOption", "number pattern until type", defaults=("*", "pass", TestType.Test))):
-        def __new__(cls, *args):
-            args = list(args)
-            l = len(args)
-            if l > 0:
-                args[0] = int(args[0])
-                assert args[0] > 0
-            if l > 1:
-                args[1] = str(args[1])
-            if l > 2:
-                assert args[2] in ("pass", "fail")
-                # FIXME: convert option.until to results list
-                # ["Fail", "Error", "Null"] fail
-                # ["OK", "XOK", "XFail", "XNull", "XError"] pass
-            if l > 3:
-                assert args[3] in ("test", "suite", "module", "feature", "scenario")
-                args[3] = getattr(TestType, args[3].capitalize())
-            return super(RepeatOption, cls).__new__(cls, *args)
-
-    try:
-        fields = list(csv.reader([value],"unix"))[-1]
-        option = RepeatOption(*fields)
-    except Exception as e:
-        raise ArgumentTypeError(f"'{value}' is invalid")
-
     return option

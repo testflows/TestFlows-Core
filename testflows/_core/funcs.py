@@ -17,12 +17,15 @@ import inspect
 import importlib
 import threading
 
+from collections import namedtuple
+
 from .exceptions import ResultException
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket
 from .testtype import TestSubType
+from .filters import the
 
 #: thread local values
 _current_test = {}
@@ -222,3 +225,53 @@ def getsattr(obj, name, *default):
     value = getattr(obj, name, *default)
     setattr(obj, name, value)
     return value
+
+class xfails(dict):
+    """xfails container.
+
+    xfails = {
+        "pattern": [("result", "reason")],
+        ...
+        }
+    """
+    def add(self, pattern, *results):
+        """Add an entry to the xfails.
+
+        :param pattern: test name pattern to match
+        :param *results: one or more results to cross out
+            where each result is a two-tuple of (result, reason)
+        """
+        self[pattern] = results
+        return self
+
+class xflags(dict):
+    """xflags container.
+
+    xflags = {
+        "filter": (set_flags, clear_flags),
+        ...
+    }
+    """
+    def add(self, pattern, set_flags=0, clear_flags=0):
+        """Add an entry to the xflags.
+
+        :param pattern: test name pattern to match
+        :param set_flags: flags to set
+        :param clear_flags: flags to clear, default: None
+        """
+        self[pattern] = [Flags(set_flags), Flags(clear_flags)]
+        return self
+
+class repeat(namedtuple("repeat", "pattern number until", defaults=("fail",))):
+    def __new__(cls, *args):
+        args = list(args)
+        l = len(args)
+        if l > 0:
+            if not isinstance(args[0], the):
+                args[0] = the(args[0])
+        if l > 1:
+            args[1] = int(args[1])
+            assert args[1] > 0
+        if l > 2:
+            assert args[2] in ("fail", "pass", "complete")
+        return super(repeat, cls).__new__(cls, *args)

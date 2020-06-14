@@ -131,6 +131,10 @@ class Null(Result):
 class XNull(XResult):
     type = Result.Type.XNull
 
+XoutResults = (XOK, XFail, XError, XNull)
+FailResults = (Fail, Error, Null)
+PassResults = (OK,) + XoutResults
+
 class Node(TestObject):
     _fields = ("name", "module", "uid", "nexts", "ins", "outs")
     _defaults = (None,) * 3
