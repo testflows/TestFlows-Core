@@ -32,7 +32,7 @@ def check_water_types(self):
 )
 def check_more_water_types(self):
     for example in self.examples:
-        Example(name=example, test=check_water)(**example)
+        Example(name=example, test=check_water)(**vars(example))
 
 examples = ExamplesTable(
     header="water_type temperature",
