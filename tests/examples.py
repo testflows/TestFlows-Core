@@ -22,6 +22,18 @@ def check_water_types(self):
         with When(f"for example {example}"):
             check_water(**example._asdict())
 
+@TestOutline
+@Examples(
+    header="water_type temperature",
+    rows=[
+       ("hot", "+30C"),
+       ("cold", "5C"),
+    ]
+)
+def check_water_type_outline(self, water_type, temperature):
+    check_water(water_type=water_type, temperature=temperature)
+
+
 @TestScenario
 @Examples(
     header="water_type temperature",
@@ -48,6 +60,17 @@ def with_examples(self):
     Scenario("check water types 1", run=check_water_types, examples=examples) 
     Scenario("check more water types 0", run=check_more_water_types)
     Scenario("check more water types 1", run=check_more_water_types, examples=examples)
+    Scenario("check water types outline 0", run=check_water_type_outline)
+    Scenario("check water types outline 1", test=check_water_type_outline)()
+    Scenario("check water types outline 2", test=check_water_type_outline)(water_type='cold', temperature='5C')
+    check_water_type_outline()
+    check_water_type_outline(water_type='cold', temperature='5C')
+    with Scenario("my water types", examples=examples):
+        check_water_type_outline()
+        check_water_type_outline(water_type='cold', temperature='5C')
+    with Outline("my outline", test=check_water_type_outline):
+        check_water_type_outline()
+    Outline("my outline", run=check_water_type_outline)
 
 if main():
     with_examples()

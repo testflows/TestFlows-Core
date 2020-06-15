@@ -982,6 +982,12 @@ class Scenario(Test):
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Scenario, cls).__new__(cls, name, **kwargs)
 
+class Outline(Test):
+    def __new__(cls, name=None, **kwargs):
+        kwargs["subtype"] = TestSubType.Scenario
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(Outline, cls).__new__(cls, name, **kwargs)
+
 class BackgroundTest(TestBase):
     def __init__(self, *args, **kwargs):
         self.contexts = []
@@ -1060,21 +1066,32 @@ class TestDecorator(object):
     def __run__(self, **args):
         test = current()
 
-        def run(test):
-            r = self.func(test, **args)
+        def process_func_result(r):
             def run_generator(r):
                 return next(r)
+
             if inspect.isgenerator(r):
                 res = run_generator(r)
                 test.context.cleanup(run_generator, r)
                 r = res
+
+            return r
+
+        def run(test):
+            if self.type is Outline and not args and test.examples:
+                for example in test.examples:
+                    with Example(name=example, args=vars(example)) as _example:
+                        process_func_result(self.func(_example, **vars(example)))
+                r = test
+            else:
+                r = process_func_result(self.func(test, **args))
             return r
 
         if test is None or (test is not None and test.type > self.type.type):
             kwargs = dict(self.func.kwargs)
             kwargs["args"] = dict(kwargs.get("args", {}))
-            kwargs["args"].update(args)
-            return self.type(**kwargs, run=self)
+            kwargs.pop("test", None)
+            return self.type(**kwargs, test=self)(**args)
         else:
             return run(test)
 
@@ -1111,6 +1128,9 @@ class TestCase(TestDecorator):
 
 class TestScenario(TestCase):
     type = Scenario
+
+class TestOutline(TestCase):
+    type = Outline
 
 class TestSuite(TestDecorator):
     type = Suite
