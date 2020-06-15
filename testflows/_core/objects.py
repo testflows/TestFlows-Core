@@ -289,7 +289,7 @@ class Ticket(TestObject):
         self.uid = get(uid, self.uid)
         return super(Ticket, self).__init__()
 
-class Example(TestObject):
+class ExamplesRow(TestObject):
     _fields = ("row", "columns", "values", "row_format")
     _defaults = (None,)
     def __init__(self, row, columns, values, row_format=None):

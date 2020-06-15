@@ -20,6 +20,7 @@ class TestType(IntEnum):
     Suite = 30
     Test = 20
     Iteration = 15
+    Example = 13
     Step = 10
 
 class TestSubType(IntEnum):

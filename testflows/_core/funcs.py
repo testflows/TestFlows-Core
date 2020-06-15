@@ -23,7 +23,7 @@ from .exceptions import ResultException
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Value, Metric, Ticket
+from .objects import Value, Metric, Ticket, ExamplesTable
 from .testtype import TestSubType
 from .filters import the
 
@@ -262,7 +262,21 @@ class xflags(dict):
         self[pattern] = [Flags(set_flags), Flags(clear_flags)]
         return self
 
+class tags(set):
+    """tags container."""
+    def __init__(self, tag, *tags):
+        if type(tag) in (tuple, set):
+            tag = list(tag)
+        else:
+            tag = [tag]
+        return super(tags, self).__init__(tags + tag)
+
+class examples(ExamplesTable):
+    """examples container."""
+    pass
+
 class repeat(namedtuple("repeat", "pattern number until", defaults=("fail",))):
+    """repeat container."""
     def __new__(cls, *args):
         args = list(args)
         l = len(args)

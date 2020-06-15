@@ -69,6 +69,65 @@ class TestArg(TestObject):
     """
     pass
 
+class RowType:
+    _fields = None
+
+    def __new__(cls, *values, **kwargs):
+        if cls is RowType:
+            raise TypeError("can't be created directly")
+        return super(RowType, cls).__new__(cls)
+
+    def __init__(self, *values, **kwargs):
+        if kwargs:
+            values = [kwargs[field] for field in self._fields]
+        fields = self._fields
+
+        if not fields:
+            raise TypeError("fields must be specified")
+        if len(fields) > len(values):
+            raise TypeError("not enough values")
+        elif len(values) > len(fields):
+            raise TypeError("too many values")
+
+        self._values = list(values)
+        [setattr(self, name, value) for name, value in zip(fields, values)]
+
+    def _asdict(self):
+        return dict(zip(self._fields, self._values))
+
+    def keys(self):
+        return self._fields
+
+    def __getitem__(self, key):
+        if type(key) is int:
+            return self._values[key]
+        elif type(key) is slice:
+            return self._values[key]
+        return getattr(self, key)
+
+    def __str__(self):
+        return ", ".join(f"{k}={getattr(self, k)}" for k in self._fields)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self})"
+
+def Row(name_type, fields):
+    fields = str(fields).split(" ")
+
+    class CustomRow(RowType):
+        _fields = fields
+
+        def __new__(cls, *values, **kwargs):
+            cls.__name__ = name_type
+            if kwargs:
+                if set(kwargs.keys()) != set(cls._fields):
+                    raise TypeError("fields do not match")
+                if values:
+                    raise TypeError("can specify both values and key values")
+            return RowType.__new__(cls, *values, **kwargs)
+
+    return CustomRow
+
 class Table(TestObject, tuple):
     _fields = ("header", "rows", "row_format")
     _defaults = (None, ) * 3
@@ -79,7 +138,9 @@ class Table(TestObject, tuple):
             rows = []
         if header is None:
             header = ""
-        row_type = namedtuple(cls._row_type_name, header)
+
+        row_type = Row(cls._row_type_name, header)
+
         obj = tuple.__new__(Table, [row_type(*row) for row in rows])
         obj.initargs=InitArgs(
             args=[header, rows, row_format],

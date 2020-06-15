@@ -23,7 +23,7 @@ from .compress import compress
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message, MessageObjectType, dumps
-from .objects import Tag, Metric, Example
+from .objects import Tag, Metric, ExamplesRow
 from .funcs import top
 from . import __version__
 
@@ -139,7 +139,7 @@ class TestOutput(object):
         [self.requirement(req) for req in self.test.requirements.values()]
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
-        [self.example(Example(idx, row._fields, list(row), self.test.examples.row_format)) for idx, row in enumerate(self.test.examples)]
+        [self.example(ExamplesRow(idx, row._fields, list(row), self.test.examples.row_format)) for idx, row in enumerate(self.test.examples)]
         if self.test.node:
             self.node(self.test.node)
         if self.test.map:

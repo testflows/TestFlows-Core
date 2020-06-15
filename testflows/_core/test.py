@@ -432,7 +432,7 @@ class TestBase(object):
         """
         if args is None:
             args = dict()
-        name = name.format(**{"$cls": cls}, **args) if name is not None else cls.name
+        name = str(name).format(**{"$cls": cls}, **args) if name is not None else cls.name
         if name is None:
             raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
@@ -942,11 +942,20 @@ class Iteration(TestDefinition):
     """Test iteration definition."""
     type = TestType.Iteration
 
-    def __new__(cls, name, **kwargs):
+    def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Iteration
         parent_type = kwargs.pop("parent_type", TestType.Test)
         self = super(Iteration, cls).__new__(cls, name, **kwargs)
         self.parent_type = parent_type
+        return self
+
+class Example(TestDefinition):
+    """Example definition."""
+    type = TestType.Example
+
+    def __new__(cls, name=None, **kwargs):
+        kwargs["type"] = TestType.Example
+        self = super(Example, cls).__new__(cls, name, **kwargs)
         return self
 
 class Step(TestDefinition):

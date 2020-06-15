@@ -174,6 +174,8 @@ def format_test(msg, keyword):
             keyword += "Suite"
     elif test_type == TestType.Iteration:
         keyword += "Iteration"
+    elif test_type == TestType.Example:
+        keyword += "Example"
     elif test_type == TestType.Step:
         if test_subtype == TestSubType.And:
             keyword += "And"
