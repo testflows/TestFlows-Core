@@ -984,6 +984,11 @@ class Scenario(Test):
 
 class Outline(Test):
     def __new__(cls, name=None, **kwargs):
+        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
+        return super(Outline, cls).__new__(cls, name, **kwargs)
+
+class ScenarioOutline(Outline):
+    def __new__(cls, name=None, **kwargs):
         kwargs["subtype"] = TestSubType.Scenario
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Outline, cls).__new__(cls, name, **kwargs)
@@ -1078,7 +1083,7 @@ class TestDecorator(object):
             return r
 
         def run(test):
-            if self.type is Outline and not args and test.examples:
+            if issubclass(self.type, Outline) and not args and test.examples:
                 for example in test.examples:
                     with Example(name=example, args=vars(example)) as _example:
                         process_func_result(self.func(_example, **vars(example)))
@@ -1129,8 +1134,11 @@ class TestCase(TestDecorator):
 class TestScenario(TestCase):
     type = Scenario
 
-class TestOutline(TestCase):
+class TestCaseOutline(TestCase):
     type = Outline
+
+class TestScenarioOutline(TestCase):
+    type = ScenarioOutline
 
 class TestSuite(TestDecorator):
     type = Suite
