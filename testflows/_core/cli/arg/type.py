@@ -136,3 +136,18 @@ def repeat(value):
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
+
+def tags_filter(value):
+    try:
+        type, cvstags = value.split(":", 1)
+        assert type in ["test", "suite", "module", "feature", "scenario"]
+        tags = list(csv.reader([cvstags],"unix"))[-1]
+        if type == "scenario":
+            type = "test"
+        elif type == "feature":
+            type = suite
+        option = {type: set(tags)}
+    except Exception as e:
+        raise ArgumentTypeError(f"'{value}' is invalid")
+    return option
+

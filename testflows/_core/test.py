@@ -38,10 +38,10 @@ from .funcs import xfails, xflags, repeat
 from .init import init
 from .cli.arg.parser import ArgumentParser
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type, repeat as repeat_type
+from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
-from .filters import the
+from .filters import the, the_tags
 
 try:
     import testflows.database as database_module
@@ -186,6 +186,10 @@ class TestBase(object):
             ':' matches anything at the current path level
           for a literal match, wrap the meta-characters in brackets
           where '[?]' matches the character '?'.
+        
+        type
+          test type either 'test','suite','module','scenario', or 'feature'
+        
         """
         parser = ArgumentParser(
                 prog=sys.argv[0],
@@ -206,6 +210,12 @@ class TestBase(object):
             help="start at the selected test", type=str, required=False)
         parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
             help="end at the selected test", type=str, required=False)
+        parser.add_argument("--only-tags", dest="_only_tags",
+            help="run only tests with selected tags.",
+            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+        parser.add_argument("--skip-tags", dest="_skip_tags",
+            help="skip tests with selected tags.",
+            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
         parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
             help="pause before executing selected tests", type=str, required=False)
         parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
@@ -225,15 +235,15 @@ class TestBase(object):
             help="show skipped tests, default: False", default=False)
         parser.add_argument("--repeat", dest="_repeat",
             help=("number of times to repeat a test until it either fails or passes.\n"
-                  "Where the `pattern` is a test name pattern, "
-                  "the `number` is a number times to repeat the test, "
-                  "the `until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
+                  "Where `pattern` is a test name pattern, "
+                  "`number` is a number times to repeat the test, "
+                  "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
             type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
         if database_module:
             database_module.argparser(parser)
         return parser
 
-    def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None,
+    def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None, only_tags=None, skip_tags=None,
             name=None, tags=None, attributes=None, repeat=None):
         """Parse command line arguments.
 
@@ -321,6 +331,18 @@ class TestBase(object):
                 pattern = args.pop("_end")[0]
                 end = the(pattern).at(name)
 
+            if args.get("_only_tags"):
+                _only_tags = {}
+                for item in args.pop("_only_tags"):
+                    _only_tags.update(item)
+                only_tags = the_tags(**_only_tags)
+
+            if args.get("_skip_tags"):
+                _skip_tags = {}
+                for item in args.pop("_skip_tags"):
+                    _skip_tags.update(item)
+                skip_tags = the_tags(**_skip_tags)
+
             if args.get("_tags"):
                 tags = {value for value in args.pop("_tags")}
 
@@ -341,13 +363,14 @@ class TestBase(object):
             else:
                 sys.exit(1)
 
-        return args, xflags, only, skip, start, end, name, tags, attributes, repeat
+        return args, xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
                  examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
-                 start=None, end=None, args=None, id=None, node=None, map=None, context=None,
+                 start=None, end=None, only_tags=None, skip_tags=None,
+                 args=None, id=None, node=None, map=None, context=None,
                  repeat=None, _frame=None):
 
         self.lock = threading.Lock()
@@ -361,8 +384,8 @@ class TestBase(object):
             self._init= False
             frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
             if main(frame):
-                cli_args, xflags, only, skip, start, end, name, tags, attributes, repeat = self.parse_cli_args(
-                    xflags, only, skip, start, end, name, tags, attributes, repeat)
+                cli_args, xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat = self.parse_cli_args(
+                    xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat)
 
         self.name = name
         if self.name is None:
@@ -394,6 +417,8 @@ class TestBase(object):
         self.skip = get(skip, None)
         self.start = get(start, None)
         self.end = get(end, None)
+        self.only_tags = get(only_tags, None)
+        self.skip_tags = get(skip_tags, None)
         self.repeat = get(repeat, None)
         self.caller_test = None
 
@@ -626,6 +651,8 @@ class TestDefinition(object):
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
                 kwargs["start"] = parent.start or kwargs.get("start")
                 kwargs["end"] = parent.end or kwargs.get("end")
+                kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
+                kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
                 # propagate repeat
                 if parent.repeat and parent.type > TestType.Test and self.type >= TestType.Test:
                     kwargs["repeat"] = parent.repeat
@@ -635,7 +662,7 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.child_count += 1
 
-            tags = test.make_tags(kwargs.pop("tags", None))
+            self.tags = test.make_tags(kwargs.pop("tags", None))
 
             # anchor all patterns
             kwargs["xfails"] = xfails({
@@ -651,11 +678,13 @@ class TestDefinition(object):
             kwargs["repeat"] = [globals()["repeat"](r.pattern.at(name if name else name_sep),r.number,r.until) for r in kwargs.get("repeat", [])] or None
 
             self._apply_xflags(name, kwargs)
-            self._apply_start(name, tags, parent, kwargs)
-            self._apply_skip(name, tags, kwargs)
-            self._apply_only(name, tags, kwargs)
-            self._apply_end(name, tags, parent, kwargs)
-            self.tags = tags
+            self._apply_start(name, parent, kwargs)
+            self._apply_only_tags(self.type, self.tags, kwargs)
+            self._apply_skip_tags(self.type, self.tags, kwargs)
+            self._apply_only(name, kwargs)
+            self._apply_skip(name, kwargs)
+            self._apply_end(name, parent, kwargs)
+
             self.repeat = kwargs.pop("repeat", None)
 
             self.test = test(name, tags=self.tags, repeat=self.repeat, **kwargs)
@@ -690,23 +719,23 @@ class TestDefinition(object):
                 top(value=parent_top)
                 previous(value=parent_previous)
 
-    def _apply_end(self, name, tags, parent, kwargs):
+    def _apply_end(self, name, parent, kwargs):
         end = kwargs.get("end")
         if not end:
             return
 
-        if end.match(name, tags):
+        if end.match(name):
             if parent:
                 with parent.lock:
                     parent.end = None
                     parent.skip = [the("/*")]
 
-    def _apply_start(self, name, tags, parent, kwargs):
+    def _apply_start(self, name, parent, kwargs):
         start = kwargs.get("start")
         if not start:
             return
 
-        if not start.match(name, tags):
+        if not start.match(name):
             kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
         else:
             kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
@@ -714,15 +743,33 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.start = None
 
-    def _apply_repeat(self, name, tags, repeat):
+    def _apply_repeat(self, name, repeat):
         if not repeat:
             return
 
         for item in repeat:
-            if item.pattern.match(name, tags, prefix=False):
+            if item.pattern.match(name,prefix=False):
                 return item
 
-    def _apply_only(self, name, tags, kwargs):
+    def _apply_only_tags(self, type, tags, kwargs):
+        only_tags = (kwargs.get("only_tags", {}) or {}).get(type)
+        if not only_tags:
+            return
+
+        found = len({tag for tag in only_tags if tag in tags}) > 0
+        if not found:
+            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+
+    def _apply_skip_tags(self, type, tags, kwargs):
+        skip_tags = (kwargs.get("skip_tags", {}) or {}).get(type)
+        if not skip_tags:
+            return
+
+        found = len({tag for tag in skip_tags if tag in tags}) > 0
+        if found:
+            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+
+    def _apply_only(self, name, kwargs):
         only = kwargs.get("only")
         if not only:
             return
@@ -733,20 +780,20 @@ class TestDefinition(object):
 
         found = False
         for item in only:
-            if item.match(name, tags):
+            if item.match(name):
                 found = True
                 break
 
         if not found:
             kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
 
-    def _apply_skip(self, name, tags, kwargs):
+    def _apply_skip(self, name, kwargs):
         skip = kwargs.get("skip")
         if not skip:
             return
 
         for item in skip:
-            if item.match(name, tags, prefix=False):
+            if item.match(name, prefix=False):
                 kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
                 break
 

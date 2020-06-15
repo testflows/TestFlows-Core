@@ -15,16 +15,15 @@
 # to the end flag
 from .name import absname, match
 from .baseobject import TestObject
+from .testtype import TestType
 
 class the(TestObject):
     """The `only`, `skip`, `start` and `end` test filer object.
     """
-    _fields = ("pattern", "tags")
-    _defaults = (None,)
+    _fields = ("pattern",)
 
-    def __init__(self, pattern, tags=None):
+    def __init__(self, pattern):
         self.pattern = pattern
-        self.tags = set(tags if tags is not None else [])
         super(the, self).__init__()
 
     def at(self, at):
@@ -33,13 +32,15 @@ class the(TestObject):
         self.pattern = absname(self.pattern, at)
         return self
 
-    def match(self, name, tags=None, prefix=True):
-        if tags is None:
-            tags = set()
-
+    def match(self, name, prefix=True):
         if match(name, self.pattern, prefix=prefix):
-            if self.tags:
-                if tags.issubset(self.tags):
-                    return True
-                return False
             return True
+
+class the_tags(dict):
+    """Tags filter object.
+    """
+    def __init__(self, test=None, suite=None, module=None):
+        test = set(test) if test is not None else set()
+        suite = set(suite) if suite is not None else set()
+        module = set(module) if module is not None else set()
+        super(the_tags, self).__init__({TestType.Test:test, TestType.Suite: suite, TestType.Module: module})
