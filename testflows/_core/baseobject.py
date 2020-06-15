@@ -114,6 +114,10 @@ class RowType:
 def Row(name_type, fields):
     fields = str(fields).split(" ")
 
+    for field in fields:
+        if field.startswith("_") or field == "keys":
+            raise TypeError(f"'{field}' is not a valid field name")
+
     class CustomRow(RowType):
         _fields = fields
 
