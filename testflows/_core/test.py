@@ -692,7 +692,7 @@ class TestDefinition(object):
                 self.test.parent_type = self.parent_type
 
             if self.repeat is not None:
-                repeat = self._apply_repeat(name, tags, self.repeat)
+                repeat = self._apply_repeat(name, self.repeat)
                 if repeat is not None:
                     self.trace = sys.gettrace()
                     sys.settrace(dummy)
@@ -951,10 +951,9 @@ class Iteration(TestDefinition):
 
 class Example(TestDefinition):
     """Example definition."""
-    type = TestType.Example
-
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.Example
+        kwargs["type"] = kwargs.pop("type", cls.type)
+        kwargs["subtype"] = TestSubType.Example
         self = super(Example, cls).__new__(cls, name, **kwargs)
         return self
 
@@ -981,17 +980,6 @@ class Scenario(Test):
         kwargs["subtype"] = TestSubType.Scenario
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Scenario, cls).__new__(cls, name, **kwargs)
-
-class Outline(Test):
-    def __new__(cls, name=None, **kwargs):
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Outline, cls).__new__(cls, name, **kwargs)
-
-class ScenarioOutline(Outline):
-    def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Scenario
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
-        return super(Outline, cls).__new__(cls, name, **kwargs)
 
 class BackgroundTest(TestBase):
     def __init__(self, *args, **kwargs):
@@ -1049,6 +1037,7 @@ class NullStep():
 # decorators
 class TestDecorator(object):
     type = Test
+    outline = False
 
     def __init__(self, func):
         self.func = func
@@ -1058,8 +1047,8 @@ class TestDecorator(object):
         self.func._frame = inspect.currentframe().f_back
         self.func.name = getattr(self.func, "name", self.func.__name__.replace("_", " "))
         self.func.description = getattr(self.func, "description", self.func.__doc__)
-
         kwargs = dict(vars(self.func))
+        self.outline = kwargs.pop("outline", False)
         signature = inspect.signature(self.func)
         kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty}
         
@@ -1083,9 +1072,13 @@ class TestDecorator(object):
             return r
 
         def run(test):
-            if issubclass(self.type, Outline) and not args and test.examples:
+            if self.outline and not args and test.examples:
                 for example in test.examples:
-                    with Example(name=example, args=vars(example)) as _example:
+                    if test.type == TestType.Iteration:
+                        type = test.parent_type
+                    else:
+                        type = test.type
+                    with Example(name=example, args=vars(example), type=type) as _example:
                         process_func_result(self.func(_example, **vars(example)))
                 r = test
             else:
@@ -1134,12 +1127,6 @@ class TestCase(TestDecorator):
 class TestScenario(TestCase):
     type = Scenario
 
-class TestCaseOutline(TestCase):
-    type = Outline
-
-class TestScenarioOutline(TestCase):
-    type = ScenarioOutline
-
 class TestSuite(TestDecorator):
     type = Suite
 
@@ -1181,6 +1168,10 @@ class Description(object):
     def __call__(self, func):
         func.description = self.description
         return func
+
+def Outline(func):
+    func.outline = True
+    return func
 
 class Examples(object):
     def __init__(self, header, rows, row_format=None):

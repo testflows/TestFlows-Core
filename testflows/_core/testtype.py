@@ -20,13 +20,13 @@ class TestType(IntEnum):
     Suite = 30
     Test = 20
     Iteration = 15
-    Example = 13
     Step = 10
 
 class TestSubType(IntEnum):
     """Test behaviour subtype."""
     Feature = 60
     Scenario = 50
+    Example = 45
     Background = 40
     Given = 30
     When = 20

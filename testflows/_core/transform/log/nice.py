@@ -165,7 +165,9 @@ def format_test(msg, keyword):
     test_type = get_type(msg)
     test_subtype = get_subtype(msg)
 
-    if test_type == TestType.Module:
+    if test_subtype == TestSubType.Example:
+        keyword += "Example"
+    elif test_type == TestType.Module:
         keyword += "Module"
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:
@@ -174,8 +176,6 @@ def format_test(msg, keyword):
             keyword += "Suite"
     elif test_type == TestType.Iteration:
         keyword += "Iteration"
-    elif test_type == TestType.Example:
-        keyword += "Example"
     elif test_type == TestType.Step:
         if test_subtype == TestSubType.And:
             keyword += "And"

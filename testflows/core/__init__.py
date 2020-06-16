@@ -16,10 +16,10 @@ from testflows._core.test import TestBase
 from testflows._core.test import Module, Suite, Test, Step, NullStep
 from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, TestBackground
 from testflows._core.test import Attributes, Requirements, Examples
-from testflows._core.test import Name, Description, Uid, Tags, TestClass, Context
-from testflows._core.test import Feature, Background, Scenario, Example, Outline, ScenarioOutline
+from testflows._core.test import Name, Description, Uid, Tags, TestClass, Context, Outline
+from testflows._core.test import Feature, Background, Scenario, Example
 from testflows._core.test import Given, When, Then, And, But, By, Finally
-from testflows._core.test import TestFeature, TestScenario, TestCaseOutline, TestScenarioOutline
+from testflows._core.test import TestFeature, TestScenario
 from testflows._core.test import tests, cases, scenarios, steps, suites, features
 from testflows._core.test import xfails, xflags, repeat, the, the_tags
 from testflows._core.funcs import *

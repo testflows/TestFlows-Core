@@ -22,7 +22,8 @@ def check_water_types(self):
         with When(f"for example {example}"):
             check_water(**example._asdict())
 
-@TestCaseOutline
+@TestCase
+@Outline
 @Examples(
     header="water_type temperature",
     rows=[
@@ -33,7 +34,8 @@ def check_water_types(self):
 def check_water_type_outline(self, water_type, temperature):
     check_water(water_type=water_type, temperature=temperature)
 
-@TestScenarioOutline
+@TestScenario
+@Outline
 @Examples(
     header="water_type temperature",
     rows=[
@@ -64,8 +66,44 @@ examples = ExamplesTable(
     ]
 )
 
+@TestSuite
+@Outline
+@Examples(
+    header="name",
+    rows = [
+        ("vitaliy",),
+        ("natalia",)
+    ]
+)
+def suite_outline(self, name):
+    note(f"hello {name}")
+    Scenario("check water types 0", run=check_water_types)
+
+@TestStep
+@Outline
+@Examples(
+    header="name",
+    rows = [
+        ("vitaliy",),
+        ("natalia",)
+    ]
+)
+def step_outline(self, name):
+    note(f"hello {name}")
+
 @TestFeature
-def with_examples(self):
+#@Outline
+@Examples(
+    header="name",
+    rows = [
+        ("vitaliy",),
+        ("natalia",)
+    ]
+)
+def with_examples(self, name=None):
+    with When(test=step_outline):
+        step_outline()
+    Suite(test=suite_outline)()
     Scenario("check water types 0", run=check_water_types)
     Scenario("check water types 1", run=check_water_types, examples=examples) 
     Scenario("check more water types 0", run=check_more_water_types)
@@ -78,13 +116,6 @@ def with_examples(self):
     with Scenario("my water types", examples=examples):
         check_water_type_outline()
         check_water_type_outline(water_type='cold', temperature='5C')
-    with Outline("my outline", test=check_water_type_outline):
-        check_water_type_outline()
-    Outline("my outline", run=check_water_type_outline)
-    with ScenarioOutline("my scenario outline", test=check_water_type_outline):
-        check_water_type_outline()
-    ScenarioOutline("my scenario outline", run=check_water_type_outline)
-
 
 if main():
     with_examples()
