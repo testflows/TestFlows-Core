@@ -21,7 +21,7 @@ from testflows._core.test import Feature, Background, Scenario, Example
 from testflows._core.test import Given, When, Then, And, But, By, Finally
 from testflows._core.test import TestFeature, TestScenario
 from testflows._core.test import tests, cases, scenarios, steps, suites, features
-from testflows._core.test import xfails, xflags, repeat, the, the_tags
+from testflows._core.filters import the, the_tags
 from testflows._core.funcs import *
 from testflows._core.objects import *
 from testflows._core.name import *

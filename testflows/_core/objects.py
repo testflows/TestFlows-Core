@@ -300,9 +300,3 @@ class ExamplesRow(TestObject):
 
 class ExamplesTable(Table):
     _row_type_name = "Example"
-
-    @classmethod
-    def from_table(cls, table):
-        """Create examples table from a table.
-        """
-        return cls(header=" ".join(table.row_type._fields), rows=table, row_format=table.row_format)

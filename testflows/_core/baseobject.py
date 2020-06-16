@@ -127,3 +127,9 @@ class Table(TestObject, tuple):
         s = [Table.__str_header__(self.row_type._fields, self.row_format)]
         s += [Table.__str_row__(row, self.row_format) for row in self]
         return "\n".join(s)
+
+    @classmethod
+    def from_table(cls, table):
+        """Creates table from a table.
+        """
+        return cls(header=" ".join(table.row_type._fields), rows=table, row_format=table.row_format)

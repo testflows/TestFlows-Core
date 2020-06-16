@@ -23,9 +23,16 @@ from .exceptions import ResultException
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Value, Metric, Ticket, ExamplesTable
+from .objects import Value, Metric, Ticket, ExamplesTable, Table
 from .testtype import TestSubType
 from .filters import the
+
+__all__ = ['top', 'current', 'previous', 'load', 'append_path',
+    'main', 'args', 'metric', 'ticket', 'value', 'note', 'debug',
+    'trace', 'message', 'exception', 'ok', 'fail', 'skip', 'error',
+    'null', 'xok', 'xfail', 'xerror', 'xnull', 'pause', 'getsattr',
+    'xfails', 'xflags', 'tags', 'examples', 'table', 'repeat'
+    ]
 
 #: thread local values
 _current_test = {}
@@ -273,6 +280,10 @@ class tags(set):
 
 class examples(ExamplesTable):
     """examples container."""
+    pass
+
+class table(Table):
+    """table container."""
     pass
 
 class repeat(namedtuple("repeat", "pattern number until", defaults=("fail",))):
