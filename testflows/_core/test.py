@@ -43,6 +43,7 @@ from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, ta
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import the, thetags
+from .utils.sort import human as human_sort
 
 try:
     import testflows.database as database_module
@@ -1236,7 +1237,7 @@ def tests(module=None, *types, frame=None):
     def is_type(member):
         return isinstance(member, types)
 
-    return [test for name, test in inspect.getmembers(module, is_type)]
+    return human_sort([test for name, test in inspect.getmembers(module, is_type)], key=lambda test: test.__name__)
 
 def cases(module=None, *types, frame=None):
     if not types:

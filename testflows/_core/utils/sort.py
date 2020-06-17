@@ -14,12 +14,16 @@
 # limitations under the License.
 import re
 
-def human(l):
+def human(l, key=None):
     """Sort in human readable format.
 
     Credit: https://blog.codinghorror.com/sorting-for-humans-natural-sort-order/
+    :key: optional function to retrieve the key from the element
     """
+    get_key = key
+    if get_key is None:
+        get_key = lambda x: x
     convert = lambda text: int(text) if text.isdigit() else text
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', key) ]
+    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', get_key(key)) ]
     l.sort(key=alphanum_key)
     return l
