@@ -14,6 +14,7 @@
 # limitations under the License.
 import re
 
+from testflows._core import __version__
 from testflows._core.utils.strip import wstrip
 from testflows._core.contrib.arpeggio import RegExMatch as _
 from testflows._core.contrib.arpeggio import OneOrMore, ZeroOrMore, EOF, Optional, Not
@@ -37,11 +38,12 @@ template = """
 class Visitor(PTNodeVisitor):
     def __init__(self, *args, **kwargs):
         self.output = (
-            "# These are auto generated requirements from an SRS document.\n"
+            "# These requirements were auto generated\n"
+            "# from software requirements specification (SRS)\n"
+            f"# document by TestFlows v{__version__}.\n"
             "# Do not edit by hand but re-generate instead\n"
-            "# using \"tfs requirement generate\" command.\n"
-            "#\n"
-            "from testflows.core import Requirement\n\n"
+            "# using \'tfs requirements generate\' command.\n"
+            "from testflows.core.objects import Requirement\n\n"
             )
         self.pyname_fmt = re.compile(r"[^a-zA-Z0-9]")
         super(Visitor, self).__init__(*args, **kwargs)
