@@ -386,8 +386,10 @@ class TestDefinition(object):
                 kwargs["test"] = run
             elif isinstance(run, TestDefinition):
                 kwargs = inherit_kwargs(**run.kwargs, **({"name": run.name} if run.name is not None else {}))
-            else:
+            elif isinstance(run, TestBase):
                 kwargs["test"] = run
+            else:
+                raise TypeError(f"'{run}' is not a valid test type")
             return cls.__create__(**kwargs)()
 
         if test:
@@ -396,8 +398,10 @@ class TestDefinition(object):
                 kwargs["test"] = test
             elif isinstance(test, TestDefinition):
                 kwargs = inherit_kwargs(**test.kwargs, **({"name": test.name} if test.name is not None else {}))
-            else:
+            elif isinstance(test, TestBase):
                 kwargs["test"] = test
+            else:
+                raise TypeError(f"'{test}' is not a valid test type")
 
         return cls.__create__(**kwargs)
 
@@ -421,7 +425,7 @@ class TestDefinition(object):
         """
         main_parser = ArgumentParserClass(
             prog=sys.argv[0],
-            description=self.kwargs.get("description", ""),
+            description=self.kwargs.get("description"),
             description_prog="Test - Framework",
             epilog = epilog
         )

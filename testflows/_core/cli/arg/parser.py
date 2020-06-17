@@ -38,7 +38,7 @@ class ArgumentParser(ArgumentParserBase):
     def __init__(self, *args, **kwargs):
         description_prog = kwargs.pop("description_prog", None)
         kwargs["epilog"] = kwargs.pop("epilog", epilog())
-        kwargs["description"] = description(textwrap.dedent(kwargs.pop("description", "")), prog=description_prog)
+        kwargs["description"] = description(textwrap.dedent(kwargs.pop("description", None) or ""), prog=description_prog)
         kwargs["formatter_class"] = kwargs.pop("formatter_class", HelpFormatter)
         return super(ArgumentParser, self).__init__(*args, **kwargs)
 
