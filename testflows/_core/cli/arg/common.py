@@ -100,4 +100,4 @@ def description(description=None, prog=None, version=None):
 
 def epilog():
     """Return argument parser epilog"""
-    return white("""Copyright %d Katteli Inc.""" % datetime.now().year, attrs=["dim"])
+    return white(f"TestFlows Test Framework. Copyright {datetime.now().year} Katteli Inc.", attrs=["dim"])

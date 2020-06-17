@@ -18,3 +18,4 @@ from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement,
 from testflows._core.objects import ExamplesTable
 from testflows._core.baseobject import Table
 from testflows._core.flags import Flags
+from testflows._core.test import TestDecorator, TestDefinition, TestBase

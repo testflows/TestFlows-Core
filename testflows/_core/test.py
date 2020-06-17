@@ -36,7 +36,8 @@ from .name import join, depth, match, absname
 from .funcs import current, top, previous, main, exception, pause
 from .funcs import xfails, xflags, repeat
 from .init import init
-from .cli.arg.parser import ArgumentParser
+from .cli.arg.parser import ArgumentParser as ArgumentParserClass
+from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.text import danger, warning
@@ -165,227 +166,22 @@ class TestBase(object):
     type = TestType.Test
     subtype = None
 
-    @classmethod
-    def argparser(cls):
-        """Command line argument parser.
-
-        :return: argument parser
-        """
-        definitions_description = """
-        
-        Option values
-        
-        pattern 
-          used to match test names using a unix-like file path pattern
-          that supports wildcards
-            '/' path level separator
-            '*' matches everything
-            '?' matches any single character
-            '[seq]' matches any character in seq
-            '[!seq]' matches any character not in seq
-            ':' matches anything at the current path level
-          for a literal match, wrap the meta-characters in brackets
-          where '[?]' matches the character '?'.
-        
-        type
-          test type either 'test','suite','module','scenario', or 'feature'
-        
-        """
-        parser = ArgumentParser(
-                prog=sys.argv[0],
-                description=((cls.description or "") + definitions_description),
-                description_prog="Test - Framework"
-            )
-        parser.add_argument("--name", dest="_name", metavar="name",
-            help="test run name", type=str, required=False)
-        parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
-            help="test run tags", type=str, required=False)
-        parser.add_argument("--attr", dest="_attrs", metavar="name=value", nargs="+",
-            help="test run attributes", type=key_value_type, required=False)
-        parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
-            help="run only selected tests", type=str, required=False)
-        parser.add_argument("--skip", dest="_skip", metavar="pattern",
-            help="skip selected tests", type=str, nargs="+", required=False)
-        parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
-            help="start at the selected test", type=str, required=False)
-        parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
-            help="end at the selected test", type=str, required=False)
-        parser.add_argument("--only-tags", dest="_only_tags",
-            help="run only tests with selected tags.",
-            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
-        parser.add_argument("--skip-tags", dest="_skip_tags",
-            help="skip tests with selected tags.",
-            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
-        parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
-            help="pause before executing selected tests", type=str, required=False)
-        parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
-            help="pause after executing selected tests", type=str, required=False)
-        parser.add_argument("--debug", dest="_debug", action="store_true",
-            help="enable debugging mode", default=False)
-        parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
-            help="disable terminal color highlighting", default=False)
-        parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
-        parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-            choices=["slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
-            help="""stdout output format, choices are: ['slick','nice','short','dots','quiet','raw'],
-                default: 'nice'""")
-        parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
-            help="path to the log file where test output will be stored, default: uses temporary log file")
-        parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
-            help="show skipped tests, default: False", default=False)
-        parser.add_argument("--repeat", dest="_repeat",
-            help=("number of times to repeat a test until it either fails or passes.\n"
-                  "Where `pattern` is a test name pattern, "
-                  "`number` is a number times to repeat the test, "
-                  "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
-            type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
-        if database_module:
-            database_module.argparser(parser)
-        return parser
-
-    def parse_cli_args(self, xflags=None, only=None, skip=None, start=None, end=None, only_tags=None, skip_tags=None,
-            name=None, tags=None, attributes=None, repeat=None):
-        """Parse command line arguments.
-
-        :return: parsed known arguments
-        """
-        try:
-            parser = self.argparser()
-            args, unknown = parser.parse_known_args()
-            args = vars(args)
-
-            if args.get("_name"):
-                name = args.pop("_name")
-
-            if name is None:
-                raise TypeError("name must be specified")
-
-            if args.get("_debug"):
-                settings.debug = True
-                args.pop("_debug")
-
-            if args.get("_no_colors"):
-                settings.no_colors = True
-                args.pop("_no_colors")
-
-            if unknown:
-                raise ExitWithError(f"unknown argument {unknown}")
-
-            if args.get("_id"):
-                settings.test_id = args.get("_id")
-                args.pop("_id")
-
-            if args.get("_log"):
-                logfile = os.path.abspath(args.get("_log"))
-                settings.write_logfile = logfile
-                args.pop("_log")
-            else:
-                settings.write_logfile = os.path.join(tempfile.gettempdir(), f"testflows.{os.getpid()}.log")
-
-            settings.read_logfile = settings.write_logfile
-            if os.path.exists(settings.write_logfile):
-                os.remove(settings.write_logfile)
-
-            settings.output_format = args.pop("_output")
-
-            if args.get("_database"):
-                settings.database = args.pop("_database")
-
-            if args.get("_show_skipped"):
-                settings.show_skipped = True
-                args.pop("_show_skipped")
-
-            if args.get("_pause_before"):
-                if not xflags:
-                    xflags = globals()["xflags"]()
-                for pattern in args.get("_pause_before"):
-                    pattern = absname(pattern, name)
-                    xflags[pattern] = xflags.get(pattern, [0, 0])
-                    xflags[pattern][0] |= PAUSE_BEFORE
-                args.pop("_pause_before")
-
-            if args.get("_pause_after"):
-                if not xflags:
-                    xflags = globals()["xflags"]()
-                for pattern in args.get("_pause_after"):
-                    pattern = absname(pattern, name)
-                    xflags[pattern] = xflags.get(pattern, [0, 0])
-                    xflags[pattern][0] |= PAUSE_AFTER
-                args.pop("_pause_after")
-
-            if args.get("_only"):
-                only = []
-                for pattern in args.pop("_only"):
-                    only.append(the(pattern).at(name))
-
-            if args.get("_skip"):
-                skip = []
-                for pattern in args.pop("_skip"):
-                    skip.append(the(pattern).at(name))
-
-            if args.get("_start"):
-                pattern = args.pop("_start")[0]
-                start = the(pattern).at(name)
-
-            if args.get("_end"):
-                pattern = args.pop("_end")[0]
-                end = the(pattern).at(name)
-
-            if args.get("_only_tags"):
-                _only_tags = {}
-                for item in args.pop("_only_tags"):
-                    _only_tags.update(item)
-                only_tags = thetags(**_only_tags)
-
-            if args.get("_skip_tags"):
-                _skip_tags = {}
-                for item in args.pop("_skip_tags"):
-                    _skip_tags.update(item)
-                skip_tags = thetags(**_skip_tags)
-
-            if args.get("_tags"):
-                tags = {value for value in args.pop("_tags")}
-
-            if args.get("_attrs"):
-                attributes = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
-
-            if args.get("_repeat"):
-                repeat = []
-                for item in args.pop("_repeat"):
-                    item.pattern.at(name)
-                    repeat.append(item)
-
-        except (ExitException, KeyboardInterrupt, Exception) as exc:
-            sys.stderr.write(warning(get_exception(), eol='\n'))
-            sys.stderr.write(danger("error: " + str(exc).strip()))
-            if isinstance(exc, ExitException):
-                sys.exit(exc.exitcode)
-            else:
-                sys.exit(1)
-
-        return args, xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat
-
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
                  examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeat=None, _frame=None):
+                 repeat=None):
 
         self.lock = threading.Lock()
 
-        cli_args = {}
         if current() is None:
             if top() is not None:
                 raise RuntimeError("only one top level test is allowed")
             top(self)
             # flag to indicate if main test called init
             self._init= False
-            frame = get(_frame, inspect.currentframe().f_back.f_back.f_back)
-            if main(frame):
-                cli_args, xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat = self.parse_cli_args(
-                    xflags, only, skip, start, end, only_tags, skip_tags, name, tags, attributes, repeat)
 
         self.name = name
         if self.name is None:
@@ -403,7 +199,6 @@ class TestBase(object):
         self.requirements = {r.name: r for r in get(requirements, list(self.requirements))}
         self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
         self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}
-        self.args.update({k: Argument(k, v) for k, v in cli_args.items() if not k.startswith("_")})
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.result = Null(test=self.name)
@@ -546,6 +341,24 @@ class TestBase(object):
         """
         return self.io.message_io(name=name)
 
+epilog = """
+option values:
+
+pattern
+  used to match test names using a unix-like file path pattern that supports wildcards
+    '/' path level separator
+    '*' matches everything
+    '?' matches any single character
+    '[seq]' matches any character in seq
+    '[!seq]' matches any character not in seq
+    ':' matches anything at the current path level
+  for a literal match, wrap the meta-characters in brackets where '[?]' matches the character '?'
+
+type
+  test type either 'test','suite','module','scenario', or 'feature'
+
+""" + common_epilog()
+
 class TestDefinition(object):
     """Test definition.
 
@@ -600,6 +413,194 @@ class TestDefinition(object):
         self.repeatable_func = None
         return self
 
+    def _argparser(self, argparser=None):
+        """Command line argument parser.
+
+        :argparser: test specific argument parser
+        :return: argument parser
+        """
+        main_parser = ArgumentParserClass(
+            prog=sys.argv[0],
+            description=self.kwargs.get("description", ""),
+            description_prog="Test - Framework",
+            epilog = epilog
+        )
+
+        if argparser:
+            argparser(main_parser.add_argument_group('test arguments'))
+
+        parser = main_parser.add_argument_group("common arguments")
+
+        parser.add_argument("--name", dest="_name", metavar="name",
+                            help="test run name", type=str, required=False)
+        parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
+                            help="test run tags", type=str, required=False)
+        parser.add_argument("--attr", dest="_attrs", metavar="name=value", nargs="+",
+                            help="test run attributes", type=key_value_type, required=False)
+        parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
+                            help="run only selected tests", type=str, required=False)
+        parser.add_argument("--skip", dest="_skip", metavar="pattern",
+                            help="skip selected tests", type=str, nargs="+", required=False)
+        parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
+                            help="start at the selected test", type=str, required=False)
+        parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
+                            help="end at the selected test", type=str, required=False)
+        parser.add_argument("--only-tags", dest="_only_tags",
+                            help="run only tests with selected tags.",
+                            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+        parser.add_argument("--skip-tags", dest="_skip_tags",
+                            help="skip tests with selected tags.",
+                            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+        parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
+                            help="pause before executing selected tests", type=str, required=False)
+        parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
+                            help="pause after executing selected tests", type=str, required=False)
+        parser.add_argument("--debug", dest="_debug", action="store_true",
+                            help="enable debugging mode", default=False)
+        parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
+                            help="disable terminal color highlighting", default=False)
+        parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
+        parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
+                            choices=["slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
+                            help="""stdout output format, choices are: ['slick','nice','short','dots','quiet','raw'],
+                default: 'nice'""")
+        parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
+                            help="path to the log file where test output will be stored, default: uses temporary log file")
+        parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
+                            help="show skipped tests, default: False", default=False)
+        parser.add_argument("--repeat", dest="_repeat",
+                            help=("number of times to repeat a test until it either fails or passes.\n"
+                                  "Where `pattern` is a test name pattern, "
+                                  "`number` is a number times to repeat the test, "
+                                  "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
+                            type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
+        if database_module:
+            database_module.argparser(parser)
+
+        return main_parser
+
+    def _parse_cli_args(self, parser):
+        """Parse command line arguments.
+
+        :parser: argument parser
+        :return: parsed known arguments
+        """
+        kwargs = self.kwargs
+        try:
+            args, unknown = parser.parse_known_args()
+            args = vars(args)
+
+            if args.get("_name"):
+                kwargs[name] = args.pop("_name")
+
+            if args.get("_debug"):
+                settings.debug = True
+                args.pop("_debug")
+
+            if args.get("_no_colors"):
+                settings.no_colors = True
+                args.pop("_no_colors")
+
+            if unknown:
+                raise ExitWithError(f"unknown argument {unknown}")
+
+            if args.get("_id"):
+                settings.test_id = args.get("_id")
+                args.pop("_id")
+
+            if args.get("_log"):
+                logfile = os.path.abspath(args.get("_log"))
+                settings.write_logfile = logfile
+                args.pop("_log")
+            else:
+                settings.write_logfile = os.path.join(tempfile.gettempdir(), f"testflows.{os.getpid()}.log")
+
+            settings.read_logfile = settings.write_logfile
+            if os.path.exists(settings.write_logfile):
+                os.remove(settings.write_logfile)
+
+            settings.output_format = args.pop("_output")
+
+            if args.get("_database"):
+                settings.database = args.pop("_database")
+
+            if args.get("_show_skipped"):
+                settings.show_skipped = True
+                args.pop("_show_skipped")
+
+            if args.get("_pause_before"):
+                xflags = kwargs.get("xflags", globals()["xflags"]())
+                for pattern in args.get("_pause_before"):
+                    pattern = absname(pattern, name)
+                    xflags[pattern] = xflags.get(pattern, [0, 0])
+                    xflags[pattern][0] |= PAUSE_BEFORE
+                kwargs["xflags"] = xflags
+                args.pop("_pause_before")
+
+            if args.get("_pause_after"):
+                xflags = kwargs.get("xflags", globals()["xflags"]())
+                for pattern in args.get("_pause_after"):
+                    pattern = absname(pattern, name)
+                    xflags[pattern] = xflags.get(pattern, [0, 0])
+                    xflags[pattern][0] |= PAUSE_AFTER
+                kwargs["xflags"] = xflags
+                args.pop("_pause_after")
+
+            if args.get("_only"):
+                only = []
+                for pattern in args.pop("_only"):
+                    only.append(the(pattern).at(name))
+                kwargs["only"] = only
+
+            if args.get("_skip"):
+                skip = []
+                for pattern in args.pop("_skip"):
+                    skip.append(the(pattern).at(name))
+                kwargs["skip"] = skip
+
+            if args.get("_start"):
+                pattern = args.pop("_start")[0]
+                kwargs["start"] = the(pattern).at(name)
+
+            if args.get("_end"):
+                pattern = args.pop("_end")[0]
+                kwargs["end"] = the(pattern).at(name)
+
+            if args.get("_only_tags"):
+                _only_tags = {}
+                for item in args.pop("_only_tags"):
+                    _only_tags.update(item)
+                kwargs["only_tags"] = thetags(**_only_tags)
+
+            if args.get("_skip_tags"):
+                _skip_tags = {}
+                for item in args.pop("_skip_tags"):
+                    _skip_tags.update(item)
+                kwargs["skip_tags"] = thetags(**_skip_tags)
+
+            if args.get("_tags"):
+                kwargs["tags"] = {value for value in args.pop("_tags")}
+
+            if args.get("_attrs"):
+                kwargs["attributes"] = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
+
+            if args.get("_repeat"):
+                repeat = []
+                for item in args.pop("_repeat"):
+                    item.pattern.at(name)
+                    repeat.append(item)
+                kwargs["repeat"] = repeat
+
+        except (ExitException, KeyboardInterrupt, Exception) as exc:
+            sys.stderr.write(warning(get_exception(), eol='\n'))
+            sys.stderr.write(danger("error: " + str(exc).strip()))
+            if isinstance(exc, ExitException):
+                sys.exit(exc.exitcode)
+            else:
+                sys.exit(1)
+
+        return args
+
     def __call__(self, **args):
         test = self.kwargs.get("test", None)
         self.kwargs["args"] = self.kwargs.get("args", {})
@@ -619,13 +620,16 @@ class TestDefinition(object):
         def dummy(*args, **kwargs):
             pass
         try:
-            self._set_current_top_previous()
-
             kwargs = self.kwargs
+
+            argparser = kwargs.pop("argparser", None)
+            parent = kwargs.pop("parent", None) or current()
             keep_type = kwargs.pop("keep_type", None)
 
-            self.parent = kwargs.pop("parent", None) or current()
-            parent = self.parent
+            if not top():
+                cli_args = self._parse_cli_args(self._argparser(argparser))
+                kwargs["args"].update({k: v for k,v in cli_args.items() if not k.startswith("_")})
+            self._set_current_top_previous()
 
             test = kwargs.pop("test", None)
             if test and isinstance(test, TestDecorator):
@@ -663,6 +667,7 @@ class TestDefinition(object):
                     parent.child_count += 1
 
             self.tags = test.make_tags(kwargs.pop("tags", None))
+            self.parent = parent
 
             # anchor all patterns
             kwargs["xfails"] = xfails({
@@ -917,7 +922,6 @@ class Module(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Module
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Module, cls).__new__(cls, name, **kwargs)
 
 class Suite(TestDefinition):
@@ -926,7 +930,6 @@ class Suite(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Suite
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Suite, cls).__new__(cls, name, **kwargs)
 
 class Test(TestDefinition):
@@ -935,7 +938,6 @@ class Test(TestDefinition):
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Test
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Test, cls).__new__(cls, name, **kwargs)
 
 class Iteration(TestDefinition):
@@ -965,20 +967,17 @@ class Step(TestDefinition):
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = kwargs.pop("type", cls.type)
         kwargs["subtype"] = kwargs.pop("subtype", cls.subtype)
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back)
         return super(Step, cls).__new__(cls, name, **kwargs)
 
 # support for BDD
 class Feature(Suite):
     def __new__(cls, name=None, **kwargs):
         kwargs["subtype"] = TestSubType.Feature
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Feature, cls).__new__(cls, name, **kwargs)
 
 class Scenario(Test):
     def __new__(cls, name=None, **kwargs):
         kwargs["subtype"] = TestSubType.Scenario
-        kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Scenario, cls).__new__(cls, name, **kwargs)
 
 class BackgroundTest(TestBase):
@@ -1044,14 +1043,15 @@ class TestDecorator(object):
         functools.update_wrapper(self, self.func)
 
         self.func.type = self.type.type
-        self.func._frame = inspect.currentframe().f_back
         self.func.name = getattr(self.func, "name", self.func.__name__.replace("_", " "))
         self.func.description = getattr(self.func, "description", self.func.__doc__)
+
         kwargs = dict(vars(self.func))
+
         self.outline = kwargs.pop("outline", False)
         signature = inspect.signature(self.func)
         kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty}
-        
+
         self.func.kwargs = kwargs
 
     def __call__(self, **args):
@@ -1151,6 +1151,14 @@ class TestClass(object):
 
     def __call__(self, func):
         func.test = self.test
+        return func
+
+class ArgumentParser(object):
+    def __init__(self, parser):
+        self.argparser = parser
+
+    def __call__(self, func):
+        func.argparser = self.argparser
         return func
 
 class Name(object):

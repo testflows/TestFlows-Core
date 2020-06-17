@@ -9,6 +9,8 @@ def open_logs(self):
      with Given("open log2"):
          self.append(open("helllo2", "w+"))
      yield self
+     with Finally("I close the logs"):
+         pass
 
 @TestFeature
 def background(self):
