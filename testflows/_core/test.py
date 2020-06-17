@@ -229,8 +229,8 @@ class TestBase(object):
             args = dict()
         try:
             name = str(name).format(**{"$cls": cls}, **args) if name is not None else cls.name
-        except AttributeError as exc:
-            raise NameError(f"can't format '{name}' using {args}{str(exc).split('has')[-1]}") from None
+        except Exception as exc:
+            raise NameError(f"can't format '{name}' using {args} {str(exc)}") from None
         if name is None:
             raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
