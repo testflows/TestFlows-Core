@@ -227,7 +227,10 @@ class TestBase(object):
         """
         if args is None:
             args = dict()
-        name = str(name).format(**{"$cls": cls}, **args) if name is not None else cls.name
+        try:
+            name = str(name).format(**{"$cls": cls}, **args) if name is not None else cls.name
+        except AttributeError as exc:
+            raise NameError(f"can't format '{name}' using {args}{str(exc).split('has')[-1]}") from None
         if name is None:
             raise TypeError("name must be specified")
         # '/' is not allowed just like in Unix file names
@@ -638,7 +641,7 @@ class TestDefinition(object):
             test = test if test is not None else TestBase
             if not issubclass(test, TestBase):
                 raise TypeError(f"{test} must be subclass of TestBase")
-            name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", None))
+            name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", {}))
 
             if parent:
                 kwargs["parent"] = parent.name
