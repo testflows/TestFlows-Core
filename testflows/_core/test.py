@@ -466,7 +466,7 @@ class TestDefinition(object):
         parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
                             help="pause after executing selected tests", type=str, required=False)
         parser.add_argument("--random-order", dest="_random_order", action="store_true", 
-                            help="randomize order of loaded tests", required=False)
+                            help="randomize order of auto loaded tests", required=False)
         parser.add_argument("--debug", dest="_debug", action="store_true",
                             help="enable debugging mode", default=False)
         parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
