@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import sys
 import inspect
 import importlib
 import threading
@@ -61,13 +62,40 @@ def previous(value=None, thread=None):
         _current_test[thread.ident]["previous"] = value
     return _current_test[thread.ident].get("previous")  
 
-def load(module, test=None):
-    """Load test from module path.
-
-    :param module: module path
-    :param test: test class or method to load (optional)
+def current_dir(frame=None):
+    """Return directory of the current source file.
     """
-    module = importlib.import_module(module)
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return os.path.dirname(os.path.abspath(frame.f_globals["__file__"]))
+
+def current_module(frame=None):
+    """Return reference to the current module.
+    """
+    if frame is None:
+        frame = inspect.currentframe().f_back
+    return sys.modules[frame.f_globals["__name__"]]
+
+def load_module(name, package=None):
+    """Load module by name.
+    """
+    return importlib.import_module(module, package=package)
+
+def load(name, test=None, package=None, frame=None):
+    """Load test by name from module.
+
+    :param name: module name or module
+    :param test: test class or method name to load (optional)
+    :param package: package if module name is relative (optional)
+    """
+    if name is None or name == ".":
+        if frame is None:
+            frame = inspect.currentframe().f_back
+        module = sys.modules[frame.f_globals["__name__"]]
+    elif inspect.ismodule(name):
+        module = name
+    else:
+        module = importlib.import_module(name, package=package)
     if test:
         test = getattr(module, test, None)
     if test is None:

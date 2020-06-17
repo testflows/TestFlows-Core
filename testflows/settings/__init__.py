@@ -36,3 +36,5 @@ read_logfile = None
 database = None
 #: show skipped tests
 show_skipped = False
+#: randomize order of loaded tests
+random_order = False

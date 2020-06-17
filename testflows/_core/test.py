@@ -15,11 +15,13 @@
 import os
 import sys
 import time
+import random
 import inspect
 import functools
 import tempfile
 import threading
 import textwrap
+import importlib
 
 from contextlib import ExitStack, contextmanager
 
@@ -454,15 +456,17 @@ class TestDefinition(object):
         parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
                             help="end at the selected test", type=str, required=False)
         parser.add_argument("--only-tags", dest="_only_tags",
-                            help="run only tests with selected tags.",
+                            help="run only tests with selected tags",
                             type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
         parser.add_argument("--skip-tags", dest="_skip_tags",
-                            help="skip tests with selected tags.",
+                            help="skip tests with selected tags",
                             type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
         parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
                             help="pause before executing selected tests", type=str, required=False)
         parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
                             help="pause after executing selected tests", type=str, required=False)
+        parser.add_argument("--random-order", dest="_random_order", action="store_true", 
+                            help="randomize order of loaded tests", required=False)
         parser.add_argument("--debug", dest="_debug", action="store_true",
                             help="enable debugging mode", default=False)
         parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
@@ -535,6 +539,10 @@ class TestDefinition(object):
             if args.get("_show_skipped"):
                 settings.show_skipped = True
                 args.pop("_show_skipped")
+
+            if args.get("_random_order"):
+                settings.random_order = True
+                args.pop("_random_order")
 
             if args.get("_pause_before"):
                 xflags = kwargs.get("xflags", globals()["xflags"]())
@@ -1226,51 +1234,37 @@ class Uid(object):
         func.uid = self.uid
         return func
 
-def tests(module=None, *types, frame=None):
-    if module is None:
+def orders(tests):
+    """Return ordered list of tests.
+    """
+    if settings.random_order:
+        random.shuffle(tests)
+    else:
+        human_sort(tests, key=lambda test: test.__name__)
+    return tests
+
+def loads(name, *types, package=None, frame=None):
+    """Load multiple tests from module.
+
+    :param name: module name or module
+    :param *types: test types (Step, Test, Scenario, Suite, Feature, or Module), default: all
+    :param package: package name if module name is relative (optional)
+    :param frame: caller frame if module name is not specified (optional)
+    :return: list of tests
+    """
+    if name is None or name == ".":
         if frame is None:
             frame = inspect.currentframe().f_back
         module = sys.modules[frame.f_globals["__name__"]]
-    if not types:
-        types = (TestDecorator,)
+    elif inspect.ismodule(name):
+        module = name
+    else:
+        module = importlib.import_module(name, package=package)
 
     def is_type(member):
-        return isinstance(member, types)
+        if isinstance(member, TestDecorator):
+            if not types:
+                return True
+            return member.type in types
 
-    return human_sort([test for name, test in inspect.getmembers(module, is_type)], key=lambda test: test.__name__)
-
-def cases(module=None, *types, frame=None):
-    if not types:
-        types = (TestCase,)
-    if frame is None:
-        frame = inspect.currentframe().f_back
-    return tests(module, *types, frame=frame)
-
-def suites(module=None, *types, frame=None):
-    if not types:
-        types = (TestSuite,)
-    if frame is None:
-        frame = inspect.currentframe().f_back
-    return tests(module, *types, frame=frame)
-
-def scenarios(module=None, *types, frame=None):
-    if not types:
-        types = (TestScenario,)
-    if frame is None:
-        frame = inspect.currentframe().f_back
-    return tests(module, *types, frame=frame)
-
-def features(module=None, *types, frame=None):
-    if not types:
-        types = (TestFeatures,)
-    if frame is None:
-        frame = inspect.currentframe().f_back
-    return tests(module, *types, frame=frame)
-
-
-def steps(module=None, *types, frame=None):
-    if not types:
-        types = (TestStep,)
-    if frame is None:
-        frame = inspect.currentframe().f_back
-    return tests(module, *types, frame=frame)
+    return orders([test for name, test in inspect.getmembers(module, is_type)])
