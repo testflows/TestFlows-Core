@@ -17,10 +17,8 @@ import inspect
 import importlib
 import threading
 
-from collections import namedtuple
-
 from .exceptions import ResultException
-from .message import Message, dumps
+from .message import Message, dumps, namedtuple_with_defaults
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket, ExamplesTable, Table, Node
@@ -279,7 +277,7 @@ class table(Table):
     """table container."""
     pass
 
-class repeat(namedtuple("repeat", "pattern number until", defaults=("fail",))):
+class repeat(namedtuple_with_defaults("repeat", "pattern number until", defaults=("fail",))):
     """repeat container."""
     def __new__(cls, *args):
         args = list(args)

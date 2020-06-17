@@ -495,7 +495,7 @@ class TestDefinition(object):
             args = vars(args)
 
             if args.get("_name"):
-                kwargs[name] = args.pop("_name")
+                kwargs["name"] = args.pop("_name")
 
             if args.get("_debug"):
                 settings.debug = True
@@ -535,7 +535,6 @@ class TestDefinition(object):
             if args.get("_pause_before"):
                 xflags = kwargs.get("xflags", globals()["xflags"]())
                 for pattern in args.get("_pause_before"):
-                    pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_BEFORE
                 kwargs["xflags"] = xflags
@@ -544,7 +543,6 @@ class TestDefinition(object):
             if args.get("_pause_after"):
                 xflags = kwargs.get("xflags", globals()["xflags"]())
                 for pattern in args.get("_pause_after"):
-                    pattern = absname(pattern, name)
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_AFTER
                 kwargs["xflags"] = xflags
@@ -553,22 +551,22 @@ class TestDefinition(object):
             if args.get("_only"):
                 only = []
                 for pattern in args.pop("_only"):
-                    only.append(the(pattern).at(name))
+                    only.append(the(pattern))
                 kwargs["only"] = only
 
             if args.get("_skip"):
                 skip = []
                 for pattern in args.pop("_skip"):
-                    skip.append(the(pattern).at(name))
+                    skip.append(the(pattern))
                 kwargs["skip"] = skip
 
             if args.get("_start"):
                 pattern = args.pop("_start")[0]
-                kwargs["start"] = the(pattern).at(name)
+                kwargs["start"] = the(pattern)
 
             if args.get("_end"):
                 pattern = args.pop("_end")[0]
-                kwargs["end"] = the(pattern).at(name)
+                kwargs["end"] = the(pattern)
 
             if args.get("_only_tags"):
                 _only_tags = {}
@@ -591,7 +589,6 @@ class TestDefinition(object):
             if args.get("_repeat"):
                 repeat = []
                 for item in args.pop("_repeat"):
-                    item.pattern.at(name)
                     repeat.append(item)
                 kwargs["repeat"] = repeat
 
