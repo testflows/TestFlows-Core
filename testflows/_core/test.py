@@ -33,7 +33,7 @@ from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, At
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
-from .funcs import current, top, previous, main, skip, ok, fail, error, exception, pause, load
+from .funcs import current, top, previous, main, exception, pause
 from .funcs import xfails, xflags, repeat
 from .init import init
 from .cli.arg.parser import ArgumentParser
@@ -41,7 +41,7 @@ from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
-from .filters import the, the_tags
+from .filters import the, thetags
 
 try:
     import testflows.database as database_module
@@ -335,13 +335,13 @@ class TestBase(object):
                 _only_tags = {}
                 for item in args.pop("_only_tags"):
                     _only_tags.update(item)
-                only_tags = the_tags(**_only_tags)
+                only_tags = thetags(**_only_tags)
 
             if args.get("_skip_tags"):
                 _skip_tags = {}
                 for item in args.pop("_skip_tags"):
                     _skip_tags.update(item)
-                skip_tags = the_tags(**_skip_tags)
+                skip_tags = thetags(**_skip_tags)
 
             if args.get("_tags"):
                 tags = {value for value in args.pop("_tags")}
@@ -608,7 +608,7 @@ class TestDefinition(object):
         if test and isinstance(test, TestDecorator):
             self.repeatable_func = test
             with self as _test:
-                test(**args)
+                test(**self.kwargs["args"])
             return _test
         else:
             with self as _test:
@@ -970,7 +970,7 @@ class Step(TestDefinition):
 
 # support for BDD
 class Feature(Suite):
-    def __new__(cls, name, **kwargs):
+    def __new__(cls, name=None, **kwargs):
         kwargs["subtype"] = TestSubType.Feature
         kwargs["_frame"] = kwargs.pop("_frame", inspect.currentframe().f_back )
         return super(Feature, cls).__new__(cls, name, **kwargs)

@@ -42,17 +42,18 @@ ERROR_NOT_COUNTED = 1 << 12
 NULL_NOT_COUNTED = 1 << 13
 # pause before test execution
 PAUSE_BEFORE = 1 << 14
-PUASE = PAUSE_BEFORE
+# pause before short form
+PAUSE = PAUSE_BEFORE
 # pause after test execution
 PAUSE_AFTER = 1 << 15
 # report flag
-REP = 1 << 26
+REPORT = 1 << 26
 # documentation
-DOC = 1 << 27
+DOCUMENT = 1 << 27
 # mandatory test
-MAN = 1 << 28
+MANDATORY = 1 << 28
 # clear flags mask
-CLR = 1 << 31
+CLEAR = 1 << 31
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR 
 # expected any result
@@ -72,14 +73,14 @@ class Flags(object):
             XOK, XFAIL, XERROR, XNULL,
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
             PAUSE_BEFORE, PAUSE_AFTER,
-            REP, DOC, MAN, CLR
+            REPORT, DOCUMENT, MANDATORY, CLEAR
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
             "XOK", "XFAIL", "XERROR", "XNULL",
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
             "PAUSE_BEFORE", "PAUSE_AFTER",
-            "REP", "DOC", "MAN", "CLR"
+            "REPORT", "DOCUMENT", "MANDATORY", "CLEAR"
         ]
     
     def __init__(self, flags=0):

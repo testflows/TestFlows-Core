@@ -36,11 +36,11 @@ class the(TestObject):
         if match(name, self.pattern, prefix=prefix):
             return True
 
-class the_tags(dict):
+class thetags(dict):
     """Tags filter object.
     """
     def __init__(self, test=None, suite=None, module=None):
         test = set(test) if test is not None else set()
         suite = set(suite) if suite is not None else set()
         module = set(module) if module is not None else set()
-        super(the_tags, self).__init__({TestType.Test:test, TestType.Suite: suite, TestType.Module: module})
+        super(thetags, self).__init__({TestType.Test:test, TestType.Suite: suite, TestType.Module: module})

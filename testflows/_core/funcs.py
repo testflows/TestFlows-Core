@@ -23,16 +23,9 @@ from .exceptions import ResultException
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Value, Metric, Ticket, ExamplesTable, Table
+from .objects import Value, Metric, Ticket, ExamplesTable, Table, Node
 from .testtype import TestSubType
 from .filters import the
-
-__all__ = ['top', 'current', 'previous', 'load', 'append_path',
-    'main', 'args', 'metric', 'ticket', 'value', 'note', 'debug',
-    'trace', 'message', 'exception', 'ok', 'fail', 'skip', 'error',
-    'null', 'xok', 'xfail', 'xerror', 'xnull', 'pause', 'getsattr',
-    'xfails', 'xflags', 'tags', 'examples', 'table', 'repeat'
-    ]
 
 #: thread local values
 _current_test = {}
@@ -184,7 +177,7 @@ def skip(message=None, test=None):
     test.result = Skip(test=test.name, message=message)
     raise test.result
 
-def error(message=None, test=None):
+def err(message=None, test=None):
     if test is None:
         test = current()
     test.result = Error(test=test.name, message=message)
@@ -208,7 +201,7 @@ def xfail(message=None, reason=None, test=None):
     test.result = XFail(test=test.name, message=message, reason=reason)
     raise test.result
 
-def xerror(message=None, reason=None, test=None):
+def xerr(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = XError(test=test.name, message=message, reason=reason)
@@ -300,3 +293,23 @@ class repeat(namedtuple("repeat", "pattern number until", defaults=("fail",))):
         if l > 2:
             assert args[2] in ("fail", "pass", "complete")
         return super(repeat, cls).__new__(cls, *args)
+
+def maps(test, nexts=None, ins=None, outs=None, map=[]):
+    """Map a test.
+
+    :param test: test
+    :param nexts: next steps
+    :param ins: input steps
+    :param outs: output steps
+    """
+    if getattr(test.func, "node", None) is not None:
+        raise ValueError("test has already been mapped")
+
+    nexts = [Node.attributes(step).uid for step in nexts or []]
+    ins = [Node.attributes(step).uid for step in ins or []]
+    outs = [Node.attributes(step).uid for step in outs or []]
+
+    test.func.node = Node(*Node.attributes(test), nexts, ins, outs)
+
+    map.append(test.func.node)
+    return map

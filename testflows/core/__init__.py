@@ -20,12 +20,19 @@ from testflows._core.test import Name, Description, Uid, Tags, TestClass, Contex
 from testflows._core.test import Feature, Background, Scenario, Example
 from testflows._core.test import Given, When, Then, And, But, By, Finally
 from testflows._core.test import TestFeature, TestScenario
-from testflows._core.test import tests, cases, scenarios, steps, suites, features
-from testflows._core.filters import the, the_tags
-from testflows._core.funcs import *
-from testflows._core.objects import *
-from testflows._core.name import *
-from testflows._core.flags import *
+from testflows._core.filters import the, thetags
+from testflows._core.funcs import top, current, previous, load, append_path
+from testflows._core.funcs import main, args, maps
+from testflows._core.funcs import metric, ticket, value, note, debug, trace
+from testflows._core.funcs import message, exception, ok, fail, skip, err
+from testflows._core.funcs import null, xok, xfail, xerr, xnull, pause, getsattr
+from testflows._core.funcs import xfails, xflags, tags, examples, table, repeat
+from testflows._core.flags import TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP
+from testflows._core.flags import XOK, XFAIL, XERROR, XNULL
+from testflows._core.flags import FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
+from testflows._core.flags import PAUSE, PAUSE_BEFORE, PAUSE_AFTER, REPORT, DOCUMENT
+from testflows._core.flags import MANDATORY, CLEAR
+from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core import __author__, __version__, __license__
 from testflows._core import threading
 

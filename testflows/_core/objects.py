@@ -152,30 +152,10 @@ class Node(TestObject):
 
     @classmethod
     def attributes(cls, test):
-        name = test.name
-        module = ".".join([test.__module__, test.name])
+        name = test.__name__
+        module = ".".join([test.__module__, test.__name__])
         uid = hash(module, short=True)
         return cls.NodeAttributes(name, module, uid)
-
-def maps(test, nexts=None, ins=None, outs=None, map=[]):
-    """Map a test.
-
-    :param test: test
-    :param nexts: next steps
-    :param ins: input steps
-    :param outs: output steps
-    """
-    if getattr(test.func, "node", None) is not None:
-        raise ValueError("test has already been mapped")
-
-    nexts = [Node.attributes(step).uid for step in nexts or []]
-    ins = [Node.attributes(step).uid for step in ins or []]
-    outs = [Node.attributes(step).uid for step in outs or []]
-
-    test.func.node = Node(*Node.attributes(test), nexts, ins, outs)
-
-    map.append(test.func.node)
-    return map
 
 class Tag(TestObject):
     _fields = ("value",)

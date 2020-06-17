@@ -31,16 +31,16 @@ def two_number_operation(self, a, op, b, equals):
 )
 def two_number_operations(self):
     for example in self.examples:
-        name = '{a}{op}{b}={equals}'.format(**example._asdict())
-        run(test=two_number_operation, name=name, args=example._asdict())
+        name = '{a}{op}{b}={equals}'.format(**vars(example))
+        Scenario(run=two_number_operation, name=name, args=vars(example))
 
 @TestFeature
 def calculator(self):
     """Calculator.
     """
-    run(test=two_number_operations)
+    Scenario(run=two_number_operations)
 
 map = maps(calculator, ins=[entering_number, entering_operation, entering_equal], outs=[checking_result])
 
 if main():
-    run(test=calculator, map=map)
+    Feature(run=calculator, map=map)

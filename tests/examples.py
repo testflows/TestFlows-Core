@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from testflows.core import *
+from testflows.core.objects import ExamplesTable
 
 @TestScenario
 def check_water(self, water_type, temperature):
