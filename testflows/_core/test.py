@@ -386,7 +386,7 @@ class TestDefinition(object):
                 kwargs["test"] = run
             elif isinstance(run, TestDefinition):
                 kwargs = inherit_kwargs(**run.kwargs, **({"name": run.name} if run.name is not None else {}))
-            elif isinstance(run, TestBase):
+            elif isinstance(run, TestBase) or inspect.isclass(run) and issubclass(run, (TestBase, TestDefinition)):
                 kwargs["test"] = run
             else:
                 raise TypeError(f"'{run}' is not a valid test type")
@@ -398,7 +398,7 @@ class TestDefinition(object):
                 kwargs["test"] = test
             elif isinstance(test, TestDefinition):
                 kwargs = inherit_kwargs(**test.kwargs, **({"name": test.name} if test.name is not None else {}))
-            elif isinstance(test, TestBase):
+            elif isinstance(test, TestBase) or inspect.isclass(test) and issubclass(test, (TestBase, TestDefinition)):
                 kwargs["test"] = test
             else:
                 raise TypeError(f"'{test}' is not a valid test type")

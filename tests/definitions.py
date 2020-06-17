@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 from testflows.core import *
+from testflows.core.objects import TestBase
 
 class CustomTest(TestBase):
     name = "CustomTest"
