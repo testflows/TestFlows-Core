@@ -1234,7 +1234,7 @@ class Uid(object):
         func.uid = self.uid
         return func
 
-def orders(tests):
+def ordered(tests):
     """Return ordered list of tests.
     """
     if settings.random_order:
@@ -1267,4 +1267,4 @@ def loads(name, *types, package=None, frame=None):
                 return True
             return member.type in types
 
-    return orders([test for name, test in inspect.getmembers(module, is_type)])
+    return ordered([test for name, test in inspect.getmembers(module, is_type)])
