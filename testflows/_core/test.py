@@ -662,7 +662,7 @@ class TestDefinition(object):
                 }) if parent.xfails else None or kwargs.get("xfails")
                 kwargs["xflags"] = xflags({
                     k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
-                }) if parent.xfails else None or kwargs.get("xflags")
+                }) if parent.xflags else None or kwargs.get("xflags")
                 # propagate only, skip, start, and end
                 kwargs["only"] = parent.only or kwargs.get("only")
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
