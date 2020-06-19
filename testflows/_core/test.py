@@ -695,13 +695,18 @@ class TestDefinition(object):
             kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
             kwargs["repeat"] = [globals()["repeat"](r.pattern.at(name if name else name_sep),r.number,r.until) for r in kwargs.get("repeat", [])] or None
 
+            # should not skip Background, Given and Finally steps
+            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
+                kwargs["only"] = kwargs["only"] or []
+                kwargs["only"].append(the(join(name, "*")))
+
             self._apply_xflags(name, kwargs)
             self._apply_start(name, parent, kwargs)
             self._apply_only_tags(self.type, self.tags, kwargs)
             self._apply_skip_tags(self.type, self.tags, kwargs)
-            self._apply_only(name, kwargs)
             self._apply_skip(name, kwargs)
             self._apply_end(name, parent, kwargs)
+            self._apply_only(name, kwargs)
 
             self.repeat = kwargs.pop("repeat", None)
 
@@ -792,10 +797,6 @@ class TestDefinition(object):
         if not only:
             return
 
-        # only should not skip Background, Given and Finally steps
-        if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
-            only.append(the(join(name, "*")))
-
         found = False
         for item in only:
             if item.match(name):
@@ -804,6 +805,8 @@ class TestDefinition(object):
 
         if not found:
             kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+        else:
+            kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
 
     def _apply_skip(self, name, kwargs):
         skip = kwargs.get("skip")
