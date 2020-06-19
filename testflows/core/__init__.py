@@ -19,6 +19,7 @@ from testflows._core.test import Name, Description, Uid, Tags, TestClass, Contex
 from testflows._core.test import Feature, Background, Scenario, Example
 from testflows._core.test import Given, When, Then, And, But, By, Finally
 from testflows._core.test import TestFeature, TestScenario, loads, ordered
+from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
 from testflows._core.filters import the, thetags
 from testflows._core.funcs import top, current, previous, load, append_path
 from testflows._core.funcs import main, args, maps
