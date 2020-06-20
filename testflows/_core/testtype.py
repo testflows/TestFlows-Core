@@ -19,6 +19,7 @@ class TestType(IntEnum):
     Module = 40
     Suite = 30
     Test = 20
+    Outline = 17
     Iteration = 15
     Step = 10
 

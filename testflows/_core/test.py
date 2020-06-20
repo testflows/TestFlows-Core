@@ -297,7 +297,7 @@ class TestBase(object):
                         if not exc_value and cleanup_exc_value:
                             process_exception(cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback)
             finally:
-                current(self.caller_test)
+                current(self.caller_test, set_value=True)
                 previous(self)
                 self._apply_xfails()
                 self.io.output.result(self.result)
@@ -634,6 +634,7 @@ class TestDefinition(object):
             pass
         try:
             kwargs = self.kwargs
+            kwargs["args"] = kwargs.get("args", None) or {}
 
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
@@ -904,10 +905,10 @@ class TestDefinition(object):
         if exception_value and not test__exit__:
             raise exception_value.with_traceback(exception_traceback)
 
-        if not self.test.result:
-            if not self.parent:
-                sys.exit(1)
+        if not self.parent:
+            sys.exit(0 if self.test.result else 1)
 
+        if not self.test.result:
             if isinstance(self.test.result, Fail):
                 result = Fail(test=self.parent.name, message=self.test.result.message)
             else:
@@ -947,6 +948,14 @@ class Suite(TestDefinition):
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = TestType.Suite
         return super(Suite, cls).__new__(cls, name, **kwargs)
+
+class Outline(TestDefinition):
+    """Outline definition."""
+    type = TestType.Outline
+
+    def __new__(cls, name=None, **kwargs):
+        kwargs["type"] = kwargs.pop("type", cls.type)
+        return super(Outline, cls).__new__(cls, name, **kwargs)
 
 class Test(TestDefinition):
     """Test definition."""
@@ -1052,7 +1061,6 @@ class NullStep():
 # decorators
 class TestDecorator(object):
     type = Test
-    outline = False
 
     def __init__(self, func):
         self.func = func
@@ -1064,7 +1072,6 @@ class TestDecorator(object):
 
         kwargs = dict(vars(self.func))
 
-        self.outline = kwargs.pop("outline", False)
         signature = inspect.signature(self.func)
         kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty}
 
@@ -1088,7 +1095,7 @@ class TestDecorator(object):
             return r
 
         def run(test):
-            if self.outline and not args and test.examples:
+            if isinstance(self, TestOutline) and not args and test.examples:
                 for example in test.examples:
                     if test.type == TestType.Iteration:
                         type = test.parent_type
@@ -1133,6 +1140,32 @@ class TestStep(TestDecorator):
             self.func = args[0]
             if self.subtype is not None:
                 self.func.subtype = self.subtype
+            TestDecorator.__init__(self, self.func)
+            return self
+
+        if args:
+            raise TypeError(f"{self.func.__name__}() takes only named arguments")
+
+        return self.__run__(**kwargs)
+
+class TestOutline(TestDecorator):
+    type = Outline
+
+    def __init__(self, func_or_type=None):
+        self.func = None
+
+        if inspect.isfunction(func_or_type):
+            self.func = func_or_type
+        elif func_or_type is not None:
+            self.type = func_or_type
+
+        if self.func:
+            TestDecorator.__init__(self, self.func)
+
+    def __call__(self, *args, **kwargs):
+        if not self.func:
+            self.func = args[0]
+            self.func.type = self.type
             TestDecorator.__init__(self, self.func)
             return self
 
@@ -1196,10 +1229,6 @@ class Description(object):
     def __call__(self, func):
         func.description = self.description
         return func
-
-def Outline(func):
-    func.outline = True
-    return func
 
 class Examples(object):
     def __init__(self, header, rows, row_format=None):

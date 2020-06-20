@@ -41,14 +41,14 @@ def top(value=None, thread=None):
         _current_test[thread.ident]["main"] = value
     return _current_test[thread.ident].get("main")     
 
-def current(value=None, thread=None):
+def current(value=None, thread=None, set_value=False):
     """Currently executing test.
     """
     if thread is None:
         thread = threading.current_thread()
     if _current_test.get(thread.ident) is None:
         _current_test[thread.ident] = {}
-    if value is not None:
+    if value is not None or set_value:
         _current_test[thread.ident]["object"] = value
     return _current_test[thread.ident].get("object")  
 
