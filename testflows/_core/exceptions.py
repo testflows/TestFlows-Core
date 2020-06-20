@@ -41,6 +41,11 @@ class RequirementError(TestFlowsError):
     """
     pass
 
+class DescriptionError(TestFlowsError):
+    """Description error.
+    """
+    pass
+
 class ArgumentError(TestFlowsError):
     """Argument error.
     """

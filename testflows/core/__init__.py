@@ -15,11 +15,12 @@
 from testflows._core.test import Module, Suite, Test, Step, NullStep
 from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, TestBackground, TestOutline
 from testflows._core.test import Attributes, Requirements, Examples, ArgumentParser
-from testflows._core.test import Name, Description, Uid, Tags, TestClass, Context
+from testflows._core.test import Name, Description, Uid, Tags, Args, Context
 from testflows._core.test import Feature, Background, Scenario, Example, Outline
 from testflows._core.test import Given, When, Then, And, But, By, Finally
 from testflows._core.test import TestFeature, TestScenario, loads, ordered
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
+from testflows._core.baseobject import Table
 from testflows._core.filters import the, thetags
 from testflows._core.funcs import top, current, previous, load, append_path
 from testflows._core.funcs import main, args, maps

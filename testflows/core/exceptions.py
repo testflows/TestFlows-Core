@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2020 Katteli Inc.
 # TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from .utils.enum import IntEnum
-
-class TestType(IntEnum):
-    """Test type."""
-    Module = 40
-    Suite = 30
-    Test = 20
-    Iteration = 15
-    Step = 10
-
-class TestSubType(IntEnum):
-    """Test behaviour subtype."""
-    Feature = 60
-    Scenario = 50
-    Example = 45
-    Background = 40
-    Given = 30
-    When = 20
-    Then = 10
-    And = 8
-    But = 7
-    By = 6
-    Finally = 5
+from testflows._core.exceptions import TestFlowsError
+from testflows._core.exceptions import RequirementError
+from testflows._core.exceptions import ArgumentError
+from testflows._core.exceptions import DescriptionError

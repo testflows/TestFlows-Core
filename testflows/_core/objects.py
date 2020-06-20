@@ -270,15 +270,6 @@ class Ticket(TestObject):
         self.uid = get(uid, self.uid)
         return super(Ticket, self).__init__()
 
-class ExamplesRow(TestObject):
-    _fields = ("row", "columns", "values", "row_format")
-    _defaults = (None,)
-    def __init__(self, row, columns, values, row_format=None):
-        self.row = row
-        self.columns = columns
-        self.values = [str(value) for value in values]
-        self.row_format = row_format
-
 class ExamplesTable(Table):
     _row_type_name = "Example"
 

@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2020 Katteli Inc.
 # TestFlows Test Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +15,5 @@
 from testflows._core.objects import Result, XResult, XoutResults, FailResults, PassResults
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Metric, Value, Ticket
 from testflows._core.objects import ExamplesTable
-from testflows._core.baseobject import Table
 from testflows._core.flags import Flags
 from testflows._core.test import TestDecorator, TestDefinition, TestBase
