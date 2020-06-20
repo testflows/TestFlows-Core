@@ -139,7 +139,7 @@ class TestOutput(object):
         [self.requirement(req) for req in self.test.requirements.values()]
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
-        [self.example(ExamplesRow(idx, row._fields, list(row), self.test.examples.row_format)) for idx, row in enumerate(self.test.examples)]
+        [self.example(ExamplesRow(row._idx, row._fields, [str(f) for f in row], row._row_format)) for row in self.test.examples]
         if self.test.node:
             self.node(self.test.node)
         if self.test.map:

@@ -19,6 +19,7 @@ from .utils.enum import IntEnum
 from .exceptions import RequirementError, ResultException
 from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
+from .baseobject import namedtuple_with_defaults
 
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
@@ -280,3 +281,34 @@ class ExamplesRow(TestObject):
 
 class ExamplesTable(Table):
     _row_type_name = "Example"
+
+    def __new__(cls, header=None, rows=None, row_format=None):
+        if rows is None:
+            rows = []
+        if header is None:
+            header = ""
+
+        row_type = namedtuple(cls._row_type_name, header)
+
+        class ExampleRow(row_type):
+            def __new__(cls, *args):
+                _args = {}
+                args = list(args)
+                if len(args) > len(header.split(" ")):
+                    _args = dict(args.pop(-1))
+
+                    if "type" in args:
+                        raise TypeError("can't specify 'type' using example arguments")
+                    if "args" in args:
+                        raise TypeError("can't specify 'args' using example arguments")
+
+                obj = super(ExampleRow, cls).__new__(cls, *args)
+                obj._args = _args
+                return obj
+
+        obj = super(ExamplesTable, cls).__new__(cls, header, rows, row_format, ExampleRow)
+        
+        for idx, row in enumerate(obj):
+            row._idx = idx
+            row._row_format = obj.row_format
+        return obj

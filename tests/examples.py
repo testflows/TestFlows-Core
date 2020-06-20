@@ -25,22 +25,11 @@ def check_water_types(self):
 
 @TestCase
 @Outline
+@Name("checking water type outline")
 @Examples(
-    header="water_type temperature",
-    rows=[
-       ("hot", "+30C"),
-       ("cold", "5C"),
-    ]
-)
-def check_water_type_outline(self, water_type, temperature):
-    check_water(water_type=water_type, temperature=temperature)
-
-@TestScenario
-@Outline
-@Examples(
-    header="water_type temperature",
-    rows=[
-       ("hot", "+30C"),
+    "water_type temperature",
+    [
+       ("hot", "+30C", args(name="checking water {water_type} with {temperature}", requirements=[], flags=TE)),
        ("cold", "5C"),
     ]
 )
@@ -62,7 +51,7 @@ def check_more_water_types(self):
 examples = ExamplesTable(
     header="water_type temperature",
     rows=[
-       ("hot", "+60C"),
+       ("hot", "+60C", args(requirements=[], flags=TE)),
        ("cold", "-5C"),
     ]
 )
@@ -102,6 +91,8 @@ def step_outline(self, name):
     ]
 )
 def with_examples(self, name=None):
+    for example in examples:
+        note([example, example._args])
     with When(test=step_outline):
         step_outline()
     Suite(test=suite_outline)()

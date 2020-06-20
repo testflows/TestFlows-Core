@@ -17,12 +17,7 @@ import json
 from collections import namedtuple
 
 from .utils.enum import IntEnum
-
-def namedtuple_with_defaults(*args, defaults=()):
-    nt = namedtuple(*args)
-    nt.__new__.__defaults__ = defaults
-    [setattr(nt, f"_{field}", idx) for idx, field in enumerate(nt._fields)]
-    return nt
+from .baseobject import namedtuple_with_defaults
 
 class Message(IntEnum):
     NONE = 0

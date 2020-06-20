@@ -1094,7 +1094,11 @@ class TestDecorator(object):
                         type = test.parent_type
                     else:
                         type = test.type
-                    with Example(name=example, args=vars(example), type=type) as _example:
+
+                    example_kwargs = dict(example._args)
+                    example_kwargs["name"] = example_kwargs.pop("name", str(example))
+
+                    with Example(args=vars(example), type=type, **example_kwargs) as _example:
                         process_func_result(self.func(_example, **vars(example)))
                 r = test
             else:

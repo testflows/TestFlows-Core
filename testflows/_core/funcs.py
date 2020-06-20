@@ -19,7 +19,8 @@ import importlib
 import threading
 
 from .exceptions import ResultException
-from .message import Message, dumps, namedtuple_with_defaults
+from .message import Message, dumps
+from .baseobject import namedtuple_with_defaults
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket, ExamplesTable, Table, Node

@@ -17,6 +17,12 @@ from collections import namedtuple
 
 InitArgs = namedtuple("InitArgs", "args kwargs")
 
+def namedtuple_with_defaults(*args, defaults=()):
+    nt = namedtuple(*args)
+    nt.__new__.__defaults__ = defaults
+    [setattr(nt, f"_{field}", idx) for idx, field in enumerate(nt._fields)]
+    return nt
+
 def get(a, b):
     """a if not a is None else b.
     """
@@ -74,13 +80,16 @@ class Table(TestObject, tuple):
     _defaults = (None, ) * 3
     _row_type_name = "Row"
 
-    def __new__(cls, header=None, rows=None, row_format=None):
+    def __new__(cls, header=None, rows=None, row_format=None, _row_type=None):
         if rows is None:
             rows = []
         if header is None:
             header = ""
 
-        row_type = namedtuple(cls._row_type_name, header)
+        if _row_type is None:
+            row_type = namedtuple(cls._row_type_name, header)
+        else:
+            row_type = _row_type
 
         class Row(row_type):
             def __str__(self):
