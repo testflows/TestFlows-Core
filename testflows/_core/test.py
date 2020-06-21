@@ -1184,7 +1184,7 @@ class TestOutline(TestDecorator):
         if not getattr(self.func, "name", None):
             name = self.func.__name__.replace("_", " ")
             example_name = ", ".join([f"{field}={{{field}}}" for field in self.examples.row_type._fields])
-            self.func.name = f"{name}, {example_name}"
+            self.func.name = f"{name} {example_name}"
 
         delattr(self.func, "examples")
 

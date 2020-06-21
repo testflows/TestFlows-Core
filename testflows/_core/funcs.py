@@ -137,7 +137,21 @@ def main(frame=None):
     return frame.f_globals["__name__"] == "__main__"
 
 class args(dict):
-    pass
+    def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
+                 uid=None, tags=None, attributes=None, requirements=None,
+                 description=None, parent=None,
+                 xfails=None, xflags=None, only=None, skip=None,
+                 start=None, end=None, only_tags=None, skip_tags=None,
+                 args=None, id=None, node=None, map=None, context=None,
+                 repeat=None):
+
+        values = {
+            name: value for name, value in locals().items()
+            if value is not None and value is not self and not name.startswith("_")
+        }
+
+        return super(self.__class__, self).__init__(**values)
+
 
 def metric(name, value, units, type=None, group=None, uid=None, base=Metric, test=None):
     obj = base(name=name, value=value, units=units, type=type, group=group, uid=uid)
