@@ -44,7 +44,7 @@ def color_result(result, attrs=None):
 
 def add_result(msg, results):
     result = msg["result_type"]
-    if getattr(TestType, msg["test_type"]) < TestType.Test:
+    if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         if not result.startswith("X"):
             return
     flags = Flags(msg["test_flags"])
