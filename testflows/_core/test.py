@@ -223,7 +223,7 @@ class TestBase(object):
         self.caller_test = None
 
     @classmethod
-    def make_name(cls, name, parent=None, args=None):
+    def make_name(cls, name, parent=None, args=None, format=True):
         """Make full name.
 
         :param name: name
@@ -233,7 +233,9 @@ class TestBase(object):
         if args is None:
             args = dict()
         try:
-            name = str(name).format(**{"$cls": cls}, **args) if name is not None else cls.name
+            name = str(name) if name is not None else cls.name
+            if format:
+                name = name.format(**{"$cls": cls}, **args)
         except Exception as exc:
             raise NameError(f"can't format '{name}' using {args} {str(exc)}") from None
         if name is None:
@@ -244,11 +246,13 @@ class TestBase(object):
         return join(get(parent, name_sep), name)
 
     @classmethod
-    def make_description(cls, description, args):
+    def make_description(cls, description, args, format=True):
         if args is None:
             args = dict()
         try:
-            return str(description).format(**{"$cls": cls}, **args) if description is not None else None
+            description = str(description) if description is not None else None
+            if format:
+                description = description.format(**{"$cls": cls}, **args)
         except Exception as exc:
             raise DescriptionError(f"can't format '{description}' using {args} {str(exc)}") from None
 
@@ -664,6 +668,8 @@ class TestDefinition(object):
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
             keep_type = kwargs.pop("keep_type", None)
+            format_name = kwargs.pop("format_name", True)
+            format_description = kwargs.pop("format_description", True)
 
             if not top():
                 cli_args = self._parse_cli_args(self._argparser(argparser))
@@ -678,7 +684,7 @@ class TestDefinition(object):
             if not issubclass(test, TestBase):
                 raise TypeError(f"{test} must be subclass of TestBase")
 
-            name = test.make_name(self.name, parent.name if parent else None, kwargs["args"])
+            name = test.make_name(self.name, parent.name if parent else None, kwargs["args"], format=format_name)
 
             if parent:
                 kwargs["parent"] = parent.name
@@ -708,7 +714,7 @@ class TestDefinition(object):
                     parent.child_count += 1
 
             self.tags = test.make_tags(kwargs.pop("tags", None))
-            self.description = test.make_description(kwargs.pop("description", None), kwargs["args"])
+            self.description = test.make_description(kwargs.pop("description", None), kwargs["args"], format=format_description)
             self.parent = parent
 
             # anchor all patterns
