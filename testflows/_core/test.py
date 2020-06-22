@@ -234,7 +234,7 @@ class TestBase(object):
             args = dict()
         try:
             name = str(name) if name is not None else cls.name
-            if format:
+            if name and format:
                 name = name.format(**{"$cls": cls}, **args)
         except Exception as exc:
             raise NameError(f"can't format '{name}' using {args} {str(exc)}") from None
@@ -251,7 +251,7 @@ class TestBase(object):
             args = dict()
         try:
             description = str(description) if description is not None else None
-            if format:
+            if description and format:
                 description = description.format(**{"$cls": cls}, **args)
         except Exception as exc:
             raise DescriptionError(f"can't format '{description}' using {args} {str(exc)}") from None
