@@ -18,14 +18,10 @@ import inspect
 import importlib
 import threading
 
-from .exceptions import ResultException
 from .message import Message, dumps
-from .baseobject import namedtuple_with_defaults
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Value, Metric, Ticket, ExamplesTable, Table, Node
-from .testtype import TestSubType
-from .filters import the
+from .objects import Value, Metric, Ticket, Node
 
 #: thread local values
 _current_test = {}
@@ -252,74 +248,6 @@ def getsattr(obj, name, *default):
     value = getattr(obj, name, *default)
     setattr(obj, name, value)
     return value
-
-class xfails(dict):
-    """xfails container.
-
-    xfails = {
-        "pattern": [("result", "reason")],
-        ...
-        }
-    """
-    def add(self, pattern, *results):
-        """Add an entry to the xfails.
-
-        :param pattern: test name pattern to match
-        :param *results: one or more results to cross out
-            where each result is a two-tuple of (result, reason)
-        """
-        self[pattern] = results
-        return self
-
-class xflags(dict):
-    """xflags container.
-
-    xflags = {
-        "filter": (set_flags, clear_flags),
-        ...
-    }
-    """
-    def add(self, pattern, set_flags=0, clear_flags=0):
-        """Add an entry to the xflags.
-
-        :param pattern: test name pattern to match
-        :param set_flags: flags to set
-        :param clear_flags: flags to clear, default: None
-        """
-        self[pattern] = [Flags(set_flags), Flags(clear_flags)]
-        return self
-
-class tags(set):
-    """tags container."""
-    def __init__(self, tag, *tags):
-        if type(tag) in (tuple, set):
-            tag = list(tag)
-        else:
-            tag = [tag]
-        return super(tags, self).__init__(tags + tag)
-
-class examples(ExamplesTable):
-    """examples container."""
-    pass
-
-class table(Table):
-    """table container."""
-    pass
-
-class repeat(namedtuple_with_defaults("repeat", "pattern number until", defaults=("fail",))):
-    """repeat container."""
-    def __new__(cls, *args):
-        args = list(args)
-        l = len(args)
-        if l > 0:
-            if not isinstance(args[0], the):
-                args[0] = the(args[0])
-        if l > 1:
-            args[1] = int(args[1])
-            assert args[1] > 0
-        if l > 2:
-            assert args[2] in ("fail", "pass", "complete")
-        return super(repeat, cls).__new__(cls, *args)
 
 def maps(test, nexts=None, ins=None, outs=None, map=[]):
     """Map a test.

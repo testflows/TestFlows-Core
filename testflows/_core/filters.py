@@ -17,14 +17,17 @@ from .name import absname, match
 from .baseobject import TestObject
 from .testtype import TestType
 
-class the(TestObject):
+class The(TestObject):
     """The `only`, `skip`, `start` and `end` test filer object.
     """
     _fields = ("pattern",)
 
     def __init__(self, pattern):
         self.pattern = pattern
-        super(the, self).__init__()
+        super(The, self).__init__()
+
+    def __str__(self):
+        return self.pattern
 
     def at(self, at):
         """Anchor filter by converting all patterns to be absolute.
@@ -36,11 +39,11 @@ class the(TestObject):
         if match(name, self.pattern, prefix=prefix):
             return True
 
-class thetags(dict):
+class TheTags(dict):
     """Tags filter object.
     """
     def __init__(self, test=None, suite=None, module=None):
         test = set(test) if test is not None else set()
         suite = set(suite) if suite is not None else set()
         module = set(module) if module is not None else set()
-        super(thetags, self).__init__({TestType.Test:test, TestType.Suite: suite, TestType.Module: module})
+        super(TheTags, self).__init__({TestType.Test: test, TestType.Suite: suite, TestType.Module: module})

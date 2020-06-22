@@ -34,7 +34,7 @@ from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.utils.sort import human
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
-from testflows._core.filters import the
+from testflows._core.filters import The
 from testflows._core.name import sep
 from testflows._core.transform.log.report.totals import Counts
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
@@ -259,7 +259,7 @@ class Handler(HandlerBase):
 
         filters = []
         for pattern in only:
-            filters.append(the(pattern).at(sep))
+            filters.append(The(pattern).at(sep))
 
         _tests = []
         for test in tests:

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 from testflows.core import *
-from testflows.core.objects import ExamplesTable
 
 @TestScenario
 def check_water(self, water_type, temperature):
@@ -46,7 +45,7 @@ def check_more_water_types(self):
     for example in self.examples:
         Example(name=example, test=check_water)(**vars(example))
 
-examples = ExamplesTable(
+examples = Examples(
     header="water_type temperature",
     rows=[
        ("hot", "+60C", args(requirements=[], flags=TE)),

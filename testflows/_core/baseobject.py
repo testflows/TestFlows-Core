@@ -59,6 +59,9 @@ class TestObject(object):
     def id(self):
         return hash(*[repr(getattr(self, field)) for field in self._fields if field != "id"])
 
+    def __iter__(self):
+        return iter([getattr(self, field) for field in self._fields])
+
     def __repr__(self):
         """Custom object representation.
         """

@@ -127,3 +127,15 @@ class Flags(object):
 
     def __ne__(self, o):
         return not self == o
+
+    def keys(self):
+        return ["flags"]
+
+    def __getitem__(self, key):
+        if key == "flags":
+            return self
+        raise KeyError(key)
+
+    def __call__(self, func):
+        setattr(func, "flags", self)
+        return func

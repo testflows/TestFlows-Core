@@ -20,6 +20,7 @@ from .exceptions import RequirementError, ResultException
 from .baseobject import TestObject, TestArg, Table
 from .baseobject import get, hash
 from .baseobject import namedtuple_with_defaults
+from .filters import The
 
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
@@ -294,13 +295,16 @@ class ExamplesTable(Table):
             def __new__(cls, *args):
                 _args = {}
                 args = list(args)
-                if len(args) > len(header.split(" ")):
-                    _args = dict(args.pop(-1))
+                len_header = len(header.split(" "))
+                if len(args) > len_header:
+                    _args = {k:v for arg in args[len_header:] for k, v in dict(arg).items()}
 
                     if "type" in args:
                         raise TypeError("can't specify 'type' using example arguments")
                     if "args" in args:
                         raise TypeError("can't specify 'args' using example arguments")
+
+                    del args[len_header:]
 
                 obj = super(ExampleRow, cls).__new__(cls, *args)
                 obj._args = _args
@@ -312,3 +316,172 @@ class ExamplesTable(Table):
             row._idx = idx
             row._row_format = obj.row_format
         return obj
+
+class NamedValue(object):
+    name = None
+
+    def __init__(self, value):
+        self.value = value
+
+    def keys(self):
+        return [self.name]
+
+    def __getitem__(self, key):
+        if key == self.name:
+            return self.value
+        raise KeyError(key)
+
+    def __call__(self, func):
+        setattr(func, self.name, self.value)
+        return func
+
+class NamedList(list):
+    name = None
+
+    def __init__(self, *items):
+        super(NamedList, self).__init__(items)
+
+    def keys(self):
+        return [self.name]
+
+    def __getitem__(self, key):
+        if key == self.name:
+            return list(self)
+        return super(NamedList, self).__getitem__(key)
+
+    def __call__(self, func):
+        setattr(func, self.name, list(self))
+        return func
+
+class XFails(NamedValue):
+    """xfails container.
+
+    xfails = {
+        "pattern": [("result", "reason")],
+        ...
+        }
+    """
+    name = "xfails"
+
+    def __init__(self, value):
+        super(XFails, self).__init__(dict(value))
+
+    def items(self):
+        return self.value.items()
+
+    def add(self, pattern, *results):
+        """Add an entry to the xfails.
+
+        :param pattern: test name pattern to match
+        :param *results: one or more results to cross out
+            where each result is a two-tuple of (result, reason)
+        """
+        self.value[pattern] = results
+        return self
+
+
+class XFlags(NamedValue):
+    """xflags container.
+
+    xflags = {
+        "filter": (set_flags, clear_flags),
+        ...
+    }
+    """
+    name = "xflags"
+
+    def __init__(self, value):
+        super(XFlags, self).__init__(dict(value))
+
+    def items(self):
+        return self.value.items()
+
+    def add(self, pattern, set_flags=0, clear_flags=0):
+        """Add an entry to the xflags.
+
+        :param pattern: test name pattern to match
+        :param set_flags: flags to set
+        :param clear_flags: flags to clear, default: None
+        """
+        self.value[pattern] = [Flags(set_flags), Flags(clear_flags)]
+        return self
+
+class Repeat(NamedList):
+    name = "repeat"
+
+    def __init__(self, *repeat):
+        super(Repeat, self).__init__(*[RepeatTest(*r) for r in repeat])
+
+class RepeatTest(namedtuple_with_defaults("repeat", "pattern number until", defaults=("fail",))):
+    """repeat container."""
+
+    def __new__(cls, *args):
+        args = list(args)
+        l = len(args)
+        if l > 0:
+            if not isinstance(args[0], the):
+                args[0] = The(args[0])
+        if l > 1:
+            args[1] = int(args[1])
+            assert args[1] > 0
+        if l > 2:
+            assert args[2] in ("fail", "pass", "complete")
+        return super(RepeatTest, cls).__new__(cls, *args)
+
+class Args(dict):
+    def __init__(self, **args):
+        super(Args, self).__init__(**args)
+
+    def __call__(self, func):
+        for k, v in self.items():
+            if not k.startswith("_"):
+                setattr(func, k, v)
+        return func
+
+class Attributes(NamedList):
+    name = "attributes"
+
+    def __init__(self, *attributes):
+        super(Attributes, self).__init__(*[Attribute(*a) for a in attributes])
+
+class Requirements(NamedList):
+    name = "requirements"
+
+    def __init__(self, *requirements):
+        super(Requirements, self).__init__(*[Requirement(*r) for r in requirements])
+
+class Tags(NamedList):
+    name = "tags"
+
+    def __init__(self, *tags):
+        super(Tags, self).__init__(*tags)
+
+class Uid(object):
+    def __init__(self, uid):
+        self.uid = uid
+
+    def __call__(self, func):
+        func.uid = self.uid
+        return func
+
+class ArgumentParser(object):
+    def __init__(self, parser):
+        self.argparser = parser
+
+    def __call__(self, func):
+        func.argparser = self.argparser
+        return func
+
+class Name(NamedValue):
+    name = "name"
+
+class Description(NamedValue):
+    name = "description"
+
+class Examples(ExamplesTable):
+    def __new__(cls, header, rows, row_format=None):
+        return super(Examples, cls).__new__(cls, header=header, rows=rows, row_format=row_format)
+
+    def __call__(self, func):
+        func.examples = self
+        return func

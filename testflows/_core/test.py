@@ -31,12 +31,12 @@ from .exceptions import DummyTestException, ResultException, RepeatTestException
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, ExamplesTable
+from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement
+from .objects import RepeatTest, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
 from .funcs import current, top, previous, main, exception, pause
-from .funcs import xfails, xflags, repeat
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
@@ -44,7 +44,7 @@ from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
-from .filters import the, thetags
+from .filters import The, TheTags
 from .utils.sort import human as human_sort
 
 try:
@@ -199,11 +199,13 @@ class TestBase(object):
         self.subtype = get(subtype, self.subtype)
         self.context = get(context, current().context if current() and self.type < TestType.Iteration else (Context(current().context if current() else None)))
         self.tags = tags
-        self.requirements = {r.name: r for r in get(requirements, list(self.requirements))}
-        self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
+        self.requirements = {r.name: r for r in [Requirement(*r) for r in get(requirements, list(self.requirements))]}
+        self.attributes =  {a.name: a for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]}
         self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
+        if not isinstance(self.examples, ExamplesTable):
+            self.examples = ExamplesTable(*self.examples)
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
@@ -566,7 +568,7 @@ class TestDefinition(object):
                 args.pop("_random_order")
 
             if args.get("_pause_before"):
-                xflags = kwargs.get("xflags", globals()["xflags"]())
+                xflags = kwargs.get("xflags", {})
                 for pattern in args.get("_pause_before"):
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_BEFORE
@@ -574,7 +576,7 @@ class TestDefinition(object):
                 args.pop("_pause_before")
 
             if args.get("_pause_after"):
-                xflags = kwargs.get("xflags", globals()["xflags"]())
+                xflags = kwargs.get("xflags", {})
                 for pattern in args.get("_pause_after"):
                     xflags[pattern] = xflags.get(pattern, [0, 0])
                     xflags[pattern][0] |= PAUSE_AFTER
@@ -584,34 +586,34 @@ class TestDefinition(object):
             if args.get("_only"):
                 only = []
                 for pattern in args.pop("_only"):
-                    only.append(the(pattern))
+                    only.append(The(pattern))
                 kwargs["only"] = only
 
             if args.get("_skip"):
                 skip = []
                 for pattern in args.pop("_skip"):
-                    skip.append(the(pattern))
+                    skip.append(The(pattern))
                 kwargs["skip"] = skip
 
             if args.get("_start"):
                 pattern = args.pop("_start")[0]
-                kwargs["start"] = the(pattern)
+                kwargs["start"] = The(pattern)
 
             if args.get("_end"):
                 pattern = args.pop("_end")[0]
-                kwargs["end"] = the(pattern)
+                kwargs["end"] = The(pattern)
 
             if args.get("_only_tags"):
                 _only_tags = {}
                 for item in args.pop("_only_tags"):
                     _only_tags.update(item)
-                kwargs["only_tags"] = thetags(**_only_tags)
+                kwargs["only_tags"] = TheTags(**_only_tags)
 
             if args.get("_skip_tags"):
                 _skip_tags = {}
                 for item in args.pop("_skip_tags"):
                     _skip_tags.update(item)
-                kwargs["skip_tags"] = thetags(**_skip_tags)
+                kwargs["skip_tags"] = TheTags(**_skip_tags)
 
             if args.get("_tags"):
                 kwargs["tags"] = {value for value in args.pop("_tags")}
@@ -637,7 +639,7 @@ class TestDefinition(object):
 
     def __call__(self, **args):
         test = self.kwargs.get("test", None)
-        self.kwargs["args"] = self.kwargs.get("args", {})
+        self.kwargs["args"] = dict(self.kwargs.get("args") or {})
         self.kwargs["args"].update(args)
 
         self.no_arguments = get(self.no_arguments, not args)
@@ -657,7 +659,7 @@ class TestDefinition(object):
             pass
         try:
             kwargs = self.kwargs
-            kwargs["args"] = kwargs.get("args", None) or {}
+            kwargs["args"] = dict(kwargs.get("args") or {})
 
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
@@ -676,19 +678,19 @@ class TestDefinition(object):
             if not issubclass(test, TestBase):
                 raise TypeError(f"{test} must be subclass of TestBase")
 
-            name = test.make_name(self.name, parent.name if parent else None, kwargs.get("args", {}))
+            name = test.make_name(self.name, parent.name if parent else None, kwargs["args"])
 
             if parent:
                 kwargs["parent"] = parent.name
                 kwargs["id"] = parent.id + [parent.child_count]
                 kwargs["cflags"] = parent.cflags
                 # propagate xfails, xflags that prefix match the name of the test
-                kwargs["xfails"] = xfails({
+                kwargs["xfails"] = {
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
-                }) if parent.xfails else None or kwargs.get("xfails")
-                kwargs["xflags"] = xflags({
+                } if parent.xfails else None or kwargs.get("xfails")
+                kwargs["xflags"] = {
                     k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
-                }) if parent.xflags else None or kwargs.get("xflags")
+                } if parent.xflags else None or kwargs.get("xflags")
                 # propagate only, skip, start, and end
                 kwargs["only"] = parent.only or kwargs.get("only")
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
@@ -706,26 +708,29 @@ class TestDefinition(object):
                     parent.child_count += 1
 
             self.tags = test.make_tags(kwargs.pop("tags", None))
-            self.description = test.make_description(kwargs.pop("description", None), kwargs.get("args", {}))
+            self.description = test.make_description(kwargs.pop("description", None), kwargs["args"])
             self.parent = parent
 
             # anchor all patterns
-            kwargs["xfails"] = xfails({
-                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xfails") or {}).items()
-            }) or None
-            kwargs["xflags"] = xflags({
-                absname(k, name if name else name_sep): v for k, v in (kwargs.get("xflags") or {}).items()
-            }) or None
-            kwargs["only"] = [f.at(name if name else name_sep) for f in kwargs.get("only") or []] or None
-            kwargs["skip"] = [f.at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
-            kwargs["start"] = kwargs.get("start").at(name if name else name_sep) if kwargs.get("start") else None
-            kwargs["end"] = kwargs.get("end").at(name if name else name_sep) if kwargs.get("end") else None
-            kwargs["repeat"] = [globals()["repeat"](r.pattern.at(name if name else name_sep),r.number,r.until) for r in kwargs.get("repeat", [])] or None
-
+            kwargs["xfails"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xfails") or {}).items()
+            } or None
+            kwargs["xflags"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xflags") or {}).items()
+            } or None
+            kwargs["only"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("only") or []] or None
+            kwargs["skip"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
+            kwargs["start"] = The(str(kwargs.get("start"))).at(name if name else name_sep) if kwargs.get("start") else None
+            kwargs["end"] = The(str(kwargs.get("end"))).at(name if name else name_sep) if kwargs.get("end") else None
+            kwargs["only_tags"] = TheTags(**dict(kwargs["only_tags"])) if kwargs.get("only_tags") and not isinstance(kwargs["only_tags"], TheTags) else None
+            kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") and not isinstance(kwargs["skip_tags"], TheTags) else None
+            kwargs["repeat"] = [RepeatTest(*r) for r in kwargs.get("repeat", [])] or None
+            if kwargs["repeat"]:
+                [r.pattern.at(name if name else name_sep) for r in kwargs["repeat"]]
             # should not skip Background, Given and Finally steps
             if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
                 kwargs["only"] = kwargs["only"] or []
-                kwargs["only"].append(the(join(name, "*")))
+                kwargs["only"].append(The(join(name, "*")))
 
             self._apply_xflags(name, kwargs)
             self._apply_start(name, parent, kwargs)
@@ -734,6 +739,12 @@ class TestDefinition(object):
             self._apply_skip(name, kwargs)
             self._apply_end(name, parent, kwargs)
             self._apply_only(name, kwargs)
+
+            if not top():
+                # can't skip, pause before or after top level test
+                kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+                kwargs["flags"] &= ~PAUSE_BEFORE
+                kwargs["flags"] &= ~PAUSE_AFTER
 
             self.repeat = kwargs.pop("repeat", None)
 
@@ -784,7 +795,7 @@ class TestDefinition(object):
             if parent:
                 with parent.lock:
                     parent.end = None
-                    parent.skip = [the("/*")]
+                    parent.skip = [The("/*")]
 
     def _apply_start(self, name, parent, kwargs):
         start = kwargs.get("start")
@@ -795,6 +806,7 @@ class TestDefinition(object):
             kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
         else:
             kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+            kwargs["start"] = None
             if parent:
                 with parent.lock:
                     parent.start = None
@@ -1141,14 +1153,14 @@ class TestDecorator(object):
             if isinstance(self, TestOutline):
                 no_arguments = (not args or getattr(test, "_run_outline_with_no_arguments", False))
 
-                if no_arguments and self.examples:
+                if no_arguments and getattr(test, "examples", self.examples):
                     kwargs["args"] = {}
                     kwargs.pop("test", None)
 
                     _test_type = self.type(**kwargs, test=self)
 
                     def execute_examples():
-                        for example in self.examples:
+                        for example in getattr(test, "examples", self.examples):
                             _kwargs = dict(self.func.kwargs)
                             _kwargs["name"] = str(example)
                             _kwargs["args"] = dict(kwargs.get("args", {}))
@@ -1277,80 +1289,6 @@ class TestBackground(TestDecorator):
         if not issubclass(func.test, BackgroundTest):
             raise TypeError(f"{func.test} must be subclass of BackgroundTest")
         return super(TestBackground, self).__init__(func)
-
-class ArgumentParser(object):
-    def __init__(self, parser):
-        self.argparser = parser
-
-    def __call__(self, func):
-        func.argparser = self.argparser
-        return func
-
-class Name(object):
-    def __init__(self, name):
-        self.name = name
-
-    def __call__(self, func):
-        func.name = self.name
-        return func
-
-class Description(object):
-    def __init__(self, description):
-        self.description = description
-
-    def __call__(self, func):
-        func.description = self.description
-        return func
-
-class Examples(ExamplesTable):
-    def __new__(cls, header, rows, row_format=None):
-        return super(Examples, cls).__new__(cls, header=header, rows=rows, row_format=row_format)
-
-    def __call__(self, func):
-        func.examples = self
-        return func
-
-class Args(object):
-    def __init__(self, **args):
-        self.args = args
-
-    def __call__(self, func):
-        for k, v in self.args.items():
-            if not k.startswith("_"):
-                setattr(func, k, v)
-        return func
-
-class Attributes(object):
-    def __init__(self, *attributes):
-        self.attributes = attributes
-
-    def __call__(self, func):
-        func.attributes = self.attributes
-        return func
-
-class Requirements(object):
-    def __init__(self, *requirements):
-        self.requirements = requirements
-
-    def __call__(self, func):
-        func.requirements = self.requirements
-        return func
-
-class Tags(object):
-    def __init__(self, *tags):
-        self.tags = tags
-
-    def __call__(self, func):
-        func.tags = self.tags
-        return func
-
-class Uid(object):
-    def __init__(self, uid):
-        self.uid = uid
-
-    def __call__(self, func):
-        func.uid = self.uid
-        return func
 
 def ordered(tests):
     """Return ordered list of tests.

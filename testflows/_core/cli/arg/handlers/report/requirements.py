@@ -35,7 +35,6 @@ from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.short import format_test, format_result
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
-from testflows._core.filters import the
 from testflows._core.name import sep
 from testflows._core.transform.log.report.totals import Counts
 from testflows._core.objects import Requirement

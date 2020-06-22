@@ -21,7 +21,7 @@ from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
-from testflows._core.funcs import repeat as Repeat
+from testflows._core.objects import RepeatTest
 
 KeyValue = namedtuple("KeyValue", "key value")
 
@@ -132,7 +132,7 @@ def count(value):
 def repeat(value):
     try:
         fields = list(csv.reader([value], "unix"))[-1]
-        option = Repeat(*fields)
+        option = RepeatTest(*fields)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option

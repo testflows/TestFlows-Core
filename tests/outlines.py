@@ -1,5 +1,4 @@
 from testflows.core import *
-from testflows.core.objects import Requirement, ExamplesTable
 
 @TestOutline(Module)
 @Examples("name", [
