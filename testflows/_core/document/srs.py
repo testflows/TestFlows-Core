@@ -43,7 +43,7 @@ class Visitor(PTNodeVisitor):
             f"# document by TestFlows v{__version__}.\n"
             "# Do not edit by hand but re-generate instead\n"
             "# using \'tfs requirements generate\' command.\n"
-            "from testflows.core.objects import Requirement\n\n"
+            "from testflows.core import Requirement\n\n"
             )
         self.pyname_fmt = re.compile(r"[^a-zA-Z0-9]")
         super(Visitor, self).__init__(*args, **kwargs)
