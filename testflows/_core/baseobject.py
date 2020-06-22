@@ -75,7 +75,7 @@ class TestArg(TestObject):
     """
     pass
 
-class Table(TestObject, tuple):
+class Table(tuple, TestObject):
     _fields = ("header", "rows", "row_format")
     _defaults = (None, ) * 3
     _row_type_name = "Row"
@@ -100,7 +100,7 @@ class Table(TestObject, tuple):
             def __dict__(self):
                 return self._asdict()
 
-        obj = tuple.__new__(Table, [Row(*row) for row in rows])
+        obj = super(Table, cls).__new__(cls, [Row(*row) for row in rows])
         obj.initargs=InitArgs(
             args=[header, rows, row_format],
             kwargs={})

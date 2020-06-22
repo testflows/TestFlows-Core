@@ -159,6 +159,7 @@ class TestBase(object):
     tags = set()
     attributes = []
     requirements = []
+    examples = None
     name = None
     description = None
     node = None
@@ -170,7 +171,7 @@ class TestBase(object):
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None,
-                 description=None, parent=None,
+                 examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
@@ -202,6 +203,7 @@ class TestBase(object):
         self.attributes =  {a.name: a for a in get(attributes, list(self.attributes))}
         self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}
         self.description = get(description, self.description)
+        self.examples = get(examples, get(self.examples, ExamplesTable()))
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
@@ -384,6 +386,13 @@ class TestDefinition(object):
     def __new__(cls, name=None, **kwargs):
         run = kwargs.pop("run", None)
         test = kwargs.pop("test", None)
+        no_arguments = None
+
+        if run and test:
+            raise TypeError("can't define both test and run")
+
+        if kwargs.get("args", None):
+            no_arguments = False
 
         if name is not None:
             kwargs["name"] = name
@@ -404,9 +413,8 @@ class TestDefinition(object):
                 kwargs["test"] = run
             else:
                 raise TypeError(f"'{run}' is not a valid test type")
-            return cls.__create__(**kwargs)()
 
-        if test:
+        elif test:
             if isinstance(test, TestDecorator):
                 kwargs = inherit_kwargs(**test.func.kwargs)
                 kwargs["test"] = test
@@ -417,7 +425,12 @@ class TestDefinition(object):
             else:
                 raise TypeError(f"'{test}' is not a valid test type")
 
-        return cls.__create__(**kwargs)
+        self = cls.__create__(**kwargs)
+        self.no_arguments = no_arguments
+
+        if run:
+            return self()
+        return self
 
     @classmethod
     def __create__(cls,  **kwargs):
@@ -627,6 +640,8 @@ class TestDefinition(object):
         self.kwargs["args"] = self.kwargs.get("args", {})
         self.kwargs["args"].update(args)
 
+        self.no_arguments = get(self.no_arguments, not args)
+
         if test and isinstance(test, TestDecorator):
             self.repeatable_func = test
             with self as _test:
@@ -654,6 +669,7 @@ class TestDefinition(object):
             self._set_current_top_previous()
 
             test = kwargs.pop("test", None)
+            kwargs_test = test
             if test and isinstance(test, TestDecorator):
                 test = test.func.kwargs.get("test", None)
             test = test if test is not None else TestBase
@@ -681,7 +697,7 @@ class TestDefinition(object):
                 kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
                 kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
                 # propagate repeat
-                if parent.repeat and parent.type > TestType.Test and self.type >= TestType.Test:
+                if parent.repeat and parent.type > TestType.Outline and self.type >= TestType.Outline:
                     kwargs["repeat"] = parent.repeat
                 # handle parent test type propagation
                 if keep_type is None:
@@ -724,6 +740,12 @@ class TestDefinition(object):
             self.test = test(name, tags=self.tags, description=self.description, repeat=self.repeat, **kwargs)
             if getattr(self, "parent_type", None):
                 self.test.parent_type = self.parent_type
+
+            # indicate that parent is running an outline
+            # and if there are any user arguments for an outline
+            if isinstance(kwargs_test, TestOutline):
+                self.test._run_outline_with_no_arguments = self.no_arguments
+                self.test._run_outline = True
 
             if self.repeat is not None:
                 repeat = self._apply_repeat(name, self.repeat)
@@ -782,7 +804,7 @@ class TestDefinition(object):
             return
 
         for item in repeat:
-            if item.pattern.match(name,prefix=False):
+            if item.pattern.match(name, prefix=False):
                 return item
 
     def _apply_only_tags(self, type, tags, kwargs):
@@ -892,6 +914,9 @@ class TestDefinition(object):
                     __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
                 for i in range(repeat.number):
                     with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
+                        if isinstance(self.repeatable_func, TestOutline):
+                            iteration._run_outline_with_no_arguments = self.no_arguments
+                            iteration._run_outline = True
                         self.repeatable_func(**__args)
                     if repeat.until == "pass" and isinstance(iteration.result, PassResults):
                         break
@@ -961,7 +986,7 @@ class Suite(TestDefinition):
 
 class Outline(TestDefinition):
     """Outline definition."""
-    type = TestType.Test
+    type = TestType.Outline
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = kwargs.pop("type", cls.type)
@@ -1083,13 +1108,8 @@ class TestDecorator(object):
         kwargs = dict(vars(self.func))
 
         signature = inspect.signature(self.func)
-        kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if p.default != inspect.Parameter.empty}
-
-        examples = kwargs.pop("examples", None)
-        if examples:
-            if not "examples" in signature.parameters.keys():
-                raise TypeError("test must either be an outline or take 'examples' argument")
-            kwargs["args"]["examples"] = examples
+        kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if
+                          p.default != inspect.Parameter.empty}
 
         self.func.kwargs = kwargs
 
@@ -1113,20 +1133,62 @@ class TestDecorator(object):
         def run(test):
             return process_func_result(self.func(test, **args))
 
-        if test is None or (test is not None and test.type > self.type.type):
-            if isinstance(self, TestOutline) and self.examples:
-                r = []
-                for example in self.examples:
-                    kwargs = dict(self.func.kwargs)
-                    kwargs["args"] = dict(kwargs.get("args", {}))
-                    kwargs["args"].update(vars(example))
-                    kwargs.update(dict(example._args))
+        if (test is None
+                or (test and test.type > self.type.type and self.type.type != TestType.Outline)
+                or (test and getattr(test, "_run_outline", False))):
+            kwargs = dict(self.func.kwargs)
+
+            if isinstance(self, TestOutline):
+                no_arguments = (not args or getattr(test, "_run_outline_with_no_arguments", False))
+
+                if no_arguments and self.examples:
+                    kwargs["args"] = {}
                     kwargs.pop("test", None)
-                    r.append(self.type(**kwargs, test=self)(**args))
-                return r
+
+                    _test_type = self.type(**kwargs, test=self)
+
+                    def execute_examples():
+                        for example in self.examples:
+                            _kwargs = dict(self.func.kwargs)
+                            _kwargs["name"] = str(example)
+                            _kwargs["args"] = dict(kwargs.get("args", {}))
+                            _kwargs["args"].update(vars(example))
+                            _kwargs.update(dict(example._args))
+                            _kwargs.pop("type", None)
+                            _kwargs.pop("examples", None)
+
+                            if _test.type == TestType.Iteration:
+                                type = _test.parent_type
+                            else:
+                                type = _test.type
+
+                            _example_type = Example(type=type, **_kwargs)
+
+                            def execute_example(**args):
+                                process_func_result(self.func(current(), **args))
+
+                            _example_type.repeatable_func = execute_example
+
+                            with _example_type as _example:
+                                execute_example(**vars(example))
+
+                    _test_type.repeatable_func = execute_examples
+
+                    if test and getattr(test, "_run_outline", False):
+                        _test = test
+                        execute_examples()
+                    else:
+                        with _test_type as _test:
+                            execute_examples()
+
+                    return _test
+                else:
+                    if test and getattr(test, "_run_outline", False):
+                        return run(test)
+                    else:
+                        kwargs.pop("test", None)
+                        return self.type(**kwargs, test=self)(**args)
             else:
-                kwargs = dict(self.func.kwargs)
-                kwargs["args"] = dict(kwargs.get("args", {}))
                 kwargs.pop("test", None)
                 return self.type(**kwargs, test=self)(**args)
         else:
@@ -1177,16 +1239,8 @@ class TestOutline(TestDecorator):
             TestDecorator.__init__(self, self.func)
 
     def _init_func(self):
-        if not getattr(self.func, "examples", None):
-            raise TypeError("no examples")
-        self.examples = self.func.examples
-
-        if not getattr(self.func, "name", None):
-            name = self.func.__name__.replace("_", " ")
-            example_name = ", ".join([f"{field}={{{field}}}" for field in self.examples.row_type._fields])
-            self.func.name = f"{name} {example_name}"
-
-        delattr(self.func, "examples")
+        if getattr(self.func, "examples", None):
+            self.examples = self.func.examples
 
     def __call__(self, *args, **kwargs):
         if not self.func:
@@ -1248,12 +1302,12 @@ class Description(object):
         func.description = self.description
         return func
 
-class Examples(object):
-    def __init__(self, header, rows, row_format=None):
-        self.examples = ExamplesTable(header, rows=rows, row_format=row_format)
+class Examples(ExamplesTable):
+    def __new__(cls, header, rows, row_format=None):
+        return super(Examples, cls).__new__(cls, header=header, rows=rows, row_format=row_format)
 
     def __call__(self, func):
-        func.examples = self.examples
+        func.examples = self
         return func
 
 class Args(object):

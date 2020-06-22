@@ -8,7 +8,7 @@ def check_water(self, water_type, temperature):
         with Then(f"water temperature should be {temperature}"):
             pass
 
-@TestScenario
+@TestOutline(Scenario)
 @Examples(
     header="water_type temperature",
     rows=[
@@ -16,15 +16,13 @@ def check_water(self, water_type, temperature):
        ("cold", "5C"),
     ]
 )
-def check_water_types(self):
+def check_water_types(self, water_type, temperature):
     """Check water types.
     """
-    for example in self.examples:
-        with When(f"for example {example}"):
-            check_water(**example._asdict())
+    with When(f"for example {water_type}, {temperature}"):
+        check_water(water_type=water_type, temperature=temperature)
 
-@TestCase
-@Outline
+@TestOutline(Test)
 @Name("checking water type outline")
 @Examples(
     "water_type temperature",
@@ -56,8 +54,7 @@ examples = ExamplesTable(
     ]
 )
 
-@TestSuite
-@Outline
+@TestOutline(Suite)
 @Examples(
     header="name",
     rows = [
@@ -67,10 +64,9 @@ examples = ExamplesTable(
 )
 def suite_outline(self, name):
     note(f"hello {name}")
-    Scenario("check water types 0", run=check_water_types)
+    check_water_types()
 
-@TestStep
-@Outline
+@TestOutline(Step)
 @Examples(
     header="name",
     rows = [
@@ -81,21 +77,22 @@ def suite_outline(self, name):
 def step_outline(self, name):
     note(f"hello {name}")
 
-@TestFeature
-#@Outline
+@TestOutline(Feature)
 @Examples(
-    header="name",
+    header="name lastname",
     rows = [
-        ("vitaliy",),
-        ("natalia",)
+        ("vitaliy", "zakaznikov",),
+        ("natalia", "lucar",)
     ]
 )
-def with_examples(self, name=None):
+def with_examples(self, name, lastname=None):
     for example in examples:
         note([example, example._args])
-    with When(test=step_outline):
-        step_outline()
-    Suite(test=suite_outline)()
+    step_outline()
+    with When("step outline", test=step_outline):
+        step_outline(name="hello")
+    Suite(test=suite_outline)(name="hello")
+    check_more_water_types()
     Scenario("check water types 0", run=check_water_types)
     Scenario("check water types 1", run=check_water_types, examples=examples) 
     Scenario("check more water types 0", run=check_more_water_types)
@@ -105,8 +102,8 @@ def with_examples(self, name=None):
     Scenario("check water types outline 2", test=check_water_type_outline)(water_type='cold', temperature='5C')
     check_water_type_outline()
     check_water_type_outline(water_type='cold', temperature='5C')
-    with Scenario("my water types", examples=examples):
-        check_water_type_outline()
+    with Scenario("my water types", examples=examples) as test:
+        check_water_type_outline(**vars(test.examples[0]))
         check_water_type_outline(water_type='cold', temperature='5C')
 
 if main():

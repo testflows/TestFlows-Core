@@ -131,7 +131,7 @@ def count(value):
 
 def repeat(value):
     try:
-        fields = list(csv.reader([value],"unix"))[-1]
+        fields = list(csv.reader([value], "unix"))[-1]
         option = Repeat(*fields)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
@@ -141,7 +141,7 @@ def tags_filter(value):
     try:
         type, cvstags = value.split(":", 1)
         assert type in ["test", "suite", "module", "feature", "scenario"]
-        tags = list(csv.reader([cvstags],"unix"))[-1]
+        tags = list(csv.reader([cvstags], "unix"))[-1]
         if type == "scenario":
             type = "test"
         elif type == "feature":
