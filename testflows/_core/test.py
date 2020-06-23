@@ -665,6 +665,8 @@ class TestDefinition(object):
             kwargs = self.kwargs
             kwargs["args"] = dict(kwargs.get("args") or {})
 
+            self._set_current_top_previous()
+
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
             keep_type = kwargs.pop("keep_type", None)
@@ -674,7 +676,6 @@ class TestDefinition(object):
             if not top():
                 cli_args = self._parse_cli_args(self._argparser(argparser))
                 kwargs["args"].update({k: v for k,v in cli_args.items() if not k.startswith("_")})
-            self._set_current_top_previous()
 
             test = kwargs.pop("test", None)
             kwargs_test = test
