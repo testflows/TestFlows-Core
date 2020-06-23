@@ -255,6 +255,7 @@ class TestBase(object):
                 description = description.format(**{"$cls": cls}, **args)
         except Exception as exc:
             raise DescriptionError(f"can't format '{description}' using {args} {str(exc)}") from None
+        return description
 
     @classmethod
     def make_tags(cls, tags):
