@@ -187,6 +187,7 @@ class TestBase(object):
             # flag to indicate if main test called init
             self._init= False
 
+        self.io = None
         self.name = name
         if self.name is None:
             raise TypeError("name must be specified")
@@ -284,6 +285,8 @@ class TestBase(object):
             return self
 
     def _exit(self, exc_type, exc_value, exc_traceback):
+        if not self.io:
+            return False
         if top() is self and not self._init:
             return False
 
@@ -447,6 +450,7 @@ class TestDefinition(object):
         self.tags = None
         self.repeat = None
         self.repeatable_func = None
+        self._with_block_frame = None
         return self
 
     def _argparser(self, argparser=None):
@@ -771,9 +775,15 @@ class TestDefinition(object):
                     sys.settrace(dummy)
                     sys._getframe(1).f_trace = functools.partial(self.__repeat__, repeat, None, None, None)
                     return
-            return self.test._enter()
 
         except (KeyboardInterrupt, Exception):
+            raise
+
+        try:
+            return self.test._enter()
+        except (KeyboardInterrupt, Exception) as exc:
+            frame = inspect.currentframe().f_back
+            self._with_block_frame = (frame, frame.f_lasti, frame.f_lineno)
             self.trace = sys.gettrace()
             sys.settrace(dummy)
             sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
@@ -934,13 +944,22 @@ class TestDefinition(object):
                     return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
 
             tb_next = walk_tb(exception_traceback)
-            return walk_frame(frame.f_back, tb_next)
+            if self._with_block_frame is not None:
+                # if self._with_block_frame is set it means an exception was raised
+                # in __enter__() during test._enter() call. Now we need to fix
+                # traceback so that includes the line where "with" block is defined
+                # as it is lost
+                _frame, _lasti, _lineno = self._with_block_frame
+                if tb_next:
+                    tb_next = tb_next.tb_next
+                if tb_next:
+                    tb_next = tb_next.tb_next
+                tb_next = tb(_frame, _lasti, _lineno, tb_next)
+            tb_start = walk_frame(frame.f_back, tb_next)
+            return tb_start
 
         if exception_value:
             exception_traceback = make_complete_traceback(exception_traceback, frame)
-
-        if self.test is None:
-            return
 
         if isinstance(exception_value, TestIteration):
             try:
@@ -988,7 +1007,7 @@ class TestDefinition(object):
 
         # if test did not handle the exception in _exit then re-raise it
         if exception_value and not test__exit__:
-            raise exception_value.with_traceback(exception_traceback)
+            raise exception_value
 
         if not self.parent:
             sys.exit(0 if self.test.result else 1)
