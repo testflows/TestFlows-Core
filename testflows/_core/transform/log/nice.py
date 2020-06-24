@@ -14,6 +14,7 @@
 # limitations under the License.
 import re
 import textwrap
+import functools
 
 import testflows.settings as settings
 
@@ -44,15 +45,23 @@ def color_secondary_keyword(keyword):
 def color_other(other):
     return color(other, "white", attrs=["dim"])
 
-def color_result(prefix, result):
+def color_result(result, attrs=None):
+    if attrs is None:
+        attrs = ["bold"]
     if result.startswith("X"):
-        return color(prefix + result, "blue", attrs=["bold"])
-    elif result.endswith("OK"):
-        return color(prefix + result, "green", attrs=["bold"])
-    elif result.endswith("Skip"):
-        return color(prefix + result, "cyan", attrs=["bold"])
-    # Error, Fail, Null
-    return color(prefix + result, "red", attrs=["bold"])
+        return functools.partial(color, color="blue", attrs=attrs)
+    elif result == "OK":
+        return functools.partial(color, color="green", attrs=attrs)
+    elif result == "Skip":
+        return functools.partial(color, color="cyan", attrs=attrs)
+    elif result == "Error":
+        return functools.partial(color, color="yellow", attrs=attrs)
+    elif result == "Fail":
+        return functools.partial(color, color="red", attrs=attrs)
+    elif result == "Null":
+        return functools.partial(color, color="magenta", attrs=attrs)
+    else:
+        raise ValueError(f"unknown result {result}")
 
 def format_input(msg, keyword):
     out = color_other(f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (msg['test_id'].count('/') - 1)}{keyword}")
@@ -216,14 +225,15 @@ def format_test(msg, keyword):
 
 def format_result(msg, prefix):
     result = msg["result_type"]
-    _result = color_result(prefix, result)
+    _color = color_result(result)
+    _result = _color(prefix + result)
     _test = color_other(basename(msg["result_test"]))
     _indent = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
     out = (f"{color_other(_indent)}{_result} "
         f"{_test}{color_other(', ' + msg['result_test'])}"
-        f"{(color_other(', ') + color(format_multiline(msg['result_message'], ' ' * len(_indent)).strip(), 'yellow', attrs=['bold'])) if msg['result_message'] else ''}"
-        f"{(color_other(', ') + color(msg['result_reason'], 'blue', attrs=['bold'])) if msg['result_reason'] else ''}\n")
+        f"{(color_other(', ') + _color(format_multiline(msg['result_message'], ' ' * len(_indent)).strip())) if msg['result_message'] else ''}"
+        f"{(color_other(', ') + _color(msg['result_reason'])) if msg['result_reason'] else ''}\n")
 
     return out
 

@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import textwrap
+import functools
 
 import testflows.settings as settings
 
@@ -43,15 +44,23 @@ def color_secondary_keyword(keyword):
 def color_test_name(name):
     return color(split(name)[-1], "white", attrs=[])
 
-def color_result(result):
+def color_result(result, attrs=None):
+    if attrs is None:
+        attrs = ["bold"]
     if result.startswith("X"):
-        return color(result, "blue", attrs=["bold"])
+        return functools.partial(color, color="blue", attrs=attrs)
     elif result == "OK":
-        return color(result, "green", attrs=["bold"])
+        return functools.partial(color, color="green", attrs=attrs)
     elif result == "Skip":
-        return color(result, "cyan", attrs=["bold"])
-    # Error, Fail, Null
-    return color(result, "red", attrs=["bold"])
+        return functools.partial(color, color="cyan", attrs=attrs)
+    elif result == "Error":
+        return functools.partial(color, color="yellow", attrs=attrs)
+    elif result == "Fail":
+        return functools.partial(color, color="red", attrs=attrs)
+    elif result == "Null":
+        return functools.partial(color, color="magenta", attrs=attrs)
+    else:
+        raise ValueError(f"unknown result {result}")
 
 def format_input(msg, keyword):
     out = f"{indent * (msg['test_id'].count('/'))}"
@@ -205,7 +214,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id):
 def format_result(msg):
     result = msg["result_type"]
 
-    _result = color_result(result)
+    _color = color_result(result)
+    _result = _color(result)
     _test = color_test_name(basename(msg["result_test"]))
 
     _indent = indent * (msg["test_id"].count('/') - 1)
@@ -215,12 +225,12 @@ def format_result(msg):
         out += f" {_test}"
         if msg["result_message"]:
             out += color_test_name(",")
-            out += f" {color(format_multiline(msg['result_message'], _indent).lstrip(), 'yellow', attrs=['bold'])}"
+            out += f" {_color(format_multiline(msg['result_message'], _indent).lstrip())}"
     elif result.startswith("X"):
         out += f" {_test}"
         if msg["result_reason"]:
             out += color_test_name(",")
-            out += f" {color(msg['result_reason'], 'blue', attrs=['bold'])}"
+            out += f" {_color(msg['result_reason'])}"
     return out + "\n"
 
 formatters = {

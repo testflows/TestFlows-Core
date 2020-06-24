@@ -32,7 +32,6 @@ def color_result(result, attrs=None):
         return functools.partial(color, color="green", attrs=attrs)
     elif result == "Skip":
         return functools.partial(color, color="cyan", attrs=attrs)
-    # Error, Fail, Null
     elif result == "Error":
         return functools.partial(color, color="yellow", attrs=attrs)
     elif result == "Fail":
