@@ -57,6 +57,7 @@ setup(
         "testflows._core.cli.arg.handlers.report",
         "testflows._core.cli.arg.handlers.report.map",
         "testflows._core.cli.arg.handlers.report.compare",
+        "testflows._core.cli.arg.handlers.report.metrics",
         "testflows._core.cli.arg.handlers.transform",
         "testflows._core.cli.arg.handlers.document",
         "testflows._core.cli.arg.handlers.requirement",
