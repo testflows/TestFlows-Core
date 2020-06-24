@@ -782,6 +782,8 @@ class TestDefinition(object):
         try:
             return self.test._enter()
         except (KeyboardInterrupt, Exception) as exc:
+            if not self.test.io:
+                raise
             frame = inspect.currentframe().f_back
             self._with_block_frame = (frame, frame.f_lasti, frame.f_lineno)
             self.trace = sys.gettrace()
