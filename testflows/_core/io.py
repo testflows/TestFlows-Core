@@ -451,4 +451,3 @@ class LogIO(object):
     def close(self, final=False):
         self.writer.close(final=final)
         self.reader.close(final=final)
-

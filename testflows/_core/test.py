@@ -917,7 +917,7 @@ class TestDefinition(object):
             def walk_frame(frame, tb_next=None):
                 if frame is None:
                     return tb_next
-                if frame.f_code.co_filename.endswith("testflows/_core/test.py"):
+                if not settings.debug and frame.f_code.co_filename.endswith("testflows/_core/test.py"):
                     tb_next = tb_next
                 else:
                     tb_next = tb(frame, frame.f_lasti, frame.f_lineno, tb_next)
@@ -927,7 +927,11 @@ class TestDefinition(object):
                 tb_next = None
                 if tb_frame.tb_next:
                     tb_next = walk_tb(tb_frame.tb_next)
-                return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
+
+                if tb_frame and not settings.debug and tb_frame.tb_frame.f_code.co_filename.endswith("testflows/_core/test.py"):
+                    return tb_next
+                else:
+                    return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
 
             tb_next = walk_tb(exception_traceback)
             return walk_frame(frame.f_back, tb_next)
