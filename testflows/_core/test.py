@@ -24,10 +24,11 @@ import textwrap
 import importlib
 
 from contextlib import ExitStack, contextmanager
+from collections import namedtuple
 
 import testflows.settings as settings
 
-from .exceptions import DummyTestException, ResultException, RepeatTestException, DescriptionError
+from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
@@ -394,9 +395,6 @@ class TestDefinition(object):
         run = kwargs.pop("run", None)
         test = kwargs.pop("test", None)
         no_arguments = None
-
-        if run and test:
-            raise TypeError("can't define both test and run")
 
         if kwargs.get("args", None):
             no_arguments = False
@@ -904,7 +902,7 @@ class TestDefinition(object):
 
     def __repeat__(self, repeat=None, *args):
         sys.settrace(self.trace)
-        raise RepeatTestException(repeat)
+        raise TestIteration(repeat)
 
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
         sys.settrace(self.trace)
@@ -913,25 +911,53 @@ class TestDefinition(object):
     def __exit__(self, exception_type, exception_value, exception_traceback):
         frame = inspect.currentframe().f_back
 
+        def make_complete_traceback(exception_traceback, frame):
+            tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
+
+            def walk_frame(frame, tb_next=None):
+                if frame is None:
+                    return tb_next
+                if frame.f_code.co_filename.endswith("testflows/_core/test.py"):
+                    tb_next = tb_next
+                else:
+                    tb_next = tb(frame, frame.f_lasti, frame.f_lineno, tb_next)
+                return walk_frame(frame.f_back, tb_next)
+
+            def walk_tb(tb_frame):
+                tb_next = None
+                if tb_frame.tb_next:
+                    tb_next = walk_tb(tb_frame.tb_next)
+                return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
+
+            tb_next = walk_tb(exception_traceback)
+            return walk_frame(frame.f_back, tb_next)
+
+        if exception_value:
+            exception_traceback = make_complete_traceback(exception_traceback, frame)
+
         if self.test is None:
             return
 
-        if isinstance(exception_value, RepeatTestException):
+        if isinstance(exception_value, TestIteration):
             try:
                 repeat = exception_value.repeat
+
                 self.test._enter()
                 if self.repeatable_func is None:
                     raise Error("not repeatable")
+
                 __kwargs = dict(self.kwargs)
                 __kwargs.pop("name", None)
                 __kwargs.pop("parent", None)
                 __kwargs["type"] = TestType.Iteration
                 __args = __kwargs.pop("args", {})
+
                 if repeat.until == "fail":
                     __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
                 else:
                     # pass or complete
                     __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+
                 for i in range(repeat.number):
                     with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
                         if isinstance(self.repeatable_func, TestOutline):
@@ -1153,22 +1179,25 @@ class TestDecorator(object):
         def run(test):
             return process_func_result(self.func(test, **args))
 
+        test_running_outline = getattr(test, "_run_outline", False)
+
         if (test is None
                 or (test and test.type > self.type.type and self.type.type != TestType.Outline)
-                or (test and getattr(test, "_run_outline", False))):
+                or (test and test_running_outline)):
             kwargs = dict(self.func.kwargs)
 
             if isinstance(self, TestOutline):
-                no_arguments = (not args or getattr(test, "_run_outline_with_no_arguments", False))
+                no_arguments = not args or getattr(test, "_run_outline_with_no_arguments", False)
+                examples = test_running_outline and getattr(test, "examples") or self.examples
 
-                if no_arguments and getattr(test, "examples", self.examples):
+                if no_arguments and examples:
                     kwargs["args"] = {}
                     kwargs.pop("test", None)
 
                     _test_type = self.type(**kwargs, test=self)
 
                     def execute_examples():
-                        for example in getattr(test, "examples", self.examples):
+                        for example in examples:
                             _kwargs = dict(self.func.kwargs)
                             _kwargs["name"] = str(example)
                             _kwargs["args"] = dict(kwargs.get("args", {}))
@@ -1194,7 +1223,7 @@ class TestDecorator(object):
 
                     _test_type.repeatable_func = execute_examples
 
-                    if test and getattr(test, "_run_outline", False):
+                    if test and test_running_outline:
                         _test = test
                         execute_examples()
                     else:
@@ -1203,7 +1232,7 @@ class TestDecorator(object):
 
                     return _test
                 else:
-                    if test and getattr(test, "_run_outline", False):
+                    if test and test_running_outline:
                         return run(test)
                     else:
                         kwargs.pop("test", None)

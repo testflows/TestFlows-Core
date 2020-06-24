@@ -24,12 +24,12 @@ class DummyTestException(TestFlowsException):
     """
     pass
 
-class RepeatTestException(TestFlowsException):
-    """Repeat test exception.
+class TestIteration(TestFlowsException):
+    """Repeat test.
     """
     def __init__(self, repeat, *args, **kwargs):
         self.repeat = repeat
-        super(RepeatTestException, self).__init__(*args, **kwargs)
+        super(TestIteration, self).__init__(*args, **kwargs)
 
 class TestFlowsError(TestFlowsException):
     """Base error exception class.

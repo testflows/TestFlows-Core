@@ -188,7 +188,7 @@ class Attribute(TestObject):
     uid = None
     type = None
     group = None
-    
+
     def __init__(self, name, value, type=None, group=None, uid=None):
         self.name = name
         self.value = value
@@ -206,7 +206,7 @@ class Requirement(TestObject):
     priority = None
     type = None
     group = None
-    
+
     def __init__(self, name, version, description=None, link=None,
             priority=None, type=None, group=None, uid=None):
         self.name = name
@@ -217,7 +217,7 @@ class Requirement(TestObject):
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
-        return super(Requirement, self).__init__()  
+        return super(Requirement, self).__init__()
 
     def __call__(self, *version):
         if not self.version in version:
@@ -230,7 +230,7 @@ class Metric(TestObject):
     uid = None
     type = None
     group = None
-    
+
     def __init__(self, name, value, units, type=None, group=None, uid=None):
         self.name = name
         self.value = value
@@ -262,7 +262,7 @@ class Ticket(TestObject):
     link = None
     type = None
     group = None
-    
+
     def __init__(self, name, link=None, type=None, group=None, uid=None):
         self.name = name
         self.link = get(link, self.link)
@@ -311,7 +311,7 @@ class ExamplesTable(Table):
                 return obj
 
         obj = super(ExamplesTable, cls).__new__(cls, header, rows, row_format, ExampleRow)
-        
+
         for idx, row in enumerate(obj):
             row._idx = idx
             row._row_format = obj.row_format
@@ -419,7 +419,7 @@ class RepeatTest(namedtuple_with_defaults("repeat", "pattern number until", defa
         args = list(args)
         l = len(args)
         if l > 0:
-            if not isinstance(args[0], the):
+            if not isinstance(args[0], The):
                 args[0] = The(args[0])
         if l > 1:
             args[1] = int(args[1])

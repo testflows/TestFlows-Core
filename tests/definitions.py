@@ -1,13 +1,6 @@
 #!/usr/bin/python3
 from testflows.core import *
-from testflows.core.objects import TestBase
 
-class CustomTest(TestBase):
-    name = "CustomTest"
-
-class CustomTestWithRun(TestBase):
-    name = "custom test with run"
-    description = "My custom test description"
 
 @TestStep
 def simple_step(self, name=None):
@@ -50,7 +43,6 @@ def open_resource(self, name=None):
 
 @TestScenario
 @Name("{$cls.name} my custom test")
-@TestClass(CustomTest)
 def custom_test(self, name=None):
     note(f"custom test {name}")
 
@@ -85,8 +77,6 @@ def my_step_with_arg(self, name):
 @Name("test definitions")
 def feature(self):
     my_step_with_arg(name="hello")
-    Scenario("my custom test", run=CustomTestWithRun, args={"name": "hello"})
-    Scenario("my custom test 2", test=CustomTestWithRun)(name="hello")
     Scenario(run=Scenario("my inner scenario", test=simple_test))
     Scenario(test=Scenario("my inner scenario 2", test=simple_test))()
     with Scenario("run simple test by calling scenario directly"):

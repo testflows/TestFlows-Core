@@ -63,7 +63,7 @@ examples = Examples(
 )
 def suite_outline(self, name):
     note(f"hello {name}")
-    check_water_types()
+    Scenario(run=check_water_types)
 
 @TestOutline(Step)
 @Examples(
