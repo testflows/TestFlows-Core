@@ -34,7 +34,7 @@ def filter(names, pat, prefix=False):
     """Return the subset of the list NAMES that match PAT.
     """
     result = []
-    match = _compile_pattern(pat, prefix=prefix)
+    match = _compile_pattern(pat, prefix=prefix).match
     # normcase is NOP. Optimize it away from the loop.
     for name in names:
         if match(name):
@@ -55,13 +55,13 @@ def matchcase(name, pat, prefix=False):
     This is a version of fnmatch() which doesn't case-normalize
     its arguments.
     """
-    match = _compile_pattern(pat, prefix=prefix)
+    match = _compile_pattern(pat, prefix=prefix).match
     return match(name) is not None
 
 @functools.lru_cache(maxsize=256, typed=True)
 def _compile_pattern(pat, prefix=False):
     res = translate(pat, prefix=prefix)
-    return re.compile(res).match
+    return re.compile(res)
 
 def translate(pat, prefix=False):
     """Translate a shell PATTERN to a regular expression.
@@ -131,11 +131,11 @@ def _translate_prefix(pat):
     For example the pattern  'A/B/C' would match
     'A', 'A/B' , 'A/B/C'
     as all are prefixes of the full match 'A/B/C'.
-    
+
     However it would not match any path prefix
     that ends with '/' such as 'A/', or 'A/B/'
     as these paths are treated as incompleted.
-    If you need to match such path you need to 
+    If you need to match such path you need to
     rstrip() the '/' before matching.
 
     There is no way to quote meta-characters.
@@ -246,7 +246,7 @@ def absname(n, at):
 def basename(name):
     """Returns the final component of a name.
     """
-    i = name.rfind(sep) + 1    
+    i = name.rfind(sep) + 1
     return name[i:]
 
 # Return the head (dirname) part of a name, same as split(name)[0].
@@ -280,7 +280,7 @@ def split(name):
 
 def relname(name, at, start=None):
     """Return a relative version of a name
-    relative to the `at`. 
+    relative to the `at`.
     """
     if not name:
         raise ValueError("no name specified")

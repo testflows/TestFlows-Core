@@ -283,11 +283,13 @@ class ExamplesRow(TestObject):
 class ExamplesTable(Table):
     _row_type_name = "Example"
 
-    def __new__(cls, header=None, rows=None, row_format=None):
+    def __new__(cls, header=None, rows=None, row_format=None, args=None):
         if rows is None:
             rows = []
         if header is None:
             header = ""
+        if args is None:
+            args = {}
 
         row_type = namedtuple(cls._row_type_name, header)
 
@@ -315,6 +317,9 @@ class ExamplesTable(Table):
         for idx, row in enumerate(obj):
             row._idx = idx
             row._row_format = obj.row_format
+
+        obj.args = dict(args)
+
         return obj
 
 class NamedValue(object):
@@ -479,8 +484,9 @@ class Description(NamedValue):
     name = "description"
 
 class Examples(ExamplesTable):
-    def __new__(cls, header, rows, row_format=None):
-        return super(Examples, cls).__new__(cls, header=header, rows=rows, row_format=row_format)
+    def __new__(cls, header, rows, row_format=None, args=None):
+        return super(Examples, cls).__new__(cls, header=header,
+            rows=rows, row_format=row_format, args=args)
 
     def __call__(self, func):
         func.examples = self

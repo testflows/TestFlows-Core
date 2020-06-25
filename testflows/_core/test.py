@@ -443,7 +443,7 @@ class TestDefinition(object):
     @classmethod
     def __create__(cls,  **kwargs):
         self = super(TestDefinition, cls).__new__(cls)
-        self.name = kwargs.pop("name", None)
+        self.name = None
         self.test = None
         self.parent = None
         self.kwargs = kwargs
@@ -688,7 +688,7 @@ class TestDefinition(object):
             if not issubclass(test, TestBase):
                 raise TypeError(f"{test} must be subclass of TestBase")
 
-            name = test.make_name(self.name, parent.name if parent else None, kwargs["args"], format=format_name)
+            name = test.make_name(kwargs.pop("name", None), parent.name if parent else None, kwargs["args"], format=format_name)
 
             if parent:
                 kwargs["parent"] = parent.name
@@ -717,6 +717,7 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.child_count += 1
 
+            self.name = name
             self.tags = test.make_tags(kwargs.pop("tags", None))
             self.description = test.make_description(kwargs.pop("description", None), kwargs["args"], format=format_description)
             self.parent = parent
@@ -737,10 +738,6 @@ class TestDefinition(object):
             kwargs["repeat"] = [RepeatTest(*r) for r in kwargs.get("repeat", [])] or None
             if kwargs["repeat"]:
                 [r.pattern.at(name if name else name_sep) for r in kwargs["repeat"]]
-            # should not skip Background, Given and Finally steps
-            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
-                kwargs["only"] = kwargs["only"] or []
-                kwargs["only"].append(The(join(name, "*")))
 
             self._apply_xflags(name, kwargs)
             self._apply_start(name, parent, kwargs)
@@ -749,6 +746,25 @@ class TestDefinition(object):
             self._apply_skip(name, kwargs)
             self._apply_end(name, parent, kwargs)
             self._apply_only(name, kwargs)
+
+            # for And subtype we change the subtype to be that of its sibling
+            if kwargs.get("subtype") is TestSubType.And:
+                sibling = previous()
+                if not sibling:
+                    raise TypeError("`And` subtype can't be used here as it has no sibling from which to inherit the subtype")
+                if sibling.type != kwargs["type"]:
+                    raise TypeError("`And` subtype can't be used here as it sibling is not of the same type")
+                kwargs["subtype"] = sibling.subtype
+
+            # should not skip Background, Given and Finally steps
+            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
+                kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+                kwargs["only"] = None
+                kwargs["skip"] = None
+                kwargs["start"] = None
+                kwargs["end"] = None
+                kwargs["only_tags"] = None
+                kwargs["skip_tags"] = None
 
             if not top():
                 # can't skip, pause before or after top level test
@@ -1227,6 +1243,7 @@ class TestDecorator(object):
                             _kwargs["name"] = str(example)
                             _kwargs["args"] = dict(kwargs.get("args", {}))
                             _kwargs["args"].update(vars(example))
+                            _kwargs.update(dict(examples.args))
                             _kwargs.update(dict(example._args))
                             _kwargs.pop("type", None)
                             _kwargs.pop("examples", None)
