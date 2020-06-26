@@ -648,7 +648,10 @@ class TestDefinition(object):
 
         return args
 
-    def __call__(self, **args):
+    def __call__(self, *pargs, **args):
+        if pargs:
+            raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
+
         test = self.kwargs.get("test", None)
         self.kwargs["args"] = dict(self.kwargs.get("args") or {})
         self.kwargs["args"].update(args)
@@ -1209,7 +1212,10 @@ class TestDecorator(object):
 
         self.func.kwargs = kwargs
 
-    def __call__(self, **args):
+    def __call__(self, *pargs, **args):
+        if pargs:
+            raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
+
         return self.__run__(**args)
 
     def __run__(self, **args):
@@ -1317,10 +1323,7 @@ class TestStep(TestDecorator):
             TestDecorator.__init__(self, self.func)
             return self
 
-        if args:
-            raise TypeError(f"{self.func.__name__}() takes only named arguments")
-
-        return self.__run__(**kwargs)
+        return super(TestStep, self).__call__(*args, **kwargs)
 
 class TestOutline(TestDecorator):
     type = Outline
@@ -1349,10 +1352,7 @@ class TestOutline(TestDecorator):
             TestDecorator.__init__(self, self.func)
             return self
 
-        if args:
-            raise TypeError(f"{self.func.__name__}() takes only named arguments")
-
-        return self.__run__(**kwargs)
+        return super(TestOutline, self).__call__(*args, **kwargs)
 
 class TestCase(TestDecorator):
     type = Test
@@ -1375,7 +1375,7 @@ class TestBackground(TestDecorator):
     def __init__(self, func):
         func.test = getattr(func, "test", BackgroundTest)
         if not issubclass(func.test, BackgroundTest):
-            raise TypeError(f"{func.test} must be subclass of BackgroundTest")
+            raise TypeError(f"{func.test} not a subclass of BackgroundTest")
         return super(TestBackground, self).__init__(func)
 
 def ordered(tests):
