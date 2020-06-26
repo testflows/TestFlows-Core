@@ -32,7 +32,7 @@ from .exceptions import DummyTestException, ResultException, TestIteration, Desc
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement
+from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
 from .objects import RepeatTest, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
@@ -213,6 +213,8 @@ class TestBase(object):
             self.flags = Flags(flags)
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
         self.uid = get(uid, self.uid)
+        if self.uid is not None:
+            self.uid = str(self.uid)
         self.xfails = get(xfails, None)
         self.xflags = get(xflags, None)
         self.only = get(only, None)
@@ -261,7 +263,7 @@ class TestBase(object):
 
     @classmethod
     def make_tags(cls, tags):
-        return set(get(tags, cls.tags))
+        return {str(tag) for tag in set(get(tags, cls.tags))}
 
     def _enter(self):
         self.io = TestIO(self)
@@ -457,9 +459,13 @@ class TestDefinition(object):
         :argparser: test specific argument parser
         :return: argument parser
         """
+        description = self.kwargs.get("description")
+        if description is not None:
+            description = str(description)
+
         main_parser = ArgumentParserClass(
             prog=sys.argv[0],
-            description=self.kwargs.get("description"),
+            description=description,
             description_prog="Test - Framework",
             epilog = epilog
         )
@@ -675,7 +681,7 @@ class TestDefinition(object):
             format_description = kwargs.pop("format_description", True)
 
             if not top():
-                cli_args = self._parse_cli_args(self._argparser(argparser))
+                cli_args = self._parse_cli_args(self._argparser(argparser if not isinstance(argparser, ArgumentParser) else argparser.value))
                 kwargs["args"].update({k: v for k,v in cli_args.items() if not k.startswith("_")})
 
             test = kwargs.pop("test", None)

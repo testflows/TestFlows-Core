@@ -167,6 +167,9 @@ class Tag(TestObject):
         self.value = value
         return super(Tag, self).__init__()
 
+    def __str__(self):
+        return str(self.value)
+
 class Argument(TestObject):
     _fields = ("name", "value", "type", "group", "uid")
     _defaults = (None,) * 4
@@ -290,6 +293,8 @@ class ExamplesTable(Table):
             header = ""
         if args is None:
             args = {}
+        else:
+            args = dict(args)
 
         row_type = namedtuple(cls._row_type_name, header)
 
@@ -318,7 +323,7 @@ class ExamplesTable(Table):
             row._idx = idx
             row._row_format = obj.row_format
 
-        obj.args = dict(args)
+        obj.args = args
 
         return obj
 
@@ -339,6 +344,10 @@ class NamedValue(object):
     def __call__(self, func):
         setattr(func, self.name, self.value)
         return func
+
+class NamedString(NamedValue):
+    def __str__(self):
+        return str(self.value)
 
 class NamedList(list):
     name = None
@@ -461,26 +470,19 @@ class Tags(NamedList):
     def __init__(self, *tags):
         super(Tags, self).__init__(*tags)
 
-class Uid(object):
-    def __init__(self, uid):
-        self.uid = uid
+class Uid(NamedString):
+    name = "uid"
 
-    def __call__(self, func):
-        func.uid = self.uid
-        return func
+class ArgumentParser(NamedValue):
+    name = "argparser"
 
-class ArgumentParser(object):
     def __init__(self, parser):
-        self.argparser = parser
+        self.value = parser
 
-    def __call__(self, func):
-        func.argparser = self.argparser
-        return func
-
-class Name(NamedValue):
+class Name(NamedString):
     name = "name"
 
-class Description(NamedValue):
+class Description(NamedString):
     name = "description"
 
 class Examples(ExamplesTable):
