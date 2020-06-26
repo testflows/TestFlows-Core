@@ -300,8 +300,6 @@ class TestBase(object):
                 exception(exc_type, exc_value, exc_traceback, test=self)
                 result = Error("unexpected %s: %s" % (exc_type.__name__, str(exc_value)), test=self.name)
                 self.result = self.result(result)
-                if isinstance(exc_value, KeyboardInterrupt):
-                    raise result
 
         try:
             if exc_value is not None:
@@ -1023,12 +1021,15 @@ class TestDefinition(object):
             except (KeyboardInterrupt, Exception):
                 raise
 
+        if not self.parent:
+            sys.exit(0 if self.test.result else 1)
+
+        if isinstance(exception_value, KeyboardInterrupt):
+            raise KeyboardInterrupt
+
         # if test did not handle the exception in _exit then re-raise it
         if exception_value and not test__exit__:
             raise exception_value
-
-        if not self.parent:
-            sys.exit(0 if self.test.result else 1)
 
         if not self.test.result:
             if isinstance(self.test.result, Fail):
