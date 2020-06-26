@@ -29,7 +29,7 @@ from collections import namedtuple
 import testflows.settings as settings
 
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError
-from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
+from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
@@ -726,6 +726,8 @@ class TestDefinition(object):
             self.description = test.make_description(kwargs.pop("description", None), kwargs["args"], format=format_description)
             self.parent = parent
 
+            kwargs["flags"] = Flags(kwargs.get("flags"))
+
             # anchor all patterns
             kwargs["xfails"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xfails") or {}).items()
@@ -761,8 +763,8 @@ class TestDefinition(object):
                 kwargs["subtype"] = sibling.subtype
 
             # should not skip Background, Given and Finally steps
-            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally):
-                kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally) or kwargs["flags"] & MANDATORY:
+                kwargs["flags"] &= ~SKIP
                 kwargs["only"] = None
                 kwargs["skip"] = None
                 kwargs["start"] = None
@@ -772,7 +774,7 @@ class TestDefinition(object):
 
             if not top():
                 # can't skip, pause before or after top level test
-                kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+                kwargs["flags"] &= ~SKIP
                 kwargs["flags"] &= ~PAUSE_BEFORE
                 kwargs["flags"] &= ~PAUSE_AFTER
 
@@ -841,9 +843,9 @@ class TestDefinition(object):
             return
 
         if not start.match(name):
-            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+            kwargs["flags"] |= SKIP
         else:
-            kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+            kwargs["flags"] &= ~SKIP
             kwargs["start"] = None
             if parent:
                 with parent.lock:
@@ -864,7 +866,7 @@ class TestDefinition(object):
 
         found = len({tag for tag in only_tags if tag in tags}) > 0
         if not found:
-            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+            kwargs["flags"] |= SKIP
 
     def _apply_skip_tags(self, type, tags, kwargs):
         skip_tags = (kwargs.get("skip_tags", {}) or {}).get(type)
@@ -873,7 +875,7 @@ class TestDefinition(object):
 
         found = len({tag for tag in skip_tags if tag in tags}) > 0
         if found:
-            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+            kwargs["flags"] |= SKIP
 
     def _apply_only(self, name, kwargs):
         only = kwargs.get("only")
@@ -887,9 +889,9 @@ class TestDefinition(object):
                 break
 
         if not found:
-            kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+            kwargs["flags"] |= SKIP
         else:
-            kwargs["flags"] = Flags(kwargs.get("flags")) & ~SKIP
+            kwargs["flags"] &= ~SKIP
 
     def _apply_skip(self, name, kwargs):
         skip = kwargs.get("skip")
@@ -898,7 +900,7 @@ class TestDefinition(object):
 
         for item in skip:
             if item.match(name, prefix=False):
-                kwargs["flags"] = Flags(kwargs.get("flags")) | SKIP
+                kwargs["flags"] |= SKIP
                 break
 
     def _apply_xflags(self, name, kwargs):
@@ -909,7 +911,7 @@ class TestDefinition(object):
         for pattern, item in xflags.items():
             if match(name, pattern):
                 set_flags, clear_flags = item
-                kwargs["flags"] = (Flags(kwargs.get("flags")) & ~Flags(clear_flags)) | Flags(set_flags)
+                kwargs["flags"] = (kwargs["flags"] & ~Flags(clear_flags)) | Flags(set_flags)
 
     def _parent_type_propagation(self, parent, kwargs):
         """Propagate parent test type if lower.
