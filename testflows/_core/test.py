@@ -742,8 +742,14 @@ class TestDefinition(object):
             kwargs["skip"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
             kwargs["start"] = The(str(kwargs.get("start"))).at(name if name else name_sep) if kwargs.get("start") else None
             kwargs["end"] = The(str(kwargs.get("end"))).at(name if name else name_sep) if kwargs.get("end") else None
-            kwargs["only_tags"] = TheTags(**dict(kwargs["only_tags"])) if kwargs.get("only_tags") and not isinstance(kwargs["only_tags"], TheTags) else None
-            kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") and not isinstance(kwargs["skip_tags"], TheTags) else None
+            if not isinstance(kwargs.get("only_tags"), TheTags):
+                kwargs["only_tags"] = TheTags(**dict(kwargs["only_tags"])) if kwargs.get("only_tags") else None
+            else:
+                kwargs["only_tags"] = kwargs.get("only_tags")
+            if not isinstance(kwargs.get("skip_tags"), TheTags):
+                kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") else None
+            else:
+                kwargs["skip_tags"] = kwargs.get("skip_tags")
             kwargs["repeat"] = [RepeatTest(*r) for r in kwargs.get("repeat", [])] or None
             if kwargs["repeat"]:
                 [r.pattern.at(name if name else name_sep) for r in kwargs["repeat"]]
@@ -850,8 +856,7 @@ class TestDefinition(object):
 
         if not start.match(name):
             kwargs["flags"] |= SKIP
-        else:
-            kwargs["flags"] &= ~SKIP
+        elif start.match(name, prefix=False):
             kwargs["start"] = None
             if parent:
                 with parent.lock:
@@ -896,8 +901,6 @@ class TestDefinition(object):
 
         if not found:
             kwargs["flags"] |= SKIP
-        else:
-            kwargs["flags"] &= ~SKIP
 
     def _apply_skip(self, name, kwargs):
         skip = kwargs.get("skip")
