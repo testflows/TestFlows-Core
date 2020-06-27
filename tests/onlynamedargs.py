@@ -29,11 +29,11 @@ def outline(self, arg1, arg2=None):
     (background,)
 ], args=Name("test={test.type.type!s}"))
 def call_directly(self, test):
-    with When("I call test step directly"):
+    with When("I call a test directly"):
         with raises(TypeError) as exc:
             test(1)
 
-    with Then("I expect TypeError to be raised with specific message"):
+    with Then("I expect TypeError to be raised"):
         assert str(exc.exception) == "only named arguments are allowed but (1,) positional arguments were passed", error()
 
 @TestOutline(Scenario)
@@ -52,12 +52,12 @@ def call_directly(self, test):
     (Scenario, outline)
     ], args=Name("outer_test={outer_test.type!s}, test={test.type.type!s}"))
 def call_using_another_test(self, outer_test, test):
-    with When("I check call test step using another step"):
+    with When("I call test using another test"):
         with raises(TypeError) as exc:
             outer_test(test=test)(1)
 
-        with Then("I expect TypeError to be raised with specific message"):
-            assert str(exc.exception) == "only named arguments are allowed but (1,) positional arguments were passed", error()
+    with Then("I expect TypeError to be raised"):
+        assert str(exc.exception) == "only named arguments are allowed but (1,) positional arguments were passed", error()
 
 
 @TestFeature

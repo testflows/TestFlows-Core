@@ -3,7 +3,6 @@ from testflows.asserts import error, raises
 
 from testflows._core.testtype import TestType, TestSubType
 
-
 @TestOutline(Scenario)
 @Examples("sibling", [
     (When,),
@@ -38,7 +37,9 @@ def check_subtype_inheritance(self, sibling):
 @TestOutline(Scenario)
 @Examples("sibling", [
     (Test,),
-    (Scenario,)
+    (Scenario,),
+    (When,),
+    (Given,)
 ], args=Name("check {sibling.__name__!s} sibling type"))
 def check_when_sibling_is_of_invalid_type(self, sibling):
     """Check that a exception is raised when sibling

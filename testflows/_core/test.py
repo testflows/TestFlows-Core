@@ -758,7 +758,10 @@ class TestDefinition(object):
 
             # for And subtype we change the subtype to be that of its sibling
             if kwargs.get("subtype") is TestSubType.And:
-                sibling = previous()
+                sibling = None
+                prev = previous()
+                if prev and depth(prev.name) == depth(name):
+                    sibling = prev
                 if not sibling:
                     raise TypeError("`And` subtype can't be used here as it has no sibling from which to inherit the subtype")
                 if sibling.type != kwargs["type"]:
