@@ -17,13 +17,13 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.transform.log.pipeline import FailsReportLogPipeline
+from testflows._core.transform.log.pipeline import TotalsReportLogPipeline
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("fails", help="fails report", epilog=epilog(),
-            description="Generate report showing only failed tests.",
+        parser = commands.add_parser("totals", help="totals", epilog=epilog(),
+            description="Show total counts.",
             formatter_class=HelpFormatter)
 
         parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
@@ -34,4 +34,4 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        FailsReportLogPipeline(args.input, args.output).run()
+        TotalsReportLogPipeline(args.input, args.output).run()

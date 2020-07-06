@@ -17,13 +17,13 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.transform.log.pipeline import VersionReportLogPipeline
+from testflows._core.transform.log.pipeline import PassingReportLogPipeline
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("version", help="framework version report", epilog=epilog(),
-            description="Generate simple report that shows the framework version that was used.",
+        parser = commands.add_parser("passing", help="passing", epilog=epilog(),
+            description="Show only passing tests.",
             formatter_class=HelpFormatter)
 
         parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
@@ -34,4 +34,4 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        VersionReportLogPipeline(args.input, args.output).run()
+        PassingReportLogPipeline(args.input, args.output).run()

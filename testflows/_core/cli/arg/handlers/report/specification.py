@@ -141,8 +141,8 @@ class Handler(HandlerBase):
 
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("specification", help="test specification report", epilog=epilog(),
-            description="Generate test specifiction.",
+        parser = commands.add_parser("specification", help="specification report", epilog=epilog(),
+            description="Generate specifiction report.",
             formatter_class=HelpFormatter)
 
         parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),

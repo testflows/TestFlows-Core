@@ -22,7 +22,7 @@ class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
         parser = commands.add_parser("compare", help="comparison report", epilog=epilog(),
-            description="Generate comparison report between test runs.",
+            description="Generate comparison report between runs.",
             formatter_class=HelpFormatter)
 
         report_commands = parser.add_subparsers(title="commands", metavar="command",

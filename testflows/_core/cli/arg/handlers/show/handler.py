@@ -17,6 +17,10 @@ from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.show.test.handler import Handler as test_handler
 from testflows._core.cli.arg.handlers.show.tests.handler import Handler as tests_handler
+from testflows._core.cli.arg.handlers.show.passing import Handler as passing_handler
+from testflows._core.cli.arg.handlers.show.totals import Handler as totals_handler
+from testflows._core.cli.arg.handlers.show.fails import Handler as fails_handler
+from testflows._core.cli.arg.handlers.show.version import Handler as version_handler
 
 class Handler(HandlerBase):
     @classmethod
@@ -30,3 +34,7 @@ class Handler(HandlerBase):
         show_commands.required = True
         test_handler.add_command(show_commands)
         tests_handler.add_command(show_commands)
+        passing_handler.add_command(show_commands)
+        fails_handler.add_command(show_commands)
+        totals_handler.add_command(show_commands)
+        version_handler.add_command(show_commands)
