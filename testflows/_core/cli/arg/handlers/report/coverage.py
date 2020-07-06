@@ -219,7 +219,7 @@ class Counts(object):
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("requirements-coverage", help="requirements coverage report", epilog=epilog(),
+        parser = commands.add_parser("coverage", help="requirements coverage report", epilog=epilog(),
             description="Generate requirements coverage report.",
             formatter_class=HelpFormatter)
 
