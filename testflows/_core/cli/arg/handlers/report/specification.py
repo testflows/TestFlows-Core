@@ -12,7 +12,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 import textwrap
+
 from collections import OrderedDict
 
 import testflows._core.cli.arg.type as argtype
@@ -35,16 +37,14 @@ template = f"""
 ---
 # %(title)s Test Specification
 
-# Table of Contents
+## Table of Contents
 
 %(table_of_contents)s
 
 ## 1. Overview
 
-This test specification contains detailed test procedures for each
-test including its unique name, attributes, tags and requirement(s).
-Each test procedure describes the step-by-step actions, expected results,
-and any special conditions necessary for testing.
+This test specification contains detailed summary of test procedures for each
+executed test including test's unique name, attributes, tags and requirement(s).
 
 %(body)s
 
@@ -83,19 +83,24 @@ class Formatter(object):
             out = textwrap.indent(out, indent)
         return out
 
-    def format_tests(self, data):
+    def format_tests(self, data, toc):
         ss = [""]
         s = []
-        s.append("## 2. Test Specifications and Procedures\n")
+        s.append("## 2. Procedures\n")
         s.append("\n")
-        s.append("This section includes all the tests and their procedures.\n")
+        s.append("This section includes procedures for all the executed tests.\n")
         ss.append("\n".join(s))
+
+        def anchor(heading):
+            return re.sub(r"\s+", "-", re.sub(r"[^a-zA-Z0-9-_\s]+", "", heading.lower()))
 
         for test in data["tests"]:
             s = []
 
             id = ".".join(["1" if i == 0 else str(int(p) + 1) for i, p in enumerate(test["id"].split(sep)[1:])])
             s.append(f"### 2.{id} {test['keyword'].upper()} **{test['name']}**\n")
+            heading = s[-1].lstrip("# ").strip()
+            name = f"{test['keyword'].upper()} {test['name']}"
             s.append(f"**Name** `{test['path']}`\n")
             if test["attributes"]:
                 s.append("**Attributes**  \n")
@@ -122,19 +127,25 @@ class Formatter(object):
                 s.append("||None|| ||")
             s.append("\n")
             ss.append("\n".join(s))
+
+            toc.append(f"{len(id.split('.')) * '  '}* 2.{id} [{name}](#{anchor(heading)})")
+
         return "\n---\n".join(ss)
 
     def format(self, data):
-        body = self.format_tests(data)
+        toc = []
+        toc.append("* 1 [Overview](#1-overview)")
+        toc.append("* 2 [Procedures](#2-procedures)")
+        body = self.format_tests(data, toc)
         return template.strip() % {
             "title": data["title"],
-            "table_of_contents": "",
+            "table_of_contents": "\n".join(toc),
             "logo": self.format_logo(data),
             "confidential": self.format_confidential(data),
             "copyright": self.format_copyright(data),
             "body": body
         }
-        # FIXME: generate and add table of contents
+
 
 class Handler(HandlerBase):
     Formatter = Formatter
