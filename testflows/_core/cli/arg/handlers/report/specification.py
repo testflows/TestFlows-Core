@@ -120,11 +120,11 @@ class Formatter(object):
 
             s.append("##### PROCEDURE\n")
             for step in test["steps"]:
-                s.append(f"||**{step['keyword']}**||{step['name']}||")
+                s.append(f"* **{step['keyword']}**  {step['name']}  ")
                 if step["description"]:
-                    s.append(f"|| ||{step['description']}||")
+                    s.append(textwrap.indent(f"{step['description'].strip()}", "  ").rstrip())
             if not test["steps"]:
-                s.append("||None|| ||")
+                s.append("* None")
             s.append("\n")
             ss.append("\n".join(s))
 
