@@ -51,6 +51,16 @@ hr { border-color: #3fdc84; }
 .test.active { border: 1px solid #dedede; border-radius: 15px; background: #fefee7; }
 .requirement-inline.active { background: #ffffe7; }
 .requirement-description, .test-procedure { border: 1px solid #dedede; padding: 15px; background: #fdfdfd; margin-bottom: 1em; overflow-x: auto; }
+.test-description {
+    background: #f5f5f5;
+    border-radius: 5px;
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-bottom: 0.25em;
+    margin-top: 0.25em;
+    padding-top: 0.25em;
+    font-size: small;
+}
 .test-procedure { background: #fdfdfd; margin-top: 15px; margin-bottom: 15px; }
 .test-procedure .highlight { height: 70vh; }
 .no-tests { color: #ffa400; vertical-align: middle; margin-left: 0.5em !important; border: 1px dashed #ffa400; }

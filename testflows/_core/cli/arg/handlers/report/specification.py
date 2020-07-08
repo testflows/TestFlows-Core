@@ -118,13 +118,19 @@ class Formatter(object):
                 s.append(self.format_multiline(test['description']) if test['description'] else "")
                 s.append("\n")
 
+            def add_steps(s, test, level):
+                for step in test["steps"]:
+                    s.append(f"{'  ' * level}* **{step['keyword']}**  {step['name']}  ")
+                    if step["description"]:
+                        s.append(textwrap.indent(f"<div markdown=1 class=\"test-description\">{step['description'].strip()}</div>", "    " * level).rstrip())
+                    if getattr(TestType, step["type"]) < TestType.Test:
+                        if step["steps"]:
+                            add_steps(s, step, level + 1)
+                if not test["steps"]:
+                    s.append("* None")
+
             s.append("##### PROCEDURE\n")
-            for step in test["steps"]:
-                s.append(f"* **{step['keyword']}**  {step['name']}  ")
-                if step["description"]:
-                    s.append(textwrap.indent(f"{step['description'].strip()}", "  ").rstrip())
-            if not test["steps"]:
-                s.append("* None")
+            add_steps(s, test, 1)
             s.append("\n")
             ss.append("\n".join(s))
 
@@ -190,6 +196,8 @@ class Handler(HandlerBase):
         t["path"] = test["test_name"]
         t["level"] = test["test_level"]
         t["keyword"] = test["test_type"]
+        t["type"] = test["test_type"]
+        t["subtype"] = test["test_subtype"]
         if test["test_subtype"]:
                 t["keyword"] = test["test_subtype"]
         t["description"] = test["test_description"]
