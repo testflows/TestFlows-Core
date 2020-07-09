@@ -103,20 +103,31 @@ class Formatter(object):
             heading = s[-1].lstrip("# ").strip()
             name = f"{test['keyword'].upper()} {test['name']}"
             s.append(f"**Name** `{test['path']}`\n")
+
             if test["attributes"]:
                 s.append("**Attributes**  \n")
                 for attr in test["attributes"]:
                     s.append(f'||**{attr["attribute_name"]}**||{attr["attribute_value"]}||')
                 s.append("\n")
+
             if test["tags"]:
                 t = []
                 for tag in test["tags"]:
                     t.append(f'`{tag["tag_value"]}`')
                 s.append(f"**Tags**  {', '.join(t)}")
                 s.append("\n")
+
             if test["description"]:
                 s.append("##### DESCRIPTION\n")
                 s.append(self.format_multiline(test['description']) if test['description'] else "")
+                s.append("\n")
+
+            if test["requirements"]:
+                s.append("##### REQUIREMENTS\n")
+                for req in test["requirements"]:
+                    s.append(f'* **{req["requirement_name"]}**  ')
+                    s.append(textwrap.indent(f'<div markdown=1 class="text-small">version: {req["requirement_version"]}</div>', "  "))
+                    s.append(textwrap.indent(f'<div markdown=1 class="test-description">{req["requirement_description"].strip()}</div>', "  "))
                 s.append("\n")
 
             def add_steps(s, test, level):
