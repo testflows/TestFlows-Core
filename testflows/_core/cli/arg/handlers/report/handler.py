@@ -22,6 +22,7 @@ from testflows._core.cli.arg.handlers.report.coverage import Handler as coverage
 from testflows._core.cli.arg.handlers.report.map.handler import Handler as map_handler
 from testflows._core.cli.arg.handlers.report.openmetrics import Handler as openmetrics_handler
 from testflows._core.cli.arg.handlers.report.specification import Handler as specification_handler
+from testflows._core.cli.arg.handlers.report.tracebility import Handler as tracebility_handler
 
 class Handler(HandlerBase):
     @classmethod
@@ -35,8 +36,9 @@ class Handler(HandlerBase):
         report_commands.required = True
         results_handler.add_command(report_commands)
         specification_handler.add_command(report_commands)
+        tracebility_handler.add_command(report_commands)
+        coverage_handler.add_command(report_commands)
         compare_handler.add_command(report_commands)
         openmetrics_handler.add_command(report_commands)
-        coverage_handler.add_command(report_commands)
         #srs_coverage_handler.add_command(report_commands)
         map_handler.add_command(report_commands)
