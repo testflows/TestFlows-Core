@@ -940,6 +940,9 @@ class TestDefinition(object):
             type = parent.type
             subtype = parent.subtype
 
+        elif subtype is TestSubType.Example:
+            type = parent_type
+
         kwargs["subtype"] = subtype
         kwargs["type"] = type
 
