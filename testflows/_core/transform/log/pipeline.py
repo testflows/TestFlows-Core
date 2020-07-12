@@ -31,7 +31,7 @@ from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
-from .report.openmetrics import transform as openmetrics_report_transform
+from .report.metrics import transform as metrics_transform
 from .report.results import transform as results_transform
 #from .report.map import transform as map_transform
 
@@ -197,8 +197,8 @@ class DotsLogPipeline(Pipeline):
         ]
         super(DotsLogPipeline, self).__init__(steps)
 
-class OpenMetricsReportLogPipeline(Pipeline):
-    def __init__(self, input, output):
+class MetricsLogPipeline(Pipeline):
+    def __init__(self, input, metrics):
         stop_event = threading.Event()
 
         message_types = [Message.METRIC.name, Message.STOP.name]
@@ -208,16 +208,10 @@ class OpenMetricsReportLogPipeline(Pipeline):
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(),
-            fanout(
-                openmetrics_report_transform(),
-            ),
-            fanin(
-                "".join
-            ),
-            write_transform(output),
+            metrics_transform(metrics),
             stop_transform(stop_event)
         ]
-        super(OpenMetricsReportLogPipeline, self).__init__(steps)
+        super(MetricsLogPipeline, self).__init__(steps)
 
 class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):

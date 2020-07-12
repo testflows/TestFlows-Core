@@ -15,28 +15,17 @@
 import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP
-from testflows._core.message import Message, dumps
+from testflows._core.message import Message
 
-def format_metric_name(name):
-    return name.replace(" ", "_")
-
-def format_metric(msg):
-    metric_name = format_metric_name(msg["metric_name"])
-    metric_value = msg["metric_value"]
-    metric_units = msg["metric_units"]
-    metric_time = msg["message_time"]
-    test_name = msg["test_name"]
-
-    return f"{metric_name}{{test={dumps(test_name)},units={dumps(metric_units)}}} {metric_value} {int(metric_time)}\n"
+def format_metric(msg, metrics):
+    metrics.append(msg)
 
 formatters = {
     Message.METRIC.name: (format_metric,),
 }
 
-def transform():
-    """Transform parsed log extracting metrics into an OpenMetrics format.
-
-    https://github.com/OpenObservability/OpenMetrics/blob/master/markdown/metric_exposition_format.md
+def transform(metrics):
+    """Transform parsed log into metrics.
     """
     line = None
     while True:
@@ -48,7 +37,7 @@ def transform():
                 if flags & SKIP and settings.show_skipped is False:
                     line = None
                 else:
-                    line = formatter[0](line, *formatter[1:])
+                    line = formatter[0](line, *formatter[1:], metrics)
             else:
                 line = None
         line = yield line
