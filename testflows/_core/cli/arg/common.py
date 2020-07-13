@@ -82,14 +82,14 @@ def description(description=None, prog=None, version=None):
     if description is None:
         description = ""
     if prog is None:
-        prog = "Test Framework"
+        prog = "Open-Source Software Testing Framework"
 
     desc =  dim_white("  ---- ") + bold_blue("o o o") + dim_white(" ----") + "\n"
     desc += dim_white(" |   ") + bold_blue("o       o") + dim_white("   |") + "\n"
     desc += (dim_white(" | ") + bold_white("1") + bold_blue(" o ") + bold_white("10010")
                 + bold_blue(" o ") + bold_white("0 ") + dim_white("|") + "\n")
     desc += (dim_white(" |   ") + bold_blue("o       o") + dim_white("   |")
-             + dim_white("    TestFlows %s v%s" % (prog, version)) + "\n")
+             + dim_white("    TestFlows.com %s v%s" % (prog, version)) + "\n")
     desc += (dim_white("  ---  ") + bold_blue("o o o") + bold_cyan("xx ") + dim_white("--") + "\n")
     desc += (dim_white(" /           ") + bold_cyan("xx") + dim_white("   \\") + "\n")
     desc += (dim_white("/  ^^^        ") + bold_cyan("xx") + dim_white("   \\") + "\n")
