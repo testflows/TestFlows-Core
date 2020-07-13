@@ -30,7 +30,7 @@ def get(a, b):
 
 def hash(*s, short=False):
     """Calculate standard hash.
-    
+
     :param s: strings
     :param short: short version, default: False
     """
@@ -110,7 +110,11 @@ class Table(tuple, TestObject):
         obj.header = header
         obj.rows = obj
         obj.row_type = row_type
-        obj.row_format = get(row_format, Table.default_row_format(row_type._fields, obj[0] if obj else None))
+        if row_format:
+            row_format % tuple(obj.header.split(" "))
+        else:
+            row_format = Table.default_row_format(row_type._fields, obj[0] if obj else None)
+        obj.row_format = row_format
         return obj
 
     @staticmethod
