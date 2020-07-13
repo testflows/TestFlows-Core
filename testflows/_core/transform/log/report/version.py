@@ -1,5 +1,5 @@
 # Copyright 2019 Katteli Inc.
-# TestFlows Test Framework (http://testflows.com)
+# TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ def transform(stop, divider="\n"):
             started = localfromtimestamp(line["message_time"])
         if stop.is_set():
             if started is not None and version is not None:
-                line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows Test Framework v{version}\n",
+                line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}\n",
                     "white", attrs=["dim"])
             else:
                 line = None

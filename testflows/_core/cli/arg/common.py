@@ -1,5 +1,5 @@
 # Copyright 2019 Katteli Inc.
-# TestFlows Test Framework (http://testflows.com)
+# TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ def description(description=None, prog=None, version=None):
           ---- o o o ----
          |   o       o   |
          | 1 o 10010 o 0 |
-         |   o       o   |     TestFlows Test Framework v 1.2.3443.22343
+         |   o       o   |     TestFlows.com Open-Source Software Testing Framework v 1.2.3443.22343
          ---  o o oxx --
         /            xx   \
        /  ^^^         xx   \
@@ -100,4 +100,4 @@ def description(description=None, prog=None, version=None):
 
 def epilog():
     """Return argument parser epilog"""
-    return white(f"TestFlows Test Framework. Copyright {datetime.now().year} Katteli Inc.", attrs=["dim"])
+    return white(f"TestFlows.com Open-Source Software Testing Framework. Copyright {datetime.now().year} Katteli Inc.", attrs=["dim"])
