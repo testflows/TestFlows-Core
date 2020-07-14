@@ -126,15 +126,15 @@ class Formatter(object):
                 s.append("##### REQUIREMENTS\n")
                 for req in test["requirements"]:
                     s.append(f'* **{req["requirement_name"]}**  ')
-                    s.append(textwrap.indent(f'<div markdown=1 class="text-small">version: {req["requirement_version"]}</div>', "  "))
-                    s.append(textwrap.indent(f'<div markdown=1 class="test-description">{req["requirement_description"].strip()}</div>', "  "))
+                    s.append(textwrap.indent(f'<div markdown="1" class="text-small">version: {req["requirement_version"]}</div>', "  "))
+                    s.append(textwrap.indent(f'<div markdown="1" class="test-description">{req["requirement_description"].strip()}</div>', "  "))
                 s.append("\n")
 
             def add_steps(s, test, level):
                 for step in test["steps"]:
                     s.append(f"{'  ' * level}* **{step['keyword']}**  {step['name']}  ")
                     if step["description"]:
-                        s.append(textwrap.indent(f"<div markdown=1 class=\"test-description\">{step['description'].strip()}</div>", "    " * level).rstrip())
+                        s.append(textwrap.indent(f"<div markdown="1" class=\"test-description\">{step['description'].strip()}</div>", "    " * level).rstrip())
                     if getattr(TestType, step["type"]) < TestType.Test:
                         if step["steps"]:
                             add_steps(s, step, level + 1)
