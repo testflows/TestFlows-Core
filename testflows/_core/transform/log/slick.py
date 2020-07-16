@@ -86,7 +86,9 @@ def format_type(msg):
     test_type = getattr(TestType, msg["test_type"])
     test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
 
-    if test_type == TestType.Module:
+    if test_subtype == TestSubType.Example:
+        return "Example"
+    elif test_type == TestType.Module:
         return "Module"
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:

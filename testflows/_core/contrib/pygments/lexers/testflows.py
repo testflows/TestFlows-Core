@@ -24,8 +24,8 @@ class TestFlowsLexer(RegexLexer):
 
     tokens = {
         'root': [
-            (r'(\s*)(Module|Suite|Feature|Test|Scenario)( .*)', bygroups(Keyword, Keyword.Namespace, Name.Namespace)),
-            (r'(\s*)(Given|When|Then|And|By|Finally)', Keyword),
+            (r'(\s*)(Module|Suite|Feature|Test|Scenario|Example|Outline)( .*)', bygroups(Keyword, Keyword.Namespace, Name.Namespace)),
+            (r'(\s*)(Step|Background|Given|When|Then|But|And|By|Finally)', Keyword),
             (r'(\s*)(Arguments|Requirements|Attributes|Tags|Examples)', Name.Label),
             (r'(\s*)OK', Result.OK),
             (r'(\s*)Fail', Result.Fail),
