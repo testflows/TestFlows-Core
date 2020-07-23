@@ -117,10 +117,14 @@ def format_test(msg, counts):
     test_type = getattr(TestType, msg["test_type"])
     test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
 
-    if test_type == TestType.Module:
+    if test_subtype == TestSubType.Example:
+        counts["example"].units += 1
+    elif test_type == TestType.Module:
         counts["module"].units += 1
     elif test_type == TestType.Suite:
         counts["suite"].units += 1
+    elif test_type == TestType.Outline:
+        counts["outline"].units += 1
     elif test_type == TestType.Iteration:
         counts["iteration"].units += 1
     elif test_type == TestType.Step:
@@ -141,10 +145,14 @@ def format_result(msg, counts):
     test_type = getattr(TestType, msg["test_type"])
     test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
 
-    if test_type == TestType.Module:
+    if test_subtype == TestSubType.Example:
+        setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
+    elif test_type == TestType.Module:
         setattr(counts["module"], _name, getattr(counts["module"], _name) + 1)
     elif test_type == TestType.Suite:
         setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
+    elif test_type == TestType.Outline:
+        setattr(counts["outline"], _name, getattr(counts["outline"], _name) + 1)
     elif test_type == TestType.Iteration:
         setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
     elif test_type == TestType.Step:
@@ -167,10 +175,12 @@ def all_counts():
         "module": Counts("modules", *([0] * 10)),
         "suite": Counts("suites", *([0] * 10)),
         "test": Counts("tests", *([0] * 10)),
+        "outline": Counts("outlines", *([0] * 10)),
         "iteration": Counts("iterations", *([0] * 10)),
         "step": Counts("steps", *([0] * 10)),
         "feature": Counts("features", *([0] * 10)),
-        "scenario": Counts("scenarios", *([0] * 10))
+        "scenario": Counts("scenarios", *([0] * 10)),
+        "example": Counts("examples", *([0] * 10))
     }
 
 def transform(stop, divider="\n"):
@@ -204,6 +214,10 @@ def transform(stop, divider="\n"):
                     line += line_icon + str(counts["feature"])
                 if counts["scenario"]:
                     line += line_icon + str(counts["scenario"])
+                if counts["example"]:
+                    line += line_icon + str(counts["example"])
+                if counts["outline"]:
+                    line += line_icon + str(counts["outline"])
                 if counts["iteration"]:
                     line += line_icon + str(counts["iteration"])
                 if counts["step"]:
