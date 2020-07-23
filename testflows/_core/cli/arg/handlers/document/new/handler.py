@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2020 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,20 +15,17 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.document.convert import Handler as convert_handler
-from testflows._core.cli.arg.handlers.document.toc import Handler as toc_handler
-from testflows._core.cli.arg.handlers.document.new.handler import Handler as new_handler
+from testflows._core.cli.arg.handlers.document.new.requirements import Handler as requirements_handler
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("document", help="document processing", epilog=epilog(),
-            description="Work with a document.",
+        parser = commands.add_parser("new", help="create new document", epilog=epilog(),
+            description="Create new document.",
             formatter_class=HelpFormatter)
 
-        document_commands = parser.add_subparsers(title="commands", metavar="command",
+        new_commands = parser.add_subparsers(title="commands", metavar="command",
             description=None, help=None)
-        document_commands.required = True
-        convert_handler.add_command(document_commands)
-        toc_handler.add_command(document_commands)
-        new_handler.add_command(document_commands)
+        new_commands.required = True
+
+        requirements_handler.add_command(new_commands)

@@ -51,6 +51,7 @@ setup(
         "testflows._core.transform.log",
         "testflows._core.transform.log.report",
         "testflows._core.document",
+        "testflows._core.document.new",
         "testflows._core.cli",
         "testflows._core.cli.arg",
         "testflows._core.cli.arg.handlers",
@@ -59,6 +60,7 @@ setup(
         "testflows._core.cli.arg.handlers.report.compare",
         "testflows._core.cli.arg.handlers.transform",
         "testflows._core.cli.arg.handlers.document",
+        "testflows._core.cli.arg.handlers.document.new",
         "testflows._core.cli.arg.handlers.requirement",
         "testflows._core.cli.arg.handlers.show",
         "testflows._core.cli.arg.handlers.show.test",
@@ -66,6 +68,7 @@ setup(
         ],
     package_data={
         "testflows._core.document": ["*.css"],
+        "testflows._core.document.new": ["*.md"],
         "testflows._core.cli.arg.handlers.report.map": ["*.css", "*.js"],
     },
     scripts=[
