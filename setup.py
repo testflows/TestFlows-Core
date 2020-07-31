@@ -56,7 +56,6 @@ setup(
         "testflows._core.cli.arg",
         "testflows._core.cli.arg.handlers",
         "testflows._core.cli.arg.handlers.report",
-        "testflows._core.cli.arg.handlers.report.map",
         "testflows._core.cli.arg.handlers.report.compare",
         "testflows._core.cli.arg.handlers.transform",
         "testflows._core.cli.arg.handlers.document",
@@ -69,7 +68,6 @@ setup(
     package_data={
         "testflows._core.document": ["*.css"],
         "testflows._core.document.new": ["*.md"],
-        "testflows._core.cli.arg.handlers.report.map": ["*.css", "*.js"],
     },
     scripts=[
         "testflows/_core/bin/tfs",

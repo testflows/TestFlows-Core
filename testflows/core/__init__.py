@@ -27,7 +27,7 @@ from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement,
 from testflows._core.baseobject import Table
 from testflows._core.filters import The, TheTags
 from testflows._core.funcs import top, current, previous, load, append_path
-from testflows._core.funcs import main, args, maps
+from testflows._core.funcs import main, args
 from testflows._core.funcs import metric, ticket, value, note, debug, trace
 from testflows._core.funcs import message, exception, ok, fail, skip, err
 from testflows._core.funcs import null, xok, xfail, xerr, xnull, pause, getsattr

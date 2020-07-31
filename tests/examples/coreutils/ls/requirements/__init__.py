@@ -12,24 +12,4 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from testflows._core.transform.log import message
-
-def process_test(msg, maps):
-    maps["top"] = msg.map
-
-processors = {
-    message.RawTest: process_test,
-}
-
-def transform(maps, stop_event):
-    """Transform parsed log line into a map.
-    """
-    line = None
-    while True:
-        if line is not None:
-            processor = processors.get(type(line), None)
-            if processor:
-                processor(line, maps)
-                stop_event.set()
-
-        line = yield line
+from .requirements import *
