@@ -19,14 +19,15 @@ from testflows._core.transform.log.report.totals import format_test as process_t
 from testflows._core.transform.log.report.totals import format_result as process_result_counts
 
 def process_test(msg, results, names, unique):
-    def add_name(name, names, unique, test_id, duplicate=0):
+    def add_name(name, names, unique, test_id):
         _name = name
-        if duplicate:
+        duplicate = 0
+        if name in unique:
+            duplicate = unique[name]
+            duplicate += 1
             _name = f'{name} ~{duplicate}'
-        if _name in unique:
-            return add_name(name, names, unique, test_id, duplicate + 1)
         names[test_id] = _name
-        unique.add(_name)
+        unique[name] = duplicate
         return
 
     add_name(msg["test_name"], names, unique, msg["test_id"])
@@ -105,7 +106,7 @@ def transform(results):
     """
     names = {}
     # unique test names
-    unique = set()
+    unique = {}
 
     if results.get("tests") is None:
         results["tests"] = {}
