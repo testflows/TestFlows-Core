@@ -118,7 +118,7 @@ def format_test(msg, last_test_id, keyword):
     _indent = indent * (msg["test_id"].count('/') - 1)
     out = f"{_indent}{icon}{_keyword} {_name}\n"
 
-    last_test_id = msg["test_id"]
+    last_test_id.append(msg["test_id"])
 
     return out
 
@@ -138,9 +138,9 @@ def format_result(msg, last_test_id):
     _indent = indent * (msg["test_id"].count('/') - 1)
     out = f"{_indent}{_result}"
 
-    if last_test_id == msg["test_id"]:
+    if last_test_id and last_test_id[-1] == msg["test_id"]:
         out = cursor_up() + "\r" + out
-    last_test_id = None
+    last_test_id = []
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
@@ -165,7 +165,7 @@ formatters = {
 def transform():
     """Transform parsed log line into a clean format.
     """
-    last_test_id = None
+    last_test_id = []
     line = None
     while True:
         if line is not None:
