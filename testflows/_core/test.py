@@ -313,10 +313,14 @@ class TestBase(object):
             try:
                 if self.type >= TestType.Test:
                     if self.context._cleanups:
-                        with Finally("I clean up"):
-                            cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
-                        if not exc_value and cleanup_exc_value:
-                            process_exception(cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback)
+                        try:
+                            with Finally("I clean up"):
+                                cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
+                                if cleanup_exc_value is not None:
+                                    raise cleanup_exc_value.with_traceback(cleanup_exc_traceback)
+                        except Exception:
+                            if not exc_value:
+                                process_exception(*sys.exc_info())
             finally:
                 current(self.caller_test, set_value=True)
                 previous(self)
