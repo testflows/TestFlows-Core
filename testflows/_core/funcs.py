@@ -25,39 +25,43 @@ from .objects import Value, Metric, Ticket, Node
 
 #: thread local values
 _current_test = {}
+_current_test_lock = threading.Lock()
 
 def top(value=None, thread=None):
     """Highest level test.
     """
-    if thread is None:
-        thread = threading.current_thread()
-    if _current_test.get(thread.ident) is None:
-        _current_test[thread.ident] = {}
-    if value is not None:
-        _current_test[thread.ident]["main"] = value
-    return _current_test[thread.ident].get("main")     
+    with _current_test_lock:
+        if thread is None:
+            thread = threading.current_thread()
+        if _current_test.get(thread.name) is None:
+            _current_test[thread.name] = {}
+        if value is not None:
+            _current_test[thread.name]["main"] = value
+        return _current_test[thread.name].get("main")
 
 def current(value=None, thread=None, set_value=False):
     """Currently executing test.
     """
-    if thread is None:
-        thread = threading.current_thread()
-    if _current_test.get(thread.ident) is None:
-        _current_test[thread.ident] = {}
-    if value is not None or set_value:
-        _current_test[thread.ident]["object"] = value
-    return _current_test[thread.ident].get("object")  
+    with _current_test_lock:
+        if thread is None:
+            thread = threading.current_thread()
+        if _current_test.get(thread.name) is None:
+            _current_test[thread.name] = {}
+        if value is not None or set_value:
+            _current_test[thread.name]["object"] = value
+        return _current_test[thread.name].get("object")
 
 def previous(value=None, thread=None):
     """Last executed test.
     """
-    if thread is None:
-        thread = threading.current_thread()
-    if _current_test.get(thread.ident) is None:
-        _current_test[thread.ident] = {}
-    if value is not None:
-        _current_test[thread.ident]["previous"] = value
-    return _current_test[thread.ident].get("previous")  
+    with _current_test_lock:
+        if thread is None:
+            thread = threading.current_thread()
+        if _current_test.get(thread.name) is None:
+            _current_test[thread.name] = {}
+        if value is not None:
+            _current_test[thread.name]["previous"] = value
+        return _current_test[thread.name].get("previous")
 
 def current_dir(frame=None):
     """Return directory of the current source file.
