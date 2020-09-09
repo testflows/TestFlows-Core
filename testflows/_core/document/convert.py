@@ -50,6 +50,22 @@ template = """
 <body>
 %(body)s
 </body>
+<script>
+var requirements = document.querySelectorAll('h1[id^="rqsrs"],h2[id^="rqsrs"],h3[id^="rqsrs"],h4[id^="rqsrs"],h5[id^="rqsrs"],h6[id^="rqsrs"]');
+
+requirements.forEach(function(item){
+  item.addEventListener('click', function(event){
+    element = document.querySelector('#table-of-contents + ul a[href="#' + event.target.id + '"]').parentElement;
+    element.scrollIntoView({block: "center"});
+    element.classList.add("infocus");
+    setTimeout(function(){
+        element.classList.remove("infocus");
+    }, 1500);
+  }, false)
+});
+
+
+</script>
 </html>
 """.strip()
 

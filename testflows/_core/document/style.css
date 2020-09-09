@@ -1,5 +1,5 @@
 body {-webkit-text-size-adjust: 100%; padding: 7vw 15vw 7vw 15vw; color: #2e2e2e; font-family: 'Open Sans', Arial, sans-serif; }
-a { color: #3a6cac; text-decoration-line: None; }
+a { color: #3a6cac; text-decoration-line: None; word-break: break-all; }
 a:hover { text-decoration-line: underline}
 strong { color: #329f7b }
 hr { border-top: 1px solid #eaeaea; }
@@ -8,6 +8,30 @@ h3 { color: #6594d0; font-size: 1.2em; }
 h4 { color: #6594d0; font-size: 1.1em; }
 h5 { color: #6594d0; font-size: 1.0em; }
 h6 { color: #6594d0; font-size: 0.95em; }
+h1[id^="rqsrs"],
+h2[id^="rqsrs"],
+h3[id^="rqsrs"],
+h4[id^="rqsrs"],
+h5[id^="rqsrs"],
+h6[id^="rqsrs"]
+{
+  color: white;
+  background: #7a4166;
+  padding: 10px;
+  font-weight: normal;
+  border-radius: 5px;
+  margin-bottom: 0px;
+  cursor: pointer;
+}
+h1[id^="rqsrs"] + p,
+h2[id^="rqsrs"] + p,
+h3[id^="rqsrs"] + p,
+h4[id^="rqsrs"] + p,
+h5[id^="rqsrs"] + p,
+h6[id^="rqsrs"] + p
+{
+  font-size: smaller;
+}
 th, td { text-align: left; padding-left: 15px; padding-right: 15px; color: #313335 }
 thead th { padding-top: 20px; padding-bottom: 20px }
 table { display: block; overflow-x: auto; }
@@ -26,6 +50,8 @@ table.stripped.primary tr:nth-child(even) { background-color: #307bbb3b; }
 .tag-3 { background: #008033;}
 .tag-4 { background: #f87d00;}
 code { background: #6593d0; border-radius: 5px; color: white; padding: 2px; }
+li.infocus { font-weight: bold !important; }
+li.infocus > a { color: #43bd43; }
 .highlight code { background: inherit; border-radius: inherit; color: inherit; padding: inherit; }
 /* Test map */
 #map-chart { border: 1px solid #eaeaea; }
