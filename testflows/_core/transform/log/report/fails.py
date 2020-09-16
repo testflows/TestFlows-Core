@@ -69,7 +69,10 @@ def generate(results, divider):
         _color = color_result(result)
         if not result.startswith("X"):
             continue
-        xfails += _color('\u2718') + f" [ { _color(result) } ] {msg['result_test']}\n"
+        xfails += _color('\u2718') + f" [ { _color(result) } ] {msg['result_test']}"
+        if msg["result_reason"]:
+            xfails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
+        xfails += "\n"
 
     if xfails:
         xfails = color("\nKnown\n\n", "white", attrs=["bold"]) + xfails
