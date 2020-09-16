@@ -32,7 +32,7 @@ class Handler(HandlerBase):
             description="Show procedure.",
             formatter_class=HelpFormatter)
 
-        parser.add_argument("--name", metavar="name", type=str, help="test name", default="")
+        parser.add_argument("name", metavar="name", type=str, help="test name", default="")
         parser.add_argument("--log", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("--output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),

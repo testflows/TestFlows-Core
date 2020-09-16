@@ -25,6 +25,9 @@ from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
 from testflows._core.transform.log.nice import transform as nice_transform
+from testflows._core.transform.log.raw import transform as raw_transform
+from testflows._core.transform.log.short import transform as short_transform
+from testflows._core.transform.log.slick import transform as slick_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
 
@@ -35,25 +38,41 @@ class Handler(HandlerBase):
             description="Show messages.",
             formatter_class=HelpFormatter)
 
-        parser.add_argument("--name", metavar="name", type=str, help="test name", default="")
+        parser.add_argument("name", metavar="name", type=str, help="test name", default="")
         parser.add_argument("--log", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("--output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output, default: stdout', default="-")
-
+        format_choices = ["nice", "raw", "short", "slick"]
+        parser.add_argument("--format", "-f", metavar="name", type=str, choices=format_choices,
+            default="nice", help=f"output format, choices are {format_choices}, default: nice")
         parser.set_defaults(func=cls())
 
     class Pipeline(PipelineBase):
-        def __init__(self, name, input, output, tail=False):
+        def __init__(self, name, input, output, format=None, tail=False):
             stop_event = threading.Event()
 
-            command = f"grep -E \',\"test_id\":\"%s\",'" % name
+            command = f"grep -E \',\"test_id\":\"%s'" % name
             steps = [
-                read_and_filter_transform(input, command=command, tail=tail),
-                parse_transform(stop_event),
-                nice_transform(),
-                write_transform(output),
+                read_and_filter_transform(input, command=command, tail=tail)
             ]
+            if format == "nice":
+                steps += [
+                    parse_transform(stop_event),
+                    nice_transform()
+                ]
+            elif format == "short":
+                steps += [
+                    parse_transform(stop_event),
+                    short_transform()
+                ]
+            elif format == "slick":
+                steps += [
+                    parse_transform(stop_event),
+                    slick_transform()
+                ]
+            steps.append(write_transform(output))
+
             super(Handler.Pipeline, self).__init__(steps)
 
     def convert_name_to_id(self, name, input):
@@ -76,7 +95,7 @@ class Handler(HandlerBase):
                 saved_input.seek(0)
                 id, offset = self.convert_name_to_id(args.name, saved_input)
                 saved_input.seek(int(offset))
-                self.Pipeline(id, saved_input, args.output).run()
+                self.Pipeline(id, saved_input, args.output, args.format).run()
         except ValueError as exc:
             if "test not found" in str(exc):
                 return
