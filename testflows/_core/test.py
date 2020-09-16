@@ -37,7 +37,7 @@ from .objects import RepeatTest, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname
-from .funcs import current, top, previous, main, exception, pause
+from .funcs import current, top, previous, main, exception, pause, _set_current_top_previous
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
@@ -187,6 +187,8 @@ class TestBase(object):
             # flag to indicate if main test called init
             self._init= False
 
+        current_test = current()
+
         self.io = None
         self.name = name
         if self.name is None:
@@ -199,7 +201,7 @@ class TestBase(object):
         self.map = get(map, list(self.map))
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
-        self.context = get(context, current().context if current() and self.type < TestType.Iteration else (Context(current().context if current() else None)))
+        self.context = get(context, current_test.context if current_test and self.type < TestType.Iteration else (Context(current_test.context if current_test else None)))
         self.tags = tags
         self.requirements = {r.name: r for r in [Requirement(*r) for r in get(requirements, list(self.requirements))]}
         self.attributes =  {a.name: a for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]}
@@ -673,13 +675,13 @@ class TestDefinition(object):
             return _test
 
     def __enter__(self):
+        _set_current_top_previous()
+
         def dummy(*args, **kwargs):
             pass
         try:
             kwargs = self.kwargs
             kwargs["args"] = dict(kwargs.get("args") or {})
-
-            self._set_current_top_previous()
 
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
@@ -827,20 +829,6 @@ class TestDefinition(object):
             self.trace = sys.gettrace()
             sys.settrace(dummy)
             sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
-
-    def _set_current_top_previous(self):
-        """Set current, top and previous
-        using the parent thread if needed.
-        """
-        current_thread = threading.current_thread()
-        if getattr(current_thread, "_parent", None):
-            parent_current = current(thread=current_thread._parent)
-            parent_top = top(thread=current_thread._parent)
-            parent_previous = previous(thread=current_thread._parent)
-            if parent_current and not current():
-                current(value=parent_current)
-                top(value=parent_top)
-                previous(value=parent_previous)
 
     def _apply_end(self, name, parent, kwargs):
         end = kwargs.get("end")
@@ -1232,6 +1220,8 @@ class TestDecorator(object):
         return self.__run__(**args)
 
     def __run__(self, **args):
+        _set_current_top_previous()
+
         test = current()
 
         def process_func_result(r):

@@ -27,6 +27,25 @@ from .objects import Value, Metric, Ticket, Node
 _current_test = {}
 _current_test_lock = threading.Lock()
 
+def _set_current_top_previous():
+    """Set current, top and previous
+    using the parent thread if needed.
+    """
+    current_thread = threading.current_thread()
+
+    if getattr(current_thread, "_parent", None):
+        if current() is not None:
+            return
+
+        parent_current = current(thread=current_thread._parent)
+
+        if parent_current is not None:
+            parent_top = top(thread=current_thread._parent)
+            parent_previous = previous(thread=current_thread._parent)
+            current(value=parent_current)
+            top(value=parent_top)
+            previous(value=parent_previous)
+
 def top(value=None, thread=None):
     """Highest level test.
     """
