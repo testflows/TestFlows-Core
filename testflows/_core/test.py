@@ -299,10 +299,10 @@ class TestBase(object):
                 self.result = self.result(exc_value)
             elif isinstance(exc_value, AssertionError):
                 exception(exc_type, exc_value, exc_traceback, test=self)
-                self.result = self.result(Fail(str(exc_value), test=self.name))
+                self.result = self.result(Fail(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name))
             else:
                 exception(exc_type, exc_value, exc_traceback, test=self)
-                result = Error("unexpected %s: %s" % (exc_type.__name__, str(exc_value)), test=self.name)
+                result = Error(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name)
                 self.result = self.result(result)
 
         try:
