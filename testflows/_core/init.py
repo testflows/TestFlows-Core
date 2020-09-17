@@ -27,6 +27,7 @@ from .transform.log.pipeline import NiceLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
 from .transform.log.pipeline import SlickLogPipeline
+from .transform.log.pipeline import ClassicLogPipeline
 
 def cleanup():
     """Clean up old temporary log files.
@@ -81,6 +82,14 @@ def stdout_slick_handler():
         log.seek(0)
         SlickLogPipeline(log, sys.stdout, tail=True).run()
 
+def stdout_classic_handler():
+    """Handler to output messages to sys.stdout
+    using "classic" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        ClassicLogPipeline(log, sys.stdout, tail=True).run()
+
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
@@ -114,6 +123,7 @@ def start_output_handler():
     output_handler_map = {
         "raw": stdout_raw_handler,
         "slick": stdout_slick_handler,
+        "classic": stdout_classic_handler,
         "nice": stdout_nice_handler,
         "quiet": stdout_silent_handler,
         "short": stdout_short_handler,

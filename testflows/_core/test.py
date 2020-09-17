@@ -513,8 +513,8 @@ class TestDefinition(object):
                             help="disable terminal color highlighting", default=False)
         parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
         parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                            choices=["slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
-                            help="""stdout output format, choices are: ['slick','nice','short','dots','quiet','raw'],
+                            choices=["classic", "slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
+                            help="""stdout output format, choices are: ['classic', 'slick','nice','short','dots','quiet','raw'],
                 default: 'nice'""")
         parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
                             help="path to the log file where test output will be stored, default: uses temporary log file")

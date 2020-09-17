@@ -20,6 +20,7 @@ from testflows._core.cli.arg.handlers.transform.short import Handler as short_ha
 from testflows._core.cli.arg.handlers.transform.dots import Handler as dots_handler
 from testflows._core.cli.arg.handlers.transform.compact import Handler as compact_handler
 from testflows._core.cli.arg.handlers.transform.slick import Handler as slick_handler
+from testflows._core.cli.arg.handlers.transform.classic import Handler as classic_handler
 from testflows._core.cli.arg.handlers.transform.raw import Handler as raw_handler
 from testflows._core.cli.arg.handlers.transform.compress import Handler as compress_handler
 from testflows._core.cli.arg.handlers.transform.decompress import Handler as decompress_handler
@@ -38,6 +39,7 @@ class Handler(HandlerBase):
         nice_handler.add_command(transform_commands)
         short_handler.add_command(transform_commands)
         slick_handler.add_command(transform_commands)
+        classic_handler.add_command(transform_commands)
         dots_handler.add_command(transform_commands)
         compact_handler.add_command(transform_commands)
         compress_handler.add_command(transform_commands)
