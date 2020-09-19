@@ -235,6 +235,31 @@ class MetricsLogPipeline(Pipeline):
         ]
         super(MetricsLogPipeline, self).__init__(steps)
 
+class ResultsReportLogPipeline(Pipeline):
+    def __init__(self, input, output):
+        stop_event = threading.Event()
+
+        message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
+
+        steps = [
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
+            fanout(
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event)
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(ResultsReportLogPipeline, self).__init__(steps)
+
 class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
