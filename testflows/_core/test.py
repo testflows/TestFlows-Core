@@ -42,11 +42,12 @@ from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
+from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type, logfile as logfile_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import The, TheTags
 from .utils.sort import human as human_sort
+from .transform.log.pipeline import ResultsLogPipeline
 
 try:
     import testflows.database as database_module
@@ -526,6 +527,16 @@ class TestDefinition(object):
                                   "`number` is a number times to repeat the test, "
                                   "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
                             type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
+        parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
+                            help="reference log file")
+
+        choices = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
+                   "xok", "xfail", "xerror", "xnull", "skip"]
+        parser.add_argument("--rerun", dest="_rerun", metavar="result", type=str,
+                            choices=choices, nargs="+",
+                            help=("rerun tests in the --reference log file.\n"
+                                f"Where `result` is either {choices}"))
+
         if database_module:
             database_module.argparser(parser)
 
@@ -538,6 +549,8 @@ class TestDefinition(object):
         :return: parsed known arguments
         """
         kwargs = self.kwargs
+        debug_processed = False
+
         try:
             args, unknown = parser.parse_known_args()
             args = vars(args)
@@ -548,6 +561,8 @@ class TestDefinition(object):
             if args.get("_debug"):
                 settings.debug = True
                 args.pop("_debug")
+
+            debug_processed = True
 
             if args.get("_no_colors"):
                 settings.no_colors = True
@@ -602,6 +617,8 @@ class TestDefinition(object):
 
             if args.get("_only"):
                 only = []
+                if args.get("_rerun"):
+                    raise ExitWithError("--only can't be used with --rerun use --skip instead")
                 for pattern in args.pop("_only"):
                     only.append(The(pattern))
                 kwargs["only"] = only
@@ -644,8 +661,68 @@ class TestDefinition(object):
                     repeat.append(item)
                 kwargs["repeat"] = repeat
 
+            if args.get("_rerun"):
+                rerun = args.pop("_rerun")
+
+                if not args.get("_reference"):
+                    raise ExitWithError(f"--reference argument must be specified")
+
+                results = {}
+                ResultsLogPipeline(args.pop("_reference"), results, steps=False).run()
+
+                if kwargs.get("only") is None:
+                    kwargs["only"] = []
+
+                rerun_tests = []
+                result_types = []
+
+                for r in rerun:
+                    if r == "xouts":
+                        result_types += ["XOK", "XFail", "XError", "XNull"]
+                    elif r == "passes":
+                        result_types += ["OK"]
+                    elif r == "fails":
+                        result_types += ["Fail", "Error", "Null"]
+                    elif r == "ok":
+                        result_types += ["OK"]
+                    elif r == "fail":
+                        result_types += ["Fail"]
+                    elif r == "error":
+                        result_types += ["Error"]
+                    elif r == "null":
+                        result_types += ["Null"]
+                    elif r == "xfail":
+                        result_types += ["XFail"]
+                    elif r == "xerror":
+                        result_types += ["XError"]
+                    elif r == "xnull":
+                        result_types += ["XNull"]
+                    elif r == "xok":
+                        result_types += ["XOK"]
+                    elif r == "skip":
+                        result_types += ["Skip"]
+
+                for test in results["tests"].values():
+                    result = test["result"]
+                    test_type = result["test_type"]
+                    test_name = result["result_test"]
+
+                    if getattr(TestType, test_type) >= TestType.Test:
+                        if result["result_type"] in result_types:
+                            found = False
+                            for rerun_test in rerun_tests:
+                                if rerun_test.startswith(test_name):
+                                    found = True
+                                    break
+                            if not found:
+                                rerun_tests.append(test_name)
+
+                for rerun_test in rerun_tests:
+                    kwargs["only"].append(The(join(rerun_test, "*")))
+
         except (ExitException, KeyboardInterrupt, Exception) as exc:
-            sys.stderr.write(warning(get_exception(), eol='\n'))
+            if not debug_processed or settings.debug:
+                sys.stderr.write(warning(get_exception(), eol='\n'))
             sys.stderr.write(danger("error: " + str(exc).strip()))
             if isinstance(exc, ExitException):
                 sys.exit(exc.exitcode)

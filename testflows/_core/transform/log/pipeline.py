@@ -347,7 +347,7 @@ class VersionReportLogPipeline(Pipeline):
         super(VersionReportLogPipeline, self).__init__(steps)
 
 class ResultsLogPipeline(Pipeline):
-    def __init__(self, input, results):
+    def __init__(self, input, results, steps=True):
         stop_event = threading.Event()
         message_types = [
             Message.PROTOCOL.name,
@@ -366,8 +366,11 @@ class ResultsLogPipeline(Pipeline):
             Message.METRIC.name,
             Message.STOP.name
         ]
-        grep = "grep -E '^{\"message_keyword\":\""
-        command = f"{grep}({'|'.join(message_types)})\"'"
+        test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
+        command = "grep -E '^{\"message_keyword\":\""
+        command = (f"{command}({'|'.join(message_types)})\""
+            + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
+            + "'")
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(stop_event),
