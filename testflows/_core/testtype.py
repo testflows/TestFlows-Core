@@ -29,6 +29,7 @@ class TestSubType(IntEnum):
     Scenario = 50
     Example = 45
     Background = 40
+    Recipe = 35
     Given = 30
     When = 20
     Then = 10
