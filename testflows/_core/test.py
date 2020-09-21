@@ -393,6 +393,281 @@ type
 
 """ + common_epilog()
 
+
+def cli_argparser(kwargs, argparser=None):
+    """Command line argument parser.
+
+    :argparser: test specific argument parser
+    :return: argument parser
+    """
+    description = kwargs.get("description")
+    if description is not None:
+        description = str(description)
+
+    main_parser = ArgumentParserClass(
+        prog=sys.argv[0],
+        description=description,
+        description_prog="Test - Framework",
+        epilog=epilog
+    )
+
+    if argparser:
+        argparser(main_parser.add_argument_group('test arguments'))
+
+    parser = main_parser.add_argument_group("common arguments")
+
+    parser.add_argument("--name", dest="_name", metavar="name",
+                        help="test run name", type=str, required=False)
+    parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
+                        help="test run tags", type=str, required=False)
+    parser.add_argument("--attr", dest="_attrs", metavar="name=value", nargs="+",
+                        help="test run attributes", type=key_value_type, required=False)
+    parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
+                        help="run only selected tests", type=str, required=False)
+    parser.add_argument("--skip", dest="_skip", metavar="pattern",
+                        help="skip selected tests", type=str, nargs="+", required=False)
+    parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
+                        help="start at the selected test", type=str, required=False)
+    parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
+                        help="end at the selected test", type=str, required=False)
+    parser.add_argument("--only-tags", dest="_only_tags",
+                        help="run only tests with selected tags",
+                        type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+    parser.add_argument("--skip-tags", dest="_skip_tags",
+                        help="skip tests with selected tags",
+                        type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+    parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
+                        help="pause before executing selected tests", type=str, required=False)
+    parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
+                        help="pause after executing selected tests", type=str, required=False)
+    parser.add_argument("--random", dest="_random_order", action="store_true",
+                        help="randomize order of auto loaded tests", required=False)
+    parser.add_argument("--debug", dest="_debug", action="store_true",
+                        help="enable debugging mode", default=False)
+    parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
+                        help="disable terminal color highlighting", default=False)
+    parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
+    parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
+                        choices=["classic", "slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
+                        help="""stdout output format, choices are: ['classic', 'slick','nice','short','dots','quiet','raw'],
+            default: 'nice'""")
+    parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
+                        help="path to the log file where test output will be stored, default: uses temporary log file")
+    parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
+                        help="show skipped tests, default: False", default=False)
+    parser.add_argument("--repeat", dest="_repeat",
+                        help=("number of times to repeat a test until it either fails or passes.\n"
+                              "Where `pattern` is a test name pattern, "
+                              "`number` is a number times to repeat the test, "
+                              "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
+                        type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
+    parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
+                        help="reference log file")
+
+    choices = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
+               "xok", "xfail", "xerror", "xnull", "skip"]
+    parser.add_argument("--rerun", dest="_rerun", metavar="result", type=str,
+                        choices=choices, nargs="+",
+                        help=("rerun tests in the --reference log file.\n"
+                              f"Where `result` is either {choices}"))
+    parser.add_argument("--rerun-individually", dest="_rerun", metavar="result", type=str,
+                        choices=choices, nargs="+",
+                        help=("rerun tests in the --reference log file individually.\n"
+                              f"Where `result` is either {choices}"))
+
+    if database_module:
+        database_module.argparser(parser)
+
+    return main_parser
+
+def parse_cli_args(kwargs, parser):
+    """Parse command line arguments.
+
+    :parser: argument parser
+    :return: parsed known arguments
+    """
+    debug_processed = False
+
+    try:
+        args, unknown = parser.parse_known_args()
+        args = vars(args)
+
+        if args.get("_name"):
+            kwargs["name"] = args.pop("_name")
+
+        if args.get("_debug"):
+            settings.debug = True
+            args.pop("_debug")
+
+        debug_processed = True
+
+        if args.get("_no_colors"):
+            settings.no_colors = True
+            args.pop("_no_colors")
+
+        if unknown:
+            raise ExitWithError(f"unknown argument {unknown}")
+
+        if args.get("_id"):
+            settings.test_id = args.get("_id")
+            args.pop("_id")
+
+        if args.get("_log"):
+            logfile = os.path.abspath(args.get("_log"))
+            settings.write_logfile = logfile
+            args.pop("_log")
+        else:
+            settings.write_logfile = os.path.join(tempfile.gettempdir(), f"testflows.{os.getpid()}.log")
+
+        settings.read_logfile = settings.write_logfile
+        if os.path.exists(settings.write_logfile):
+            os.remove(settings.write_logfile)
+
+        settings.output_format = args.pop("_output")
+
+        if args.get("_database"):
+            settings.database = args.pop("_database")
+
+        if args.get("_show_skipped"):
+            settings.show_skipped = True
+            args.pop("_show_skipped")
+
+        if args.get("_random_order"):
+            settings.random_order = True
+            args.pop("_random_order")
+
+        if args.get("_pause_before"):
+            xflags = kwargs.get("xflags", {})
+            for pattern in args.get("_pause_before"):
+                xflags[pattern] = xflags.get(pattern, [0, 0])
+                xflags[pattern][0] |= PAUSE_BEFORE
+            kwargs["xflags"] = xflags
+            args.pop("_pause_before")
+
+        if args.get("_pause_after"):
+            xflags = kwargs.get("xflags", {})
+            for pattern in args.get("_pause_after"):
+                xflags[pattern] = xflags.get(pattern, [0, 0])
+                xflags[pattern][0] |= PAUSE_AFTER
+            kwargs["xflags"] = xflags
+            args.pop("_pause_after")
+
+        if args.get("_only"):
+            only = []
+            if args.get("_rerun"):
+                raise ExitWithError("--only can't be used with --rerun use --skip instead")
+            for pattern in args.pop("_only"):
+                only.append(The(pattern))
+            kwargs["only"] = only
+
+        if args.get("_skip"):
+            skip = []
+            for pattern in args.pop("_skip"):
+                skip.append(The(pattern))
+            kwargs["skip"] = skip
+
+        if args.get("_start"):
+            pattern = args.pop("_start")[0]
+            kwargs["start"] = The(pattern)
+
+        if args.get("_end"):
+            pattern = args.pop("_end")[0]
+            kwargs["end"] = The(pattern)
+
+        if args.get("_only_tags"):
+            _only_tags = {}
+            for item in args.pop("_only_tags"):
+                _only_tags.update(item)
+            kwargs["only_tags"] = TheTags(**_only_tags)
+
+        if args.get("_skip_tags"):
+            _skip_tags = {}
+            for item in args.pop("_skip_tags"):
+                _skip_tags.update(item)
+            kwargs["skip_tags"] = TheTags(**_skip_tags)
+
+        if args.get("_tags"):
+            kwargs["tags"] = {value for value in args.pop("_tags")}
+
+        if args.get("_attrs"):
+            kwargs["attributes"] = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
+
+        if args.get("_repeat"):
+            repeat = []
+            for item in args.pop("_repeat"):
+                repeat.append(item)
+            kwargs["repeat"] = repeat
+
+        if args.get("_rerun"):
+            rerun = args.pop("_rerun")
+
+            if not args.get("_reference"):
+                raise ExitWithError(f"--reference argument must be specified")
+
+            results = {}
+            ResultsLogPipeline(args.pop("_reference"), results, steps=False).run()
+
+            if kwargs.get("only") is None:
+                kwargs["only"] = []
+
+            rerun_tests = []
+            result_types = []
+
+            for r in rerun:
+                if r == "xouts":
+                    result_types += ["XOK", "XFail", "XError", "XNull"]
+                elif r == "passes":
+                    result_types += ["OK"]
+                elif r == "fails":
+                    result_types += ["Fail", "Error", "Null"]
+                elif r == "ok":
+                    result_types += ["OK"]
+                elif r == "fail":
+                    result_types += ["Fail"]
+                elif r == "error":
+                    result_types += ["Error"]
+                elif r == "null":
+                    result_types += ["Null"]
+                elif r == "xfail":
+                    result_types += ["XFail"]
+                elif r == "xerror":
+                    result_types += ["XError"]
+                elif r == "xnull":
+                    result_types += ["XNull"]
+                elif r == "xok":
+                    result_types += ["XOK"]
+                elif r == "skip":
+                    result_types += ["Skip"]
+
+            for test in results["tests"].values():
+                result = test["result"]
+                test_type = result["test_type"]
+                test_name = result["result_test"]
+
+                if getattr(TestType, test_type) >= TestType.Test:
+                    if result["result_type"] in result_types:
+                        found = False
+                        for rerun_test in rerun_tests:
+                            if rerun_test.startswith(test_name):
+                                found = True
+                                break
+                        if not found:
+                            rerun_tests.append(test_name)
+
+            for rerun_test in rerun_tests:
+                kwargs["only"].append(The(join(rerun_test, "*")))
+
+    except (ExitException, KeyboardInterrupt, Exception) as exc:
+        if not debug_processed or settings.debug:
+            sys.stderr.write(warning(get_exception(), eol='\n'))
+        sys.stderr.write(danger("error: " + str(exc).strip()))
+        if isinstance(exc, ExitException):
+            sys.exit(exc.exitcode)
+        else:
+            sys.exit(1)
+
+    return args
+
 class TestDefinition(object):
     """Test definition.
 
@@ -460,277 +735,6 @@ class TestDefinition(object):
         self._with_block_frame = None
         return self
 
-    def _argparser(self, argparser=None):
-        """Command line argument parser.
-
-        :argparser: test specific argument parser
-        :return: argument parser
-        """
-        description = self.kwargs.get("description")
-        if description is not None:
-            description = str(description)
-
-        main_parser = ArgumentParserClass(
-            prog=sys.argv[0],
-            description=description,
-            description_prog="Test - Framework",
-            epilog = epilog
-        )
-
-        if argparser:
-            argparser(main_parser.add_argument_group('test arguments'))
-
-        parser = main_parser.add_argument_group("common arguments")
-
-        parser.add_argument("--name", dest="_name", metavar="name",
-                            help="test run name", type=str, required=False)
-        parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
-                            help="test run tags", type=str, required=False)
-        parser.add_argument("--attr", dest="_attrs", metavar="name=value", nargs="+",
-                            help="test run attributes", type=key_value_type, required=False)
-        parser.add_argument("--only", dest="_only", metavar="pattern", nargs="+",
-                            help="run only selected tests", type=str, required=False)
-        parser.add_argument("--skip", dest="_skip", metavar="pattern",
-                            help="skip selected tests", type=str, nargs="+", required=False)
-        parser.add_argument("--start", dest="_start", metavar="pattern", nargs=1,
-                            help="start at the selected test", type=str, required=False)
-        parser.add_argument("--end", dest="_end", metavar="pattern", nargs=1,
-                            help="end at the selected test", type=str, required=False)
-        parser.add_argument("--only-tags", dest="_only_tags",
-                            help="run only tests with selected tags",
-                            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
-        parser.add_argument("--skip-tags", dest="_skip_tags",
-                            help="skip tests with selected tags",
-                            type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
-        parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
-                            help="pause before executing selected tests", type=str, required=False)
-        parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
-                            help="pause after executing selected tests", type=str, required=False)
-        parser.add_argument("--random", dest="_random_order", action="store_true",
-                            help="randomize order of auto loaded tests", required=False)
-        parser.add_argument("--debug", dest="_debug", action="store_true",
-                            help="enable debugging mode", default=False)
-        parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
-                            help="disable terminal color highlighting", default=False)
-        parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
-        parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                            choices=["classic", "slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
-                            help="""stdout output format, choices are: ['classic', 'slick','nice','short','dots','quiet','raw'],
-                default: 'nice'""")
-        parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
-                            help="path to the log file where test output will be stored, default: uses temporary log file")
-        parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
-                            help="show skipped tests, default: False", default=False)
-        parser.add_argument("--repeat", dest="_repeat",
-                            help=("number of times to repeat a test until it either fails or passes.\n"
-                                  "Where `pattern` is a test name pattern, "
-                                  "`number` is a number times to repeat the test, "
-                                  "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
-                            type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
-        parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
-                            help="reference log file")
-
-        choices = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
-                   "xok", "xfail", "xerror", "xnull", "skip"]
-        parser.add_argument("--rerun", dest="_rerun", metavar="result", type=str,
-                            choices=choices, nargs="+",
-                            help=("rerun tests in the --reference log file.\n"
-                                f"Where `result` is either {choices}"))
-
-        if database_module:
-            database_module.argparser(parser)
-
-        return main_parser
-
-    def _parse_cli_args(self, parser):
-        """Parse command line arguments.
-
-        :parser: argument parser
-        :return: parsed known arguments
-        """
-        kwargs = self.kwargs
-        debug_processed = False
-
-        try:
-            args, unknown = parser.parse_known_args()
-            args = vars(args)
-
-            if args.get("_name"):
-                kwargs["name"] = args.pop("_name")
-
-            if args.get("_debug"):
-                settings.debug = True
-                args.pop("_debug")
-
-            debug_processed = True
-
-            if args.get("_no_colors"):
-                settings.no_colors = True
-                args.pop("_no_colors")
-
-            if unknown:
-                raise ExitWithError(f"unknown argument {unknown}")
-
-            if args.get("_id"):
-                settings.test_id = args.get("_id")
-                args.pop("_id")
-
-            if args.get("_log"):
-                logfile = os.path.abspath(args.get("_log"))
-                settings.write_logfile = logfile
-                args.pop("_log")
-            else:
-                settings.write_logfile = os.path.join(tempfile.gettempdir(), f"testflows.{os.getpid()}.log")
-
-            settings.read_logfile = settings.write_logfile
-            if os.path.exists(settings.write_logfile):
-                os.remove(settings.write_logfile)
-
-            settings.output_format = args.pop("_output")
-
-            if args.get("_database"):
-                settings.database = args.pop("_database")
-
-            if args.get("_show_skipped"):
-                settings.show_skipped = True
-                args.pop("_show_skipped")
-
-            if args.get("_random_order"):
-                settings.random_order = True
-                args.pop("_random_order")
-
-            if args.get("_pause_before"):
-                xflags = kwargs.get("xflags", {})
-                for pattern in args.get("_pause_before"):
-                    xflags[pattern] = xflags.get(pattern, [0, 0])
-                    xflags[pattern][0] |= PAUSE_BEFORE
-                kwargs["xflags"] = xflags
-                args.pop("_pause_before")
-
-            if args.get("_pause_after"):
-                xflags = kwargs.get("xflags", {})
-                for pattern in args.get("_pause_after"):
-                    xflags[pattern] = xflags.get(pattern, [0, 0])
-                    xflags[pattern][0] |= PAUSE_AFTER
-                kwargs["xflags"] = xflags
-                args.pop("_pause_after")
-
-            if args.get("_only"):
-                only = []
-                if args.get("_rerun"):
-                    raise ExitWithError("--only can't be used with --rerun use --skip instead")
-                for pattern in args.pop("_only"):
-                    only.append(The(pattern))
-                kwargs["only"] = only
-
-            if args.get("_skip"):
-                skip = []
-                for pattern in args.pop("_skip"):
-                    skip.append(The(pattern))
-                kwargs["skip"] = skip
-
-            if args.get("_start"):
-                pattern = args.pop("_start")[0]
-                kwargs["start"] = The(pattern)
-
-            if args.get("_end"):
-                pattern = args.pop("_end")[0]
-                kwargs["end"] = The(pattern)
-
-            if args.get("_only_tags"):
-                _only_tags = {}
-                for item in args.pop("_only_tags"):
-                    _only_tags.update(item)
-                kwargs["only_tags"] = TheTags(**_only_tags)
-
-            if args.get("_skip_tags"):
-                _skip_tags = {}
-                for item in args.pop("_skip_tags"):
-                    _skip_tags.update(item)
-                kwargs["skip_tags"] = TheTags(**_skip_tags)
-
-            if args.get("_tags"):
-                kwargs["tags"] = {value for value in args.pop("_tags")}
-
-            if args.get("_attrs"):
-                kwargs["attributes"] = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
-
-            if args.get("_repeat"):
-                repeat = []
-                for item in args.pop("_repeat"):
-                    repeat.append(item)
-                kwargs["repeat"] = repeat
-
-            if args.get("_rerun"):
-                rerun = args.pop("_rerun")
-
-                if not args.get("_reference"):
-                    raise ExitWithError(f"--reference argument must be specified")
-
-                results = {}
-                ResultsLogPipeline(args.pop("_reference"), results, steps=False).run()
-
-                if kwargs.get("only") is None:
-                    kwargs["only"] = []
-
-                rerun_tests = []
-                result_types = []
-
-                for r in rerun:
-                    if r == "xouts":
-                        result_types += ["XOK", "XFail", "XError", "XNull"]
-                    elif r == "passes":
-                        result_types += ["OK"]
-                    elif r == "fails":
-                        result_types += ["Fail", "Error", "Null"]
-                    elif r == "ok":
-                        result_types += ["OK"]
-                    elif r == "fail":
-                        result_types += ["Fail"]
-                    elif r == "error":
-                        result_types += ["Error"]
-                    elif r == "null":
-                        result_types += ["Null"]
-                    elif r == "xfail":
-                        result_types += ["XFail"]
-                    elif r == "xerror":
-                        result_types += ["XError"]
-                    elif r == "xnull":
-                        result_types += ["XNull"]
-                    elif r == "xok":
-                        result_types += ["XOK"]
-                    elif r == "skip":
-                        result_types += ["Skip"]
-
-                for test in results["tests"].values():
-                    result = test["result"]
-                    test_type = result["test_type"]
-                    test_name = result["result_test"]
-
-                    if getattr(TestType, test_type) >= TestType.Test:
-                        if result["result_type"] in result_types:
-                            found = False
-                            for rerun_test in rerun_tests:
-                                if rerun_test.startswith(test_name):
-                                    found = True
-                                    break
-                            if not found:
-                                rerun_tests.append(test_name)
-
-                for rerun_test in rerun_tests:
-                    kwargs["only"].append(The(join(rerun_test, "*")))
-
-        except (ExitException, KeyboardInterrupt, Exception) as exc:
-            if not debug_processed or settings.debug:
-                sys.stderr.write(warning(get_exception(), eol='\n'))
-            sys.stderr.write(danger("error: " + str(exc).strip()))
-            if isinstance(exc, ExitException):
-                sys.exit(exc.exitcode)
-            else:
-                sys.exit(1)
-
-        return args
-
     def __call__(self, *pargs, **args):
         if pargs:
             raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
@@ -767,7 +771,7 @@ class TestDefinition(object):
             format_description = kwargs.pop("format_description", True)
 
             if not top():
-                cli_args = self._parse_cli_args(self._argparser(argparser if not isinstance(argparser, ArgumentParser) else argparser.value))
+                cli_args = parse_cli_args(self.kwargs, cli_argparser(self.kwargs, argparser if not isinstance(argparser, ArgumentParser) else argparser.value))
                 kwargs["args"].update({k: v for k,v in cli_args.items() if not k.startswith("_")})
 
             test = kwargs.pop("test", None)
