@@ -1371,19 +1371,27 @@ class TestDecorator(object):
 
     def __init__(self, func):
         self.func = func
-        functools.update_wrapper(self, self.func)
 
         self.func.type = self.type.type
         self.func.name = getattr(self.func, "name", self.func.__name__.replace("_", " "))
         self.func.description = getattr(self.func, "description", self.func.__doc__)
 
+        signature = inspect.signature(self.func)
+
+        args = getattr(self.func, "args", {})
+        default_args = {p.name: p.default for p in signature.parameters.values() if
+            p.default != inspect.Parameter.empty}
+
+        self.func.args = default_args
+        self.func.args.update(args)
+
         kwargs = dict(vars(self.func))
 
-        signature = inspect.signature(self.func)
-        kwargs["args"] = {p.name: p.default for p in signature.parameters.values() if
-                          p.default != inspect.Parameter.empty}
-
         self.func.kwargs = kwargs
+
+        _type = self.type
+        functools.update_wrapper(self, self.func)
+        self.type = _type
 
     def __call__(self, *pargs, **args):
         if pargs:
