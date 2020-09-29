@@ -31,6 +31,13 @@ class TestIteration(TestFlowsException):
         self.repeat = repeat
         super(TestIteration, self).__init__(*args, **kwargs)
 
+class TestRerunIndividually(TestFlowsException):
+    """Repeat tests individually.
+    """
+    def __init__(self, tests, *args, **kwargs):
+        self.tests = tests
+        super(TestRerunIndividually, self).__init__(*args, **kwargs)
+
 class TestFlowsError(TestFlowsException):
     """Base error exception class.
     """

@@ -35,6 +35,9 @@ class The(TestObject):
         self.pattern = absname(self.pattern, at)
         return self
 
+    def set(self, pattern):
+        self.pattern = pattern
+
     def match(self, name, prefix=True):
         if match(name, self.pattern, prefix=prefix):
             return True

@@ -28,7 +28,7 @@ from collections import namedtuple
 
 import testflows.settings as settings
 
-from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError
+from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
@@ -36,7 +36,7 @@ from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, At
 from .objects import RepeatTest, ExamplesTable
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
-from .name import join, depth, match, absname
+from .name import join, depth, match, absname, split, isabs
 from .funcs import current, top, previous, main, exception, pause, _set_current_top_previous
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
@@ -276,7 +276,7 @@ class TestBase(object):
 
         self.io.output.test_message()
 
-        if self.flags & PAUSE_BEFORE:
+        if self.flags & PAUSE_BEFORE and not self.flags & SKIP:
             pause()
 
         self.caller_test = current()
@@ -314,7 +314,7 @@ class TestBase(object):
                     self.result = self.result(OK(test=self.name))
         finally:
             try:
-                if self.type >= TestType.Test:
+                if self.type >= TestType.Iteration:
                     if self.context._cleanups:
                         try:
                             with Finally("I clean up"):
@@ -335,7 +335,7 @@ class TestBase(object):
                 else:
                     self.io.close()
 
-            if self.flags & PAUSE_AFTER:
+            if self.flags & PAUSE_AFTER and not self.flags & SKIP:
                 pause()
 
         return True
@@ -470,10 +470,8 @@ def cli_argparser(kwargs, argparser=None):
                         choices=choices, nargs="+",
                         help=("rerun tests in the --reference log file.\n"
                               f"Where `result` is either {choices}"))
-    parser.add_argument("--rerun-individually", dest="_rerun", metavar="result", type=str,
-                        choices=choices, nargs="+",
-                        help=("rerun tests in the --reference log file individually.\n"
-                              f"Where `result` is either {choices}"))
+    parser.add_argument("--individually", dest="_individually", action="store_true", default=False,
+                        help="if --rerun is specified then rerun tests in the --reference log file individually.")
 
     if database_module:
         database_module.argparser(parser)
@@ -554,8 +552,6 @@ def parse_cli_args(kwargs, parser):
 
         if args.get("_only"):
             only = []
-            if args.get("_rerun"):
-                raise ExitWithError("--only can't be used with --rerun use --skip instead")
             for pattern in args.pop("_only"):
                 only.append(The(pattern))
             kwargs["only"] = only
@@ -599,6 +595,7 @@ def parse_cli_args(kwargs, parser):
             kwargs["repeat"] = repeat
 
         if args.get("_rerun"):
+            rerun_individually = args.pop("_individually", False)
             rerun = args.pop("_rerun")
 
             if not args.get("_reference"):
@@ -610,6 +607,10 @@ def parse_cli_args(kwargs, parser):
             if kwargs.get("only") is None:
                 kwargs["only"] = []
 
+            if rerun_individually is True:
+                kwargs["rerun_individually"] = []
+
+            RerunTest = namedtuple("RerunTest", "name type tags")
             rerun_tests = []
             result_types = []
 
@@ -641,21 +642,36 @@ def parse_cli_args(kwargs, parser):
 
             for test in results["tests"].values():
                 result = test["result"]
-                test_type = result["test_type"]
+                test_type = getattr(TestType, result["test_type"])
                 test_name = result["result_test"]
+                test_tags = {tag["tag_value"] for tag in test["test"]["tags"]}
 
-                if getattr(TestType, test_type) >= TestType.Test:
+                if test_type >= TestType.Test:
                     if result["result_type"] in result_types:
                         found = False
                         for rerun_test in rerun_tests:
-                            if rerun_test.startswith(test_name):
+                            if rerun_test.name.startswith(test_name):
                                 found = True
                                 break
                         if not found:
-                            rerun_tests.append(test_name)
+                            rerun_tests.append(RerunTest(test_name, test_type, test_tags))
+
+                rerun_tests.sort()
+                length = len(rerun_tests)
+
+                for i, test in enumerate(rerun_tests):
+                    if i+1 < length and rerun_tests[i+1].name.startswith(test.name):
+                        rerun_tests.remove(test)
+                        i -= 1
 
             for rerun_test in rerun_tests:
-                kwargs["only"].append(The(join(rerun_test, "*")))
+                if rerun_individually is True:
+                    name_parts = rerun_test.name.split(name_sep)
+                    kwargs["rerun_individually"].append(RerunTest(
+                        The(join(name_sep, name_parts[1], ":", *name_parts[2:], "*")),
+                        rerun_test.type, rerun_test.tags))
+                else:
+                    kwargs["only"].append(The(join(rerun_test.name, "*")))
 
     except (ExitException, KeyboardInterrupt, Exception) as exc:
         if not debug_processed or settings.debug:
@@ -731,6 +747,7 @@ class TestDefinition(object):
         self.kwargs = kwargs
         self.tags = None
         self.repeat = None
+        self.rerun_individually = None
         self.repeatable_func = None
         self._with_block_frame = None
         return self
@@ -878,6 +895,26 @@ class TestDefinition(object):
                 kwargs["flags"] &= ~PAUSE_AFTER
 
             self.repeat = kwargs.pop("repeat", None)
+            self.rerun_individually = kwargs.pop("rerun_individually", None)
+
+            if self.rerun_individually:
+                def transform_pattern(pattern):
+                    if isabs(pattern):
+                        parts = pattern.split(name_sep)
+                        return join(name_sep, parts[1], ":", *parts[2:])
+                    return pattern
+
+                # need to fix all anchored patterns
+                kwargs["xfails"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("xfails", {}) or {}).items()} or None
+                kwargs["xflags"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("xflags", {}) or {}).items()} or None
+                kwargs["only"] = [The(transform_pattern(str(f))) for f in kwargs.get("only") or []] or None
+                kwargs["skip"] = [The(transform_pattern(str(f))) for f in kwargs.get("skip") or []] or None
+                kwargs["start"] = The(transform_pattern(str(kwargs.get("start")))) if kwargs.get("start") else None
+                kwargs["end"] = The(transform_pattern(str(kwargs.get("end")))) if kwargs.get("end") else None
+                for r in self.repeat or []:
+                    r.pattern.set(transform_pattern(str(r.pattern)))
 
             self.test = test(name, tags=self.tags, description=self.description, repeat=self.repeat, **kwargs)
             if getattr(self, "parent_type", None):
@@ -888,6 +925,12 @@ class TestDefinition(object):
             if isinstance(kwargs_test, TestOutline):
                 self.test._run_outline_with_no_arguments = self.no_arguments
                 self.test._run_outline = True
+
+            if self.rerun_individually is not None:
+                self.trace = sys.gettrace()
+                sys.settrace(dummy)
+                sys._getframe(1).f_trace = functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None)
+                return
 
             if self.repeat is not None:
                 repeat = self._apply_repeat(name, self.repeat)
@@ -1023,6 +1066,10 @@ class TestDefinition(object):
         sys.settrace(self.trace)
         raise TestIteration(repeat)
 
+    def __rerun_individually__(self, patterns, *args):
+        sys.settrace(self.trace)
+        raise TestRerunIndividually(patterns)
+
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
         sys.settrace(self.trace)
         raise exc_value.with_traceback(exc_tb)
@@ -1098,6 +1145,50 @@ class TestDefinition(object):
                         self.repeatable_func(**__args)
                     if repeat.until == "pass" and isinstance(iteration.result, PassResults):
                         break
+            except:
+                try:
+                    test__exit__ = self.test._exit(*sys.exc_info())
+                except(KeyboardInterrupt, Exception):
+                    raise
+            else:
+                try:
+                    test__exit__ = self.test._exit(None, None, None)
+                except(KeyboardInterrupt, Exception):
+                    raise
+
+        elif isinstance(exception_value, TestRerunIndividually):
+            try:
+                rerun_tests = exception_value.tests
+
+                self.test._enter()
+
+                if self.repeatable_func is None:
+                    raise Error("not repeatable")
+
+                for i, rerun_test in enumerate(rerun_tests):
+                    __kwargs = dict(self.kwargs)
+                    __kwargs.pop("name", None)
+                    __kwargs.pop("parent", None)
+                    __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+                    __kwargs["type"] = TestType.Iteration
+                    __args = __kwargs.pop("args", {})
+
+                    rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
+
+                    self._apply_start(rerun_name, self.parent, __kwargs)
+                    self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
+                    self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
+                    self._apply_skip(rerun_name, __kwargs)
+                    self._apply_end(rerun_name, self.parent, __kwargs)
+                    self._apply_only(rerun_name, __kwargs)
+
+                    __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
+
+                    with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
+                        if isinstance(self.repeatable_func, TestOutline):
+                            iteration._run_outline_with_no_arguments = self.no_arguments
+                            iteration._run_outline = True
+                        self.repeatable_func(**__args)
             except:
                 try:
                     test__exit__ = self.test._exit(*sys.exc_info())

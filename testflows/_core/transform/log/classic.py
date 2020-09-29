@@ -89,7 +89,7 @@ def format_test(msg, keyword):
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if getattr(TestType, msg["test_type"]) < TestType.Test:
+    if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
 
     icon = '\u27A4'
@@ -107,7 +107,7 @@ def format_result(msg):
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if getattr(TestType, msg["test_type"]) < TestType.Test:
+    if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
 
     _icon = color_result(result)
