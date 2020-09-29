@@ -77,7 +77,7 @@ class Handler(HandlerBase):
 
     def convert_name_to_id(self, name, input):
         command = "grep --byte-offset -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
-        command += ".+\"test_name\":\"%s\"' -m 1" % name
+        command += ".+\"test_name\":\"%s\"' -m 1" % name.replace("'", r"'\''")
         process = subprocess.Popen(command, stdin=input, stdout=subprocess.PIPE, shell=True)
         process.wait()
         parse_generator = parse_transform(None)

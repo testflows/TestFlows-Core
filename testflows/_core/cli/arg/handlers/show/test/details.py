@@ -43,7 +43,7 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = "grep -E '\"message_object\":1,.+\"test_name\":\"%s\"'" % name
+            command = "grep -E '\"message_object\":1,.+\"test_name\":\"%s\"'" % name.replace("'", r"'\''")
             steps = [
                 read_and_filter_transform(input, command=command, tail=tail, stop=stop_event),
                 parse_transform(),
