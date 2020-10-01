@@ -381,11 +381,11 @@ option values:
 pattern
   used to match test names using a unix-like file path pattern that supports wildcards
     '/' path level separator
-    '*' matches everything
+    '*' matches any zero or more characters including '/' path level separator
     '?' matches any single character
     '[seq]' matches any character in seq
     '[!seq]' matches any character not in seq
-    ':' matches anything at the current path level
+    ':' matches any one or more characters but not including '/' path level separator
   for a literal match, wrap the meta-characters in brackets where '[?]' matches the character '?'
 
 type
