@@ -15,6 +15,7 @@
 import io
 import os
 import sys
+import time
 import lzma
 import builtins
 import _compression
@@ -25,11 +26,14 @@ Compressor = lzma.LZMACompressor
 Decompressor = lzma.LZMADecompressor
 
 class TailingDecompressReader(_compression.DecompressReader):
+
     def __init__(self, *args, **kwargs):
         self._tail = kwargs.pop("tail", True)
+        self._tail_sleep = float(kwargs.pop("tail_sleep", 0.15))
+
         super(TailingDecompressReader, self).__init__(*args, **kwargs)
 
-    def read(self, size=-1):
+    def read(self, size=-1, _tail_sleep=0.15):
         if size < 0:
             return self.readall()
 
@@ -45,6 +49,7 @@ class TailingDecompressReader(_compression.DecompressReader):
                 if not self.rawblock:
                     if not self._tail:
                         break
+                    time.sleep(self._tail_sleep)
                     continue
                 # Continue to next stream.
                 self._decompressor = self._decomp_factory(
@@ -60,12 +65,15 @@ class TailingDecompressReader(_compression.DecompressReader):
                     if not self.rawblock:
                         if not self._tail:
                             break
+                        time.sleep(self._tail_sleep)
                         continue
                 else:
                     self.rawblock = b""
                 data = self._decompressor.decompress(self.rawblock, size)
+
             if data:
                 break
+
         if not data:
             self._eof = True
             self._size = self._pos
