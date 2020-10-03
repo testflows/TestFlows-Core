@@ -593,7 +593,12 @@ def parse_cli_args(kwargs, parser):
             kwargs["tags"] = {value for value in args.pop("_tags")}
 
         if args.get("_attrs"):
-            kwargs["attributes"] = [Attribute(item.key, item.value) for item in args.pop("_attrs")]
+            if kwargs.get("attributes", None) is None:
+                kwargs["attributes"] = []
+            kwargs["attributes"] += [Attribute(item.key, item.value) for item in args.pop("_attrs")]
+            for attr in kwargs["attributes"]:
+                if args.get(attr.name, None):
+                    raise AttributeError(f"use test argument '--{attr.name}' instead of '--attr {attr.name}=<value>'")
 
         if args.get("_repeat"):
             repeat = []
