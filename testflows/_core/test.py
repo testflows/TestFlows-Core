@@ -205,7 +205,7 @@ class TestBase(object):
         self.context = get(context, current_test.context if current_test and self.type < TestType.Iteration else (Context(current_test.context if current_test else None)))
         self.tags = tags
         self.requirements = {r.name: r for r in [Requirement(*r) for r in get(requirements, list(self.requirements))]}
-        self.attributes =  {a.name: a for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]}
+        self.attributes = {a.name: a for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]}
         self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
@@ -270,9 +270,16 @@ class TestBase(object):
 
     def _enter(self):
         self.io = TestIO(self)
+
         if top() is self:
             self.io.output.protocol()
             self.io.output.version()
+
+            self.attributes.update({
+                    arg.name: Attribute(name=arg.name, value=arg.value, type=arg.type, group=arg.group, uid=arg.uid)
+                    for arg in self.args.values()
+                })
+            self.args = {}
 
         self.io.output.test_message()
 

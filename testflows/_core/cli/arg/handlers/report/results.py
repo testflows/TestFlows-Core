@@ -214,12 +214,6 @@ class MarkdownFormatter:
     def format_attributes_and_tags(self, data):
         s = ""
 
-        if data["arguments"]:
-            s += "\n\n### Arguments\n"
-            for arg in data["arguments"]:
-                s += "||" + "||".join([f"**{arg['argument_name']}**", f"{arg['argument_value']}"]) + "||\n"
-            s += "\n"
-
         if data["attributes"]:
             s += "\n\n### Attributes\n"
             for attr in data["attributes"]:
@@ -350,15 +344,6 @@ class Handler(HandlerBase):
                 "link": link
             }
 
-    def arguments(self, results):
-        if not results["tests"]:
-            return []
-        test = next(iter(results["tests"].values()), None)["test"]
-
-        if test["arguments"]:
-            return test["arguments"]
-        return []
-
     def attributes(self, results):
         if not results["tests"]:
             return []
@@ -429,7 +414,6 @@ class Handler(HandlerBase):
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(results)
         d["attributes"] = self.attributes(results)
-        d["arguments"] = self.arguments(results)
         d["tags"] = self.tags(results)
         d["artifacts"] = self.artifacts(args.artifacts)
         d["tests"] = self.tests(results)
