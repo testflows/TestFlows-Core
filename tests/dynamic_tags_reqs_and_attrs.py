@@ -2,10 +2,10 @@ from testflows.core import *
 from testflows.asserts import error
 
 @TestFeature
-@Name("dynamic tags requirements and attributes")
+@Name("dynamic tags, requirements, and attributes")
 def feature(self):
-    """Check that we cat dynamically add tags, requirements and attributes
-    to the current test.
+    """Check that we cat dynamically add 
+    tags, requirements, and attributes to a test.
     """
     def check():
         test = current()
