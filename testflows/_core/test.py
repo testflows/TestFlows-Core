@@ -796,8 +796,8 @@ class TestDefinition(object):
             argparser = kwargs.pop("argparser", None)
             parent = kwargs.pop("parent", None) or current()
             keep_type = kwargs.pop("keep_type", None)
-            format_name = kwargs.pop("format_name", True)
-            format_description = kwargs.pop("format_description", True)
+            format_name = kwargs.pop("format_name", False)
+            format_description = kwargs.pop("format_description", False)
 
             if not top():
                 cli_args = parse_cli_args(self.kwargs, cli_argparser(self.kwargs, argparser if not isinstance(argparser, ArgumentParser) else argparser.value))
