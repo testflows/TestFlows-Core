@@ -21,7 +21,7 @@ import threading
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
-from .objects import Value, Metric, Ticket, Node
+from .objects import Value, Metric, Ticket, Attribute, Tag, Requirement, Node
 
 #: thread local values
 _current_test = {}
@@ -157,6 +157,33 @@ def main(frame=None):
 
 class args(dict):
     pass
+
+def attribute(name, value, type=None, group=None, uid=None, base=Attribute, test=None):
+    obj = base(name=name, value=value, type=type, group=group, uid=uid)
+    if test is None:
+        test = current()
+    if test.attributes.get(obj.name, None) is not None:
+        raise NameError(f"attribute named '{obj.name}' already exists")
+    test.attributes[obj.name] = obj
+    test.io.output.attribute(obj)
+
+def requirement(name, version, description=None, link=None,
+        priority=None, type=None, group=None, uid=None, base=Requirement, test=None):
+    obj = base(name=name, version=version, description=description, link=link,
+        priority=priority, type=type, group=group, uid=uid)
+    if test is None:
+        test = current()
+    if test.requirements.get(obj.name, None) is not None:
+        raise NameError(f"requirement named '{obj.name}' already exists")
+    test.requirements[obj.name] = obj
+    test.io.output.requirement(obj)
+
+def tag(value, test=None):
+    value = str(value)
+    if test is None:
+        test = current()
+    test.tags.add(value)
+    test.io.output.tag(Tag(value))
 
 def metric(name, value, units, type=None, group=None, uid=None, base=Metric, test=None):
     obj = base(name=name, value=value, units=units, type=type, group=group, uid=uid)
