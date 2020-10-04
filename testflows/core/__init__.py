@@ -43,3 +43,4 @@ from testflows._core import __author__, __version__, __license__
 from testflows._core import threading
 
 import testflows._core.utils as utils
+import testflows._core.contrib.rsa as rsa
