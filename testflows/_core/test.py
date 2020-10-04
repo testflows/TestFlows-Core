@@ -272,6 +272,7 @@ class TestBase(object):
         self.io = TestIO(self)
 
         if top() is self:
+            self._init = init()
             self.io.output.protocol()
             self.io.output.version()
 
@@ -291,10 +292,8 @@ class TestBase(object):
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
-        else:
-            if top() is self:
-                self._init = init()
-            return self
+
+        return self
 
     def _exit(self, exc_type, exc_value, exc_traceback):
         if not self.io:
