@@ -299,6 +299,7 @@ class TestBase(object):
     def _exit(self, exc_type, exc_value, exc_traceback):
         if not self.io:
             return False
+
         if top() is self and not self._init:
             return False
 
@@ -964,6 +965,7 @@ class TestDefinition(object):
         except (KeyboardInterrupt, Exception) as exc:
             if not self.test.io:
                 raise
+
             frame = inspect.currentframe().f_back
             self._with_block_frame = (frame, frame.f_lasti, frame.f_lineno)
             self.trace = sys.gettrace()
@@ -1092,6 +1094,7 @@ class TestDefinition(object):
 
     def __exit__(self, exception_type, exception_value, exception_traceback):
         frame = inspect.currentframe().f_back
+        co_filename_filter = "testflows/_core"
 
         def make_complete_traceback(exception_traceback, frame):
             tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
@@ -1099,7 +1102,7 @@ class TestDefinition(object):
             def walk_frame(frame, tb_next=None):
                 if frame is None:
                     return tb_next
-                if not settings.debug and frame.f_code.co_filename.endswith("testflows/_core/test.py"):
+                if not settings.debug and co_filename_filter in frame.f_code.co_filename:
                     tb_next = tb_next
                 else:
                     tb_next = tb(frame, frame.f_lasti, frame.f_lineno, tb_next)
@@ -1110,7 +1113,7 @@ class TestDefinition(object):
                 if tb_frame.tb_next:
                     tb_next = walk_tb(tb_frame.tb_next)
 
-                if tb_frame and not settings.debug and tb_frame.tb_frame.f_code.co_filename.endswith("testflows/_core/test.py"):
+                if tb_frame and not settings.debug and co_filename_filter in tb_frame.tb_frame.f_code.co_filename:
                     return tb_next
                 else:
                     return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
@@ -1222,6 +1225,10 @@ class TestDefinition(object):
                 raise
 
         if not self.parent:
+            if not test__exit__:
+                sys.stderr.write(warning(get_exception(exception_type, exception_value, exception_traceback), eol='\n'))
+                sys.stderr.write(danger("error: " + str(exception_value).strip()))
+                sys.exit(1)
             sys.exit(0 if self.test.result else 1)
 
         if isinstance(exception_value, KeyboardInterrupt):

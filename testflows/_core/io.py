@@ -414,7 +414,8 @@ class LogWriter(object):
                 self.fd.write(compress(b"".join(self.buffer)))
                 self.fd.flush()
                 del self.buffer[:]
-            if not final:
+
+            if not final and threading.main_thread().is_alive():
                 self.timer = threading.Timer(self.auto_flush_interval, self.flush, (True,))
                 self.timer.start()
 
