@@ -685,6 +685,10 @@ def parse_cli_args(kwargs, parser):
                 else:
                     kwargs["only"].append(The(join(rerun_test.name, "*")))
 
+        if args.get("func"):
+            func = args.pop("func")
+            func(args, kwargs)
+
     except (ExitException, KeyboardInterrupt, Exception) as exc:
         if not debug_processed or settings.debug:
             sys.stderr.write(warning(get_exception(), eol='\n'))
