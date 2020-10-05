@@ -34,6 +34,7 @@ from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
 from .objects import RepeatTest, ExamplesTable
+from .objects import Secret
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname, split, isabs
@@ -42,7 +43,8 @@ from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type, logfile as logfile_type
+from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
+from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import The, TheTags
@@ -177,7 +179,7 @@ class TestBase(object):
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeat=None):
+                 repeat=None, private_key=None):
 
         self.lock = threading.Lock()
 
@@ -227,6 +229,7 @@ class TestBase(object):
         self.only_tags = get(only_tags, None)
         self.skip_tags = get(skip_tags, None)
         self.repeat = get(repeat, None)
+        self.private_key = get(private_key, None)
         self.caller_test = None
 
     @classmethod
@@ -480,6 +483,9 @@ def cli_argparser(kwargs, argparser=None):
     parser.add_argument("--individually", dest="_individually", action="store_true", default=False,
                         help="if --rerun is specified then rerun tests in the --reference log file individually.")
 
+    parser.add_argument("--private-key", dest="_private_key", metavar="file", type=rsa_private_key_pem_file_type,
+        help="RSA private key PEM file that can be used to encrypt secrets.")
+
     if database_module:
         database_module.argparser(parser)
 
@@ -600,6 +606,9 @@ def parse_cli_args(kwargs, parser):
                 if args.get(attr.name, None):
                     raise AttributeError(f"use test argument '--{attr.name}' instead of '--attr {attr.name}=<value>'")
 
+        if args.get("_private_key"):
+            kwargs["private_key"] = args.pop("_private_key")
+
         if args.get("_repeat"):
             repeat = []
             for item in args.pop("_repeat"):
@@ -688,6 +697,12 @@ def parse_cli_args(kwargs, parser):
         if args.get("func"):
             func = args.pop("func")
             func(args, kwargs)
+
+        if kwargs.get("private_key"):
+            private_key = kwargs.get("private_key")
+            for name, value in args.items():
+                if isinstance(value, Secret):
+                    value(public_key=private_key.pubkey)
 
     except (ExitException, KeyboardInterrupt, Exception) as exc:
         if not debug_processed or settings.debug:

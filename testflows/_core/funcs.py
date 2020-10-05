@@ -207,6 +207,15 @@ def value(name, value, type=None, group=None, uid=None, base=Value, test=None):
     test.io.output.value(obj)
     return value
 
+def private_key(value=None, test=None):
+    if test is None:
+        test = current()
+    if value is not None:
+        test.private_key = value
+    else:
+        value = test.private_key
+    return value
+
 def note(message, test=None):
     if test is None:
         test = current()

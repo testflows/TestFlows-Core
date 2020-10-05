@@ -147,6 +147,9 @@ class TestOutput(object):
 
     def attribute(self, attribute, object_type=MessageObjectType.TEST):
         msg = object_fields(attribute, "attribute")
+        value = msg["attribute_value"]
+        if value is not None:
+            msg["attribute_value"] = str_or_repr(value)
         self.message(Message.ATTRIBUTE, msg, object_type=object_type)
 
     def requirement(self, requirement, object_type=MessageObjectType.TEST):

@@ -24,10 +24,11 @@ from testflows._core.objects import Name, Description, Uid, Tags, Args
 from testflows._core.objects import XFails, XFlags, Repeat, RepeatTest
 from testflows._core.objects import Attributes, Requirements, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Metric, Value, Ticket
+from testflows._core.objects import Secret
 from testflows._core.baseobject import Table
 from testflows._core.filters import The, TheTags
 from testflows._core.funcs import top, current, previous, load, append_path
-from testflows._core.funcs import main, args
+from testflows._core.funcs import main, args, private_key
 from testflows._core.funcs import metric, ticket, value, note, debug, trace
 from testflows._core.funcs import attribute, requirement, tag
 from testflows._core.funcs import message, exception, ok, fail, skip, err

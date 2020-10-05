@@ -23,6 +23,8 @@ from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
 from testflows._core.objects import RepeatTest
 
+import testflows._core.contrib.rsa as rsa
+
 KeyValue = namedtuple("KeyValue", "key value")
 
 class FileType(object):
@@ -112,6 +114,12 @@ def file(*args, **kwargs):
 def logfile(*args, **kwargs):
     """Log file type."""
     return LogFileType(*args, **kwargs)
+
+def rsa_private_key_pem_file(p):
+    """RSA private key PEM file type.
+    """
+    with open(p, mode="rb") as pem_file:
+        return rsa.PrivateKey.load_pkcs1(pem_file.read())
 
 def key_value(s, sep='='):
     """Parse a key, value pair using a seperator (default: '=').

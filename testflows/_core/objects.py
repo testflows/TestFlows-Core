@@ -12,15 +12,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import IntEnum
+import base64
+import hashlib
+
 from collections import namedtuple
 
 from .utils.enum import IntEnum
 from .exceptions import RequirementError, ResultException
-from .baseobject import TestObject, TestArg, Table
+from .baseobject import TestObject, Table
 from .baseobject import get, hash
 from .baseobject import namedtuple_with_defaults
 from .filters import The
+
+import testflows._core.contrib.rsa as rsa
 
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
@@ -282,6 +286,89 @@ class ExamplesRow(TestObject):
         self.columns = columns
         self.values = [str(value) for value in values]
         self.row_format = row_format
+
+class Secret(TestObject):
+    """RSA encrypted secret.
+    """
+    _fields = ("name", "code", "pubkey_id", "type", "group", "uid")
+    _defaults = (None,) * 6
+    uid = None
+    name = None
+    type = None
+    group = None
+    encoding = "utf-8"
+
+    def __init__(self, name=None, code=None, pubkey_id=None, type=None, group=None, uid=None):
+        self.name = get(name, None)
+        self.type = get(type, self.type)
+        self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
+        self.pubkey_id = get(pubkey_id, None)
+        if self.pubkey_id is not None:
+            self.pubkey_id = base64.b64decode(pubkey_id.encode(self.encoding))
+        self.code = get(code, None)
+        self._value = None
+
+        self.__call__(code=code)
+
+    def clear(self):
+        self._value = None
+        return self
+
+    def __call__(self, value=None, code=None, private_key=None, public_key=None):
+        if value is not None:
+            self._value = str(value)
+            self.code = None
+
+        if code is not None:
+            self.code = base64.b64decode(code.encode(self.encoding))
+            self._value = None
+
+        if public_key is not None:
+            self.pubkey_id = hashlib.sha1(public_key.save_pkcs1()).digest()
+            self.code = None
+
+            if self._value is None:
+                raise ValueError("no value")
+            self.code = rsa.encrypt(self._value.encode(self.encoding), public_key)
+
+        if private_key is not None:
+            if self.pubkey_id is not None:
+                pk_id = hashlib.sha1(private_key.pubkey.save_pkcs1()).digest()
+                if self.pubkey_id != pk_id:
+                    raise ValueError("wrong private key")
+
+            if self.code is None:
+                raise ValueError("no code")
+            self._value = rsa.decrypt(self.code, private_key).decode(self.encoding)
+
+        return self
+
+    @property
+    def value(self):
+        """Return plaintext value of the secret.
+        """
+        if self._value is None:
+            raise ValueError("no value")
+        return self._value
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        """Custom object representation.
+        """
+        kwargs = []
+        for field in self._fields:
+            value = getattr(self, field)
+            if value is None:
+                continue
+            if field in ("code", "pubkey_id"):
+                kwargs.append(f"{field}='{base64.b64encode(value).decode('utf-8')}'")
+            else:
+                kwargs.append(f"{field}={repr(value)}")
+
+        return f"Secret({','.join(kwargs)})"
 
 class ExamplesTable(Table):
     _row_type_name = "Example"
