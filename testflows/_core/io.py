@@ -137,6 +137,7 @@ class TestOutput(object):
 
         [self.attribute(attr) for attr in self.test.attributes.values()]
         [self.requirement(req) for req in self.test.requirements.values()]
+        [self.specification(spec) for spec in self.test.specifications.values()]
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
         [self.example(ExamplesRow(row._idx, row._fields, [str(f) for f in row], row._row_format)) for row in self.test.examples]
@@ -155,6 +156,10 @@ class TestOutput(object):
     def requirement(self, requirement, object_type=MessageObjectType.TEST):
         msg = object_fields(requirement, "requirement")
         self.message(Message.REQUIREMENT, msg, object_type=object_type)
+
+    def specification(self, specification, object_type=MessageObjectType.TEST):
+        msg = object_fields(specification, "specification")
+        self.message(Message.SPECIFICATION, msg, object_type=object_type)
 
     def argument(self, argument, object_type=MessageObjectType.TEST):
         msg = object_fields(argument, "argument")

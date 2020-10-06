@@ -18,7 +18,7 @@ import hashlib
 from collections import namedtuple
 
 from .utils.enum import IntEnum
-from .exceptions import RequirementError, ResultException
+from .exceptions import SpecificationError, RequirementError, ResultException
 from .baseobject import TestObject, Table
 from .baseobject import get, hash
 from .baseobject import namedtuple_with_defaults
@@ -277,6 +277,35 @@ class Ticket(TestObject):
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
         return super(Ticket, self).__init__()
+
+class Specification(TestObject):
+    _fields = ("name", "content", "description", "link", "author", "version",
+        "date", "status", "approved_by", "type", "group", "uid")
+    _defaults = (None,) * 10
+    uid = None
+    link = None
+    type = None
+    group = None
+
+    def __init__(self, name, content, description=None, link=None, author=None, version=None,
+        date=None, status=None, approved_by=None, type=None, group=None, uid=None):
+        self.name = name
+        self.content = content
+        self.description = description
+        self.author = author
+        self.version = version
+        self.date = date
+        self.status = status
+        self.approved_by = approved_by
+        self.link = get(link, self.link)
+        self.type = get(type, self.type)
+        self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
+
+    def __call__(self, *version):
+        if not self.version in version:
+            raise SpecificationError("specification version %s is not in %s" % (self.version, list(version)))
+        return self
 
 class ExamplesRow(TestObject):
     _fields = ("row", "columns", "values", "row_format")
@@ -550,6 +579,12 @@ class Requirements(NamedList):
 
     def __init__(self, *requirements):
         super(Requirements, self).__init__(*[Requirement(*r) for r in requirements])
+
+class Specifications(NamedList):
+    name = "specifications"
+
+    def __init__(self, *specifications):
+        super(Specifications, self).__init__(*[Specification(*r) for r in specifications])
 
 class Tags(NamedList):
     name = "tags"

@@ -33,7 +33,7 @@ from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NO
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
-from .objects import RepeatTest, ExamplesTable
+from .objects import RepeatTest, ExamplesTable, Specification
 from .objects import Secret
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
@@ -163,6 +163,7 @@ class TestBase(object):
     tags = set()
     attributes = []
     requirements = []
+    specifications = []
     examples = None
     name = None
     description = None
@@ -174,7 +175,7 @@ class TestBase(object):
     subtype = None
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
-                 uid=None, tags=None, attributes=None, requirements=None,
+                 uid=None, tags=None, attributes=None, requirements=None, specifications=None,
                  examples=None, description=None, parent=None,
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
@@ -206,6 +207,7 @@ class TestBase(object):
         self.subtype = get(subtype, self.subtype)
         self.context = get(context, current_test.context if current_test and self.type < TestType.Iteration else (Context(current_test.context if current_test else None)))
         self.tags = tags
+        self.specifications = {s.name: s for s in [Specification(*r) for r in get(specifications, list(self.specifications))]}
         self.requirements = {r.name: r for r in [Requirement(*r) for r in get(requirements, list(self.requirements))]}
         self.attributes = {a.name: a for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]}
         self.args = {k: Argument(k, v) for k,v in get(args, {}).items()}

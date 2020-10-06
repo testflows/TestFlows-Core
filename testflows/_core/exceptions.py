@@ -48,6 +48,11 @@ class RequirementError(TestFlowsError):
     """
     pass
 
+class SpecificationError(TestFlowsError):
+    """Specification error.
+    """
+    pass
+
 class DescriptionError(TestFlowsError):
     """Description error.
     """

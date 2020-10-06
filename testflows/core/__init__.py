@@ -22,8 +22,8 @@ from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
 from testflows._core.objects import Name, Description, Uid, Tags, Args
 from testflows._core.objects import XFails, XFlags, Repeat, RepeatTest
-from testflows._core.objects import Attributes, Requirements, Examples, ArgumentParser
-from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Metric, Value, Ticket
+from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
+from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
 from testflows._core.objects import Secret
 from testflows._core.baseobject import Table
 from testflows._core.filters import The, TheTags

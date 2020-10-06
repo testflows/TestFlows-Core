@@ -14,5 +14,6 @@
 # limitations under the License.
 from testflows._core.exceptions import TestFlowsError
 from testflows._core.exceptions import RequirementError
+from testflows._core.exceptions import SpecificationError
 from testflows._core.exceptions import ArgumentError
 from testflows._core.exceptions import DescriptionError
