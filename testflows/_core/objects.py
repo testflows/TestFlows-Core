@@ -509,7 +509,6 @@ class XFails(NamedValue):
         self.value[pattern] = results
         return self
 
-
 class XFlags(NamedValue):
     """xflags container.
 

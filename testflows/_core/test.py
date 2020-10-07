@@ -218,6 +218,8 @@ class TestBase(object):
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
+        if self.subtype in [TestSubType.Given, TestSubType.Finally]:
+            self.flags |= MANDATORY
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
         self.uid = get(uid, self.uid)
         if self.uid is not None:
