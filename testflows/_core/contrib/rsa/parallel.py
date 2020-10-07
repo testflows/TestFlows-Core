@@ -25,16 +25,16 @@ Introduced in Python-RSA 3.1.
 import multiprocessing as mp
 from multiprocessing.connection import Connection
 
-import testflows._core.contrib.rsa.prime as rsa_prime
-import testflows._core.contrib.rsa.randnum as rsa_randnum
+from .prime import is_prime
+from .randnum import read_random_odd_int
 
 
 def _find_prime(nbits: int, pipe: Connection) -> None:
     while True:
-        integer = rsa_randnum.read_random_odd_int(nbits)
+        integer = read_random_odd_int(nbits)
 
         # Test for primeness
-        if rsa_prime.is_prime(integer):
+        if is_prime(integer):
             pipe.send(integer)
             return
 

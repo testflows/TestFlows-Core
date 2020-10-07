@@ -19,7 +19,8 @@
 import os
 import struct
 
-from testflows._core.contrib.rsa import common, transform
+from .common import bit_size as get_bit_size
+from .transform import bytes2int
 
 
 def read_random_bits(nbits: int) -> bytes:
@@ -48,7 +49,7 @@ def read_random_int(nbits: int) -> int:
     """
 
     randomdata = read_random_bits(nbits)
-    value = transform.bytes2int(randomdata)
+    value = bytes2int(randomdata)
 
     # Ensure that the number is large enough to just fill out the required
     # number of bits.
@@ -78,7 +79,7 @@ def randint(maxvalue: int) -> int:
     is.
     """
 
-    bit_size = common.bit_size(maxvalue)
+    bit_size = get_bit_size(maxvalue)
 
     tries = 0
     while True:

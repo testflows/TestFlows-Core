@@ -22,11 +22,11 @@ import sys
 import typing
 import optparse
 
-import testflows._core.contrib.rsa as rsa
-import testflows._core.contrib.rsa.key as rsa_key
-import testflows._core.contrib.rsa.pkcs1 as rsa_pkcs1
+from . import newkeys, PublicKey, encrypt, PrivateKey, decrypt, verify, sign, VerificationError
+from .key import AbstractKey
+from .pkcs1 import HASH_METHODS
 
-HASH_METHODS = sorted(rsa_pkcs1.HASH_METHODS.keys())
+HASH_METHODS = sorted(HASH_METHODS.keys())
 Indexable = typing.Union[typing.Tuple, typing.List[str]]
 
 
@@ -64,7 +64,7 @@ def keygen() -> None:
         raise SystemExit(1)
 
     print('Generating %i-bit key' % keysize, file=sys.stderr)
-    (pub_key, priv_key) = rsa.newkeys(keysize)
+    (pub_key, priv_key) = newkeys(keysize)
 
     # Save public key
     if cli.pubout:
@@ -101,7 +101,7 @@ class CryptoOperation(metaclass=abc.ABCMeta):
     expected_cli_args = 1
     has_output = True
 
-    key_class = rsa.PublicKey  # type: typing.Type[rsa_key.AbstractKey]
+    key_class = PublicKey  # type: typing.Type[AbstractKey]
 
     def __init__(self) -> None:
         self.usage = self.usage % self.__class__.__dict__
@@ -109,7 +109,7 @@ class CryptoOperation(metaclass=abc.ABCMeta):
         self.output_help = self.output_help % self.__class__.__dict__
 
     @abc.abstractmethod
-    def perform_operation(self, indata: bytes, key: rsa_key.AbstractKey,
+    def perform_operation(self, indata: bytes, key: AbstractKey,
                           cli_args: Indexable) -> typing.Any:
         """Performs the program's operation.
 
@@ -158,7 +158,7 @@ class CryptoOperation(metaclass=abc.ABCMeta):
 
         return cli, cli_args
 
-    def read_key(self, filename: str, keyform: str) -> rsa_key.AbstractKey:
+    def read_key(self, filename: str, keyform: str) -> AbstractKey:
         """Reads a public or private key."""
 
         print('Reading %s key from %s' % (self.keyname, filename), file=sys.stderr)
@@ -200,11 +200,11 @@ class EncryptOperation(CryptoOperation):
     operation_past = 'encrypted'
     operation_progressive = 'encrypting'
 
-    def perform_operation(self, indata: bytes, pub_key: rsa_key.AbstractKey,
+    def perform_operation(self, indata: bytes, pub_key: AbstractKey,
                           cli_args: Indexable = ()) -> bytes:
         """Encrypts files."""
-        assert isinstance(pub_key, rsa_key.PublicKey)
-        return rsa.encrypt(indata, pub_key)
+        assert isinstance(pub_key, PublicKey)
+        return encrypt(indata, pub_key)
 
 
 class DecryptOperation(CryptoOperation):
@@ -216,13 +216,13 @@ class DecryptOperation(CryptoOperation):
     operation = 'decrypt'
     operation_past = 'decrypted'
     operation_progressive = 'decrypting'
-    key_class = rsa.PrivateKey
+    key_class = PrivateKey
 
-    def perform_operation(self, indata: bytes, priv_key: rsa_key.AbstractKey,
+    def perform_operation(self, indata: bytes, priv_key: AbstractKey,
                           cli_args: Indexable = ()) -> bytes:
         """Decrypts files."""
-        assert isinstance(priv_key, rsa_key.PrivateKey)
-        return rsa.decrypt(indata, priv_key)
+        assert isinstance(priv_key, PrivateKey)
+        return decrypt(indata, priv_key)
 
 
 class SignOperation(CryptoOperation):
@@ -235,23 +235,23 @@ class SignOperation(CryptoOperation):
     operation = 'sign'
     operation_past = 'signature'
     operation_progressive = 'Signing'
-    key_class = rsa.PrivateKey
+    key_class = PrivateKey
     expected_cli_args = 2
 
     output_help = ('Name of the file to write the signature to. Written '
                    'to stdout if this option is not present.')
 
-    def perform_operation(self, indata: bytes, priv_key: rsa_key.AbstractKey,
+    def perform_operation(self, indata: bytes, priv_key: AbstractKey,
                           cli_args: Indexable) -> bytes:
         """Signs files."""
-        assert isinstance(priv_key, rsa_key.PrivateKey)
+        assert isinstance(priv_key, PrivateKey)
 
         hash_method = cli_args[1]
         if hash_method not in HASH_METHODS:
             raise SystemExit('Invalid hash method, choose one of %s' %
                              ', '.join(HASH_METHODS))
 
-        return rsa.sign(indata, priv_key, hash_method)
+        return sign(indata, priv_key, hash_method)
 
 
 class VerifyOperation(CryptoOperation):
@@ -264,14 +264,14 @@ class VerifyOperation(CryptoOperation):
     operation = 'verify'
     operation_past = 'verified'
     operation_progressive = 'Verifying'
-    key_class = rsa.PublicKey
+    key_class = PublicKey
     expected_cli_args = 2
     has_output = False
 
-    def perform_operation(self, indata: bytes, pub_key: rsa_key.AbstractKey,
+    def perform_operation(self, indata: bytes, pub_key: AbstractKey,
                           cli_args: Indexable) -> None:
         """Verifies files."""
-        assert isinstance(pub_key, rsa_key.PublicKey)
+        assert isinstance(pub_key, PublicKey)
 
         signature_file = cli_args[1]
 
@@ -279,8 +279,8 @@ class VerifyOperation(CryptoOperation):
             signature = sigfile.read()
 
         try:
-            rsa.verify(indata, signature, pub_key)
-        except rsa.VerificationError:
+            verify(indata, signature, pub_key)
+        except VerificationError:
             raise SystemExit('Verification failed.')
 
         print('Verification OK', file=sys.stderr)

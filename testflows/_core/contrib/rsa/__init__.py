@@ -21,8 +21,8 @@ prevent repetitions, or other common security improvements. Use with care.
 
 """
 
-from testflows._core.contrib.rsa.key import newkeys, PrivateKey, PublicKey
-from testflows._core.contrib.rsa.pkcs1 import encrypt, decrypt, sign, verify, DecryptionError, \
+from .key import newkeys, PrivateKey, PublicKey
+from .pkcs1 import encrypt, decrypt, sign, verify, DecryptionError, \
     VerificationError, find_signature_hash,  sign_hash, compute_hash
 
 __author__ = "Sybren Stuvel, Barry Mead and Yesudeep Mangalapilly"
