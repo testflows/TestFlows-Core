@@ -12,10 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import re
-import sys
 import time
 import threading
+
+from multiprocessing.dummy import Pool
 
 import testflows.settings as settings
 
@@ -23,8 +23,7 @@ from .compress import compress
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message, MessageObjectType, dumps
-from .objects import Tag, Metric, ExamplesRow
-from .funcs import top
+from .objects import Tag, ExamplesRow
 from . import __version__
 
 def object_fields(obj, prefix):
@@ -399,8 +398,9 @@ class LogWriter(object):
                 self.fd = open(settings.write_logfile, "ab", buffering=0)
                 self.lock = threading.Lock()
                 self.buffer = []
-                self.timer = threading.Timer(cls.auto_flush_interval, self.flush, (True,))
-                self.timer.start()
+                self.pool = Pool(1)
+                self.cancel = False
+                self.pool.apply_async(self.flush, (), dict(sleep=cls.auto_flush_interval, force=True))
                 cls.instance = self
             return cls.instance
 
@@ -412,25 +412,33 @@ class LogWriter(object):
             self.buffer.append(msg.encode("utf-8"))
             return len(msg)
 
-    def flush(self, force=False, final=False):
+    def flush(self, force=False, final=False, sleep=None):
         if not force:
             return
 
+        if sleep:
+            time.sleep(sleep)
+
+        if self.cancel:
+            return
+
         with self.lock:
-            self.timer.cancel()
+            self.cancel = True
             if self.buffer:
                 self.fd.write(compress(b"".join(self.buffer)))
                 self.fd.flush()
                 del self.buffer[:]
 
             if not final and threading.main_thread().is_alive():
-                self.timer = threading.Timer(self.auto_flush_interval, self.flush, (True,))
-                self.timer.start()
+                self.cancel = False
+                self.pool.apply_async(self.flush, (), dict(sleep=self.auto_flush_interval, force=True))
 
     def close(self, final=False):
         if final:
+            self.pool.close()
             self.flush(force=True, final=True)
             self.fd.close()
+            self.pool.join()
 
 class LogIO(object):
     """Log file reader and writer.
