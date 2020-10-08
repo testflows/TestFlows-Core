@@ -21,7 +21,24 @@ from testflows._core.contrib.arpeggio import OneOrMore, ZeroOrMore, EOF, Optiona
 from testflows._core.contrib.arpeggio import ParserPython as PEGParser
 from testflows._core.contrib.arpeggio import PTNodeVisitor, visit_parse_tree
 
-template = """
+specification_template = """
+%(pyname)s = Specification(
+        name=%(name)s, 
+        description=%(description)s,
+        author=%(author)s,
+        date=%(date)s, 
+        status=%(status)s, 
+        approved_by=%(approved_by)s,
+        version=%(version)s,
+        group=%(group)s,
+        type=%(type)s,
+        link=%(link)s,
+        uid=%(uid)s,
+        content=%(content)s)
+
+"""
+
+requirement_template = """
 %(pyname)s = Requirement(
         name='%(name)s',
         version='%(version)s',
@@ -30,19 +47,20 @@ template = """
         type=%(type)s,
         uid=%(uid)s,
         description=%(description)s,
-        link=%(link)s
-    )
+        link=%(link)s)
 
 """
 
 class Visitor(PTNodeVisitor):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, source_data, *args, **kwargs):
+        self.source_data = source_data
         self.output = (
             "# These requirements were auto generated\n"
             "# from software requirements specification (SRS)\n"
             f"# document by TestFlows v{__version__}.\n"
             "# Do not edit by hand but re-generate instead\n"
             "# using \'tfs requirements generate\' command.\n"
+            "from testflows.core import Specification\n"
             "from testflows.core import Requirement\n\n"
             )
         self.pyname_fmt = re.compile(r"[^a-zA-Z0-9]")
@@ -50,6 +68,57 @@ class Visitor(PTNodeVisitor):
 
     def visit_line(self, node, children):
         pass
+
+    def visit_specification(self, node, children):
+        name = f"{node.specification_heading.specification_name.value.strip()}"
+        pyname = re.sub(r"_+", "_", self.pyname_fmt.sub("_", name))
+        author = None
+        status = None
+        version = None
+        date = None
+        approved_by = None
+        description = None
+        type = None
+        group = None
+        link = None
+        uid = None
+
+        try:
+            author = f"'{str(node.author.words).strip()}'"
+        except:
+            pass
+        try:
+            status = f"'{str(node.approval.status.words).strip()}'"
+        except:
+            pass
+        try:
+            version = f"'{str(node.approval.version.words).strip()}'"
+        except:
+            pass
+        try:
+            date = f"'{str(node.date.words).strip()}'"
+        except:
+            pass
+        try:
+            approved_by = f"'{str(node.approval.approved_by.words).strip()}'"
+        except:
+            pass
+
+        self.output += specification_template.lstrip() % {
+            "pyname": pyname,
+            "name": f"'{name}'",
+            "description": str(description),
+            "author": str(author),
+            "date": str(date),
+            "status": str(status),
+            "approved_by": str(approved_by),
+            "version": str(version),
+            "group": str(group),
+            "type": str(type),
+            "link": str(link),
+            "uid": str(uid),
+            "content": "'''%s'''" % self.source_data.replace("'''", "\'\'\'")
+        }
 
     def visit_requirement(self, node, children):
         name = node.requirement_heading.requirement_name.value
@@ -84,7 +153,7 @@ class Visitor(PTNodeVisitor):
         except:
             pass
 
-        self.output += template.lstrip() % {
+        self.output += requirement_template.lstrip() % {
             "pyname": pyname,
             "name": node.requirement_heading.requirement_name.value,
             "version": node.version.word,
@@ -105,20 +174,44 @@ def Parser():
     def line():
         return _(r"[^\n]*\n")
 
+    def empty_line():
+        return _(r"\s*\n")
+
     def not_heading():
-        return Not(heading)
+        return _(r"\s?\s?\s?[^#]+[^\n]*\n?")
 
     def heading():
         return [
-            (_(r"\s?\s?\s?#+\s+"), heading_name, _(r"\n?")),
-            (heading_name, _(r"[-=]+\n?"))
+            (_(r"\s?\s?\s?#+\s+"), heading_name, _(r"\n")),
+            (heading_name, _(r"\n[-=]+\n"))
         ]
 
     def requirement_heading():
         return [
-            (_(r"\s?\s?\s?#+\s+"), requirement_name, _(r"\n?")),
-            (requirement_name, _(r"[-=]+\n?"))
+            (_(r"\s?\s?\s?#+\s+"), requirement_name, _(r"\n")),
+            (requirement_name, _(r"\n[-=]+\n"))
         ]
+
+    def specification_heading():
+        return [
+            (_(r"\s?\s?\s?#+\s+"), specification_name, _(r"\n")),
+            (specification_name, _(r"\n[-=]+\n"))
+        ]
+
+    def specification_approval_heading():
+        return [
+            (_(r"\s?\s?\s?#+\s+"), _(r"Approval"), _(r"\s*\n")),
+            (_(r"Approval"), _(r"\n[-=]+\n"))
+        ]
+
+    def toc_heading():
+        return [
+            (_(r"\s?\s?\s?#+\s+"), _(r"Table of Contents"), _(r"\n")),
+            (_(r"Table of Contents"), _(r"\n[-=]+\n"))
+        ]
+
+    def specification_name():
+        return _(r"(QA-)?SRS[^\n]+")
 
     def heading_name():
         return _(r"[^\n]+")
@@ -131,6 +224,9 @@ def Parser():
 
     def word():
         return _(r"[^\s]+")
+
+    def words():
+        return _(r"[^\n]+")
 
     def version():
         return _(r"\s*version:\s*"), word
@@ -147,11 +243,48 @@ def Parser():
     def uid():
         return _(r"\s*uid:\s*"), word
 
+    def other():
+        return _(r"\*?\*?[^\*\n]+:\*?\*?\s*"), words, _(r"\n")
+
+    def author():
+        return _(r"\*?\*?[Aa]uthor:\*?\*?\s*"), words, _(r"\n")
+
+    def date():
+        return _(r"\*?\*?[Dd]ate:\*?\*?\s*"), words, _(r"\n")
+
+    def status():
+        return _(r"\*?\*?[Ss]tatus:\*?\*?\s*"), words, _(r"\n")
+
+    def approval_version():
+        return _(r"\*?\*?[Vv]ersion:\*?\*?\s*"), words, _(r"\n")
+
+    def approved_by():
+        return _(r"\*?\*?[Aa]pproved by:\*?\*?\s*"), words, _(r"\n")
+
+    def approval():
+        return specification_approval_heading, OneOrMore([
+            status,
+            approval_version,
+            approved_by,
+            date,
+            empty_line
+        ])
+
+    def specification():
+        return specification_heading, OneOrMore([
+            author,
+            date,
+            other,
+            approval,
+            empty_line,
+            _(r"\s*[^\*#\n][^\n]*\n")
+        ]), toc_heading
+
     def requirement():
         return requirement_heading, version, ZeroOrMore([priority, type, group, uid]), Optional(requirement_description), _(r"\n?")
 
     def document():
-        return Optional(OneOrMore([requirement, heading, line])), EOF
+        return Optional(OneOrMore([specification, requirement, heading, line])), EOF
 
     return PEGParser(document, skipws=False)
 
@@ -165,6 +298,6 @@ def generate(source, destination):
     parser = Parser()
     source_data = source.read()
     tree = parser.parse(source_data)
-    destination_data = visit_parse_tree(tree, Visitor())
+    destination_data = visit_parse_tree(tree, Visitor(source_data=source_data))
     if destination_data:
         destination.write(destination_data)
