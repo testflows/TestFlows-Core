@@ -92,7 +92,7 @@ class Visitor(PTNodeVisitor):
         except:
             pass
         try:
-            version = f"'{str(node.approval.version.words).strip()}'"
+            version = f"'{str(node.approval.approval_version.words).strip()}'"
         except:
             pass
         try:
@@ -117,7 +117,7 @@ class Visitor(PTNodeVisitor):
             "type": str(type),
             "link": str(link),
             "uid": str(uid),
-            "content": "'''%s'''" % self.source_data.replace("'''", "\'\'\'")
+            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "\'\'\'").rstrip()
         }
 
     def visit_requirement(self, node, children):
@@ -178,37 +178,22 @@ def Parser():
         return _(r"\s*\n")
 
     def not_heading():
-        return _(r"\s?\s?\s?[^#]+[^\n]*\n?")
+        return Not(heading)
 
     def heading():
-        return [
-            (_(r"\s?\s?\s?#+\s+"), heading_name, _(r"\n")),
-            (heading_name, _(r"\n[-=]+\n"))
-        ]
+        return _(r"\s?\s?\s?#+\s+"), heading_name, _(r"\n")
 
     def requirement_heading():
-        return [
-            (_(r"\s?\s?\s?#+\s+"), requirement_name, _(r"\n")),
-            (requirement_name, _(r"\n[-=]+\n"))
-        ]
+        return _(r"\s?\s?\s?#+\s+"), requirement_name, _(r"\n")
 
     def specification_heading():
-        return [
-            (_(r"\s?\s?\s?#+\s+"), specification_name, _(r"\n")),
-            (specification_name, _(r"\n[-=]+\n"))
-        ]
+        return _(r"\s?\s?\s?#\s+"), specification_name, _(r"\n")
 
     def specification_approval_heading():
-        return [
-            (_(r"\s?\s?\s?#+\s+"), _(r"Approval"), _(r"\s*\n")),
-            (_(r"Approval"), _(r"\n[-=]+\n"))
-        ]
+        return _(r"\s?\s?\s?#+\s+"), _(r"Approval"), _(r"\s*\n")
 
     def toc_heading():
-        return [
-            (_(r"\s?\s?\s?#+\s+"), _(r"Table of Contents"), _(r"\n")),
-            (_(r"Table of Contents"), _(r"\n[-=]+\n"))
-        ]
+        return _(r"\s?\s?\s?#+\s+"), _(r"Table of Contents"), _(r"\n")
 
     def specification_name():
         return _(r"(QA-)?SRS[^\n]+")
@@ -271,7 +256,7 @@ def Parser():
         ])
 
     def specification():
-        return specification_heading, OneOrMore([
+        return specification_heading, Optional(heading), OneOrMore([
             author,
             date,
             other,
