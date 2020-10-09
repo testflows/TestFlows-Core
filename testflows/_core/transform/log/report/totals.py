@@ -134,6 +134,8 @@ def format_test(msg, counts):
             counts["feature"].units += 1
         elif test_subtype == TestSubType.Scenario:
             counts["scenario"].units += 1
+        elif test_subtype == TestSubType.Check:
+            counts["check"].units += 1
         elif test_subtype == TestSubType.Recipe:
             counts["recipe"].units += 1
         else:
@@ -164,6 +166,8 @@ def format_result(msg, counts):
             setattr(counts["feature"], _name, getattr(counts["feature"], _name) + 1)
         elif test_subtype == TestSubType.Scenario:
             setattr(counts["scenario"], _name, getattr(counts["scenario"], _name) + 1)
+        elif test_subtype == TestSubType.Check:
+            setattr(counts["check"], _name, getattr(counts["check"], _name) + 1)
         elif test_subtype == TestSubType.Recipe:
             setattr(counts["recipe"], _name, getattr(counts["recipe"], _name) + 1)
         else:
@@ -185,6 +189,7 @@ def all_counts():
         "feature": Counts("features", *([0] * 10)),
         "scenario": Counts("scenarios", *([0] * 10)),
         "recipe": Counts("recipes", *([0] * 10)),
+        "check": Counts("checks", *([0] * 10)),
         "example": Counts("examples", *([0] * 10))
     }
 
@@ -219,6 +224,8 @@ def transform(stop, divider="\n"):
                     line += line_icon + str(counts["feature"])
                 if counts["scenario"]:
                     line += line_icon + str(counts["scenario"])
+                if counts["check"]:
+                    line += line_icon + str(counts["check"])
                 if counts["recipe"]:
                     line += line_icon + str(counts["recipe"])
                 if counts["example"]:

@@ -200,6 +200,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id):
     else:
         if test_subtype == TestSubType.Scenario:
             keyword += "Scenario"
+        elif test_subtype == TestSubType.Check:
+            keyword += "Check"
         elif test_subtype == TestSubType.Recipe:
             keyword += "Recipe"
         else:

@@ -1353,6 +1353,11 @@ class Scenario(Test):
         kwargs["subtype"] = TestSubType.Scenario
         return super(Scenario, cls).__new__(cls, name, **kwargs)
 
+class Check(Test):
+    def __new__(cls, name=None, **kwargs):
+        kwargs["subtype"] = TestSubType.Check
+        return super(Check, cls).__new__(cls, name, **kwargs)
+
 class BackgroundTest(TestBase):
     def __init__(self, *args, **kwargs):
         self.contexts = []
