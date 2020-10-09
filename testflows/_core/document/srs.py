@@ -172,28 +172,28 @@ def Parser():
     """Returns markdown requirements parser.
     """
     def line():
-        return _(r"[^\n]*\n")
+        return _(r"[^\n]*\n?")
 
     def empty_line():
-        return _(r"\s*\n")
+        return _(r"[ \t]*\n")
 
     def not_heading():
         return Not(heading)
 
     def heading():
-        return _(r"\s?\s?\s?#+\s+"), heading_name, _(r"\n")
+        return _(r"#+[ \t]+"), heading_name, _(r"\n")
 
     def requirement_heading():
-        return _(r"\s?\s?\s?#+\s+"), requirement_name, _(r"\n")
+        return _(r"#+[ \t]+"), requirement_name, _(r"\n")
 
     def specification_heading():
-        return _(r"\s?\s?\s?#\s+"), specification_name, _(r"\n")
+        return _(r"#[ \t]+"), specification_name, _(r"\n")
 
     def specification_approval_heading():
-        return _(r"\s?\s?\s?#+\s+"), _(r"Approval"), _(r"\s*\n")
+        return _(r"#+[ \t]+"), _(r"Approval"), _(r"[ \t]*\n")
 
     def toc_heading():
-        return _(r"\s?\s?\s?#+\s+"), _(r"Table of Contents"), _(r"\n")
+        return _(r"#+[ \t]+"), _(r"Table of Contents"), _(r"[ \t]*\n")
 
     def specification_name():
         return _(r"(QA-)?SRS[^\n]+")
@@ -214,37 +214,37 @@ def Parser():
         return _(r"[^\n]+")
 
     def version():
-        return _(r"\s*version:\s*"), word
+        return _(r"[ \t]*version:[ \t]*"), word
 
     def priority():
-        return _(r"\s*priority:\s*"), word
+        return _(r"[ \t]*priority:[ \t]*"), word
 
     def type():
-        return _(r"\s*type:\s*"), word
+        return _(r"[ \t]*type:[ \t]*"), word
 
     def group():
-        return _(r"\s*group:\s*"), word
+        return _(r"[ \t]*group:[ \t]*"), word
 
     def uid():
-        return _(r"\s*uid:\s*"), word
+        return _(r"[ \t]*uid:[ \t]*"), word
 
     def other():
-        return _(r"\*?\*?[^\*\n]+:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[^\*\n]+:\*?\*?[ \t]*"), words, _(r"\n")
 
     def author():
-        return _(r"\*?\*?[Aa]uthor:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[Aa]uthor:\*?\*?[ \t]*"), words, _(r"\n")
 
     def date():
-        return _(r"\*?\*?[Dd]ate:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[Dd]ate:\*?\*?[ \t]*"), words, _(r"\n")
 
     def status():
-        return _(r"\*?\*?[Ss]tatus:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[Ss]tatus:\*?\*?[ \t]*"), words, _(r"\n")
 
     def approval_version():
-        return _(r"\*?\*?[Vv]ersion:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[Vv]ersion:\*?\*?[ \t]*"), words, _(r"\n")
 
     def approved_by():
-        return _(r"\*?\*?[Aa]pproved by:\*?\*?\s*"), words, _(r"\n")
+        return _(r"\*?\*?[Aa]pproved by:\*?\*?[ \t]*"), words, _(r"\n")
 
     def approval():
         return specification_approval_heading, OneOrMore([
@@ -256,13 +256,13 @@ def Parser():
         ])
 
     def specification():
-        return specification_heading, Optional(heading), OneOrMore([
+        return specification_heading, ZeroOrMore(heading), ZeroOrMore([
             author,
             date,
             other,
             approval,
             empty_line,
-            _(r"\s*[^\*#\n][^\n]*\n")
+            _(r"[ \t]*[^\*#\n][^\n]*\n")
         ]), toc_heading
 
     def requirement():
