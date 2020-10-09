@@ -1589,6 +1589,9 @@ class TestCase(TestDecorator):
 class TestScenario(TestCase):
     type = Scenario
 
+class TestCheck(TestCase):
+    type = Check
+
 class TestSuite(TestDecorator):
     type = Suite
 
