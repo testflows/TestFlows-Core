@@ -29,19 +29,23 @@ specification_template = """
         date=%(date)s, 
         status=%(status)s, 
         approved_by=%(approved_by)s,
+        approved_date=%(approved_date)s,
+        approved_version=%(approved_version)s,
         version=%(version)s,
         group=%(group)s,
         type=%(type)s,
         link=%(link)s,
         uid=%(uid)s,
+        parent=%(parent)s,
+        children=%(children)s,
         content=%(content)s)
 
 """
 
 requirement_template = """
 %(pyname)s = Requirement(
-        name='%(name)s',
-        version='%(version)s',
+        name=%(name)s,
+        version=%(version)s,
         priority=%(priority)s,
         group=%(group)s,
         type=%(type)s,
@@ -70,58 +74,75 @@ class Visitor(PTNodeVisitor):
         pass
 
     def visit_specification(self, node, children):
-        name = f"{node.specification_heading.specification_name.value.strip()}"
+        name = str(node.specification_heading.specification_name.value).strip()
         pyname = re.sub(r"_+", "_", self.pyname_fmt.sub("_", name))
         author = None
         status = None
         version = None
         date = None
         approved_by = None
+        approved_date = None
+        approved_version = None
         description = None
         type = None
         group = None
         link = None
         uid = None
+        parent = None
+        children = None
 
         try:
-            author = f"'{str(node.author.words).strip()}'"
+            date = str(node.specification_date.words).strip()
         except:
             pass
         try:
-            status = f"'{str(node.approval.status.words).strip()}'"
+            author = str(node.specification_author.words).strip()
         except:
             pass
         try:
-            version = f"'{str(node.approval.approval_version.words).strip()}'"
+            version = str(node.specification_version.words).strip()
         except:
             pass
         try:
-            date = f"'{str(node.date.words).strip()}'"
+            status = str(node.specification_approval.specification_approval_status.words).strip()
         except:
             pass
         try:
-            approved_by = f"'{str(node.approval.approved_by.words).strip()}'"
+            approved_version = str(node.specification_approval.specification_approval_version.words).strip()
+        except:
+            pass
+        try:
+            approved_date = str(node.specification_approval.specification_approval_date.words).strip()
+        except:
+            pass
+        try:
+            approved_by = str(node.specification_approval.specification_approval_by.words).strip()
         except:
             pass
 
         self.output += specification_template.lstrip() % {
             "pyname": pyname,
-            "name": f"'{name}'",
-            "description": str(description),
-            "author": str(author),
-            "date": str(date),
-            "status": str(status),
-            "approved_by": str(approved_by),
-            "version": str(version),
-            "group": str(group),
-            "type": str(type),
-            "link": str(link),
-            "uid": str(uid),
+            "name": repr(name),
+            "description": repr(description),
+            "author": repr(author),
+            "date": repr(date),
+            "status": repr(status),
+            "approved_by": repr(approved_by),
+            "approved_date": repr(approved_date),
+            "approved_version": repr(approved_version),
+            "version": repr(version),
+            "group": repr(group),
+            "type": repr(type),
+            "link": repr(link),
+            "uid": repr(uid),
+            "parent": repr(parent),
+            "children": repr(children),
             "content": "'''\n%s\n'''" % self.source_data.replace("'''", "\'\'\'").rstrip()
         }
 
     def visit_requirement(self, node, children):
         name = node.requirement_heading.requirement_name.value
+        version = str(node.requirement_version.word)
         pyname = re.sub(r"_+", "_", self.pyname_fmt.sub("_", name))
         description = None
         group = None
@@ -135,34 +156,34 @@ class Visitor(PTNodeVisitor):
             description = wstrip(description, f"{'':8}'\\n'\n")
             description = f"(\n{description}\n{'':8})"
         except:
-            pass
+            description = "None"
         try:
-            priority = node.priority.word
+            priority = str(node.requirement_priority.word)
         except:
             pass
         try:
-            group = f"\"{node.group.word}\""
+            group = str(node.requirement_group.word)
         except:
             pass
         try:
-            type = f"\"{node.type.word}\""
+            type = str(node.requirement_type.word)
         except:
             pass
         try:
-            uid = f"\"{node.uid.word}\""
+            uid = str(node.requirement_uid.word)
         except:
             pass
 
         self.output += requirement_template.lstrip() % {
             "pyname": pyname,
-            "name": node.requirement_heading.requirement_name.value,
-            "version": node.version.word,
-            "description": str(description),
-            "priority": str(priority),
-            "group": str(group),
-            "type": str(type),
-            "uid": str(uid),
-            "link": str(link)
+            "name": repr(name),
+            "version": repr(version),
+            "description": description,
+            "priority": repr(priority),
+            "group": repr(group),
+            "type": repr(type),
+            "uid": repr(uid),
+            "link": repr(link)
         }
 
     def visit_document(self, node, children):
@@ -177,28 +198,22 @@ def Parser():
     def empty_line():
         return _(r"[ \t]*\n")
 
-    def not_heading():
-        return Not(heading)
-
     def heading():
         return _(r"#+[ \t]+"), heading_name, _(r"\n")
-
-    def requirement_heading():
-        return _(r"#+[ \t]+"), requirement_name, _(r"\n")
-
-    def specification_heading():
-        return _(r"#[ \t]+"), specification_name, _(r"\n")
-
-    def specification_approval_heading():
-        return _(r"#+[ \t]+"), _(r"Approval"), _(r"[ \t]*\n")
 
     def toc_heading():
         return _(r"#+[ \t]+"), _(r"Table of Contents"), _(r"[ \t]*\n")
 
-    def specification_name():
-        return _(r"(QA-)?SRS[^\n]+")
-
     def heading_name():
+        return _(r"[^\n]+")
+
+    def not_heading():
+        return Not(heading)
+
+    def word():
+        return _(r"[^\s]+")
+
+    def words():
         return _(r"[^\n]+")
 
     def requirement_name():
@@ -207,66 +222,85 @@ def Parser():
     def requirement_description():
         return ZeroOrMore((not_heading, line))
 
-    def word():
-        return _(r"[^\s]+")
+    def requirement_heading():
+        return _(r"#+[ \t]+"), requirement_name, _(r"\n")
 
-    def words():
-        return _(r"[^\n]+")
-
-    def version():
+    def requirement_version():
         return _(r"[ \t]*version:[ \t]*"), word
 
-    def priority():
+    def requirement_priority():
         return _(r"[ \t]*priority:[ \t]*"), word
 
-    def type():
+    def requirement_type():
         return _(r"[ \t]*type:[ \t]*"), word
 
-    def group():
+    def requirement_group():
         return _(r"[ \t]*group:[ \t]*"), word
 
-    def uid():
+    def requirement_uid():
         return _(r"[ \t]*uid:[ \t]*"), word
 
-    def other():
-        return _(r"\*?\*?[^\*\n]+:\*?\*?[ \t]*"), words, _(r"\n")
+    def specification_name():
+        return _(r"(QA-)?SRS[^\n]+")
 
-    def author():
+    def specification_heading():
+        return _(r"#[ \t]+"), specification_name, _(r"\n")
+
+    def specification_author():
         return _(r"\*?\*?[Aa]uthor:\*?\*?[ \t]*"), words, _(r"\n")
 
-    def date():
+    def specification_date():
         return _(r"\*?\*?[Dd]ate:\*?\*?[ \t]*"), words, _(r"\n")
 
-    def status():
-        return _(r"\*?\*?[Ss]tatus:\*?\*?[ \t]*"), words, _(r"\n")
-
-    def approval_version():
+    def specification_version():
         return _(r"\*?\*?[Vv]ersion:\*?\*?[ \t]*"), words, _(r"\n")
 
-    def approved_by():
+    def specification_other():
+        return _(r"\*?\*?[^\*\n]+:\*?\*?[ \t]*"), words, _(r"\n")
+
+    def specification_approval_heading():
+        return _(r"#+[ \t]+"), _(r"Approval"), _(r"[ \t]*\n")
+
+    def specification_approval_status():
+        return _(r"\*?\*?[Ss]tatus:\*?\*?[ \t]*"), words, _(r"\n")
+
+    def specification_approval_version():
+        return _(r"\*?\*?[Vv]ersion:\*?\*?[ \t]*"), words, _(r"\n")
+
+    def specification_approval_by():
         return _(r"\*?\*?[Aa]pproved by:\*?\*?[ \t]*"), words, _(r"\n")
 
-    def approval():
-        return specification_approval_heading, OneOrMore([
-            status,
-            approval_version,
-            approved_by,
-            date,
+    def specification_approval_date():
+        return _(r"\*?\*?[Dd]ate:\*?\*?[ \t]*"), words, _(r"\n")
+
+    def specification_approval_other():
+        return _(r"\*?\*?[^\*\n]+:\*?\*?[ \t]*"), words, _(r"\n")
+
+    def specification_approval():
+        return specification_approval_heading, ZeroOrMore([
+            specification_approval_status,
+            specification_approval_version,
+            specification_approval_by,
+            specification_approval_date,
+            specification_approval_other,
             empty_line
         ])
 
     def specification():
         return specification_heading, ZeroOrMore(heading), ZeroOrMore([
-            author,
-            date,
-            other,
-            approval,
+            specification_author,
+            specification_date,
+            specification_version,
+            specification_other,
+            specification_approval,
             empty_line,
             _(r"[ \t]*[^\*#\n][^\n]*\n")
         ]), toc_heading
 
     def requirement():
-        return requirement_heading, version, ZeroOrMore([priority, type, group, uid]), Optional(requirement_description), _(r"\n?")
+        return requirement_heading, requirement_version, ZeroOrMore([
+                requirement_priority, requirement_type, requirement_group, requirement_uid
+            ]), Optional(requirement_description)
 
     def document():
         return Optional(OneOrMore([specification, requirement, heading, line])), EOF

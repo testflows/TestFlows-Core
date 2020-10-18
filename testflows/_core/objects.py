@@ -280,7 +280,8 @@ class Ticket(TestObject):
 
 class Specification(TestObject):
     _fields = ("name", "content", "description", "link", "author", "version",
-        "date", "status", "approved_by", "type", "group", "uid")
+        "date", "status", "approved_by", "approved_date", "approved_version",
+        "type", "group", "uid", "parent", "children")
     _defaults = (None,) * 10
     uid = None
     link = None
@@ -288,7 +289,8 @@ class Specification(TestObject):
     group = None
 
     def __init__(self, name, content, description=None, link=None, author=None, version=None,
-        date=None, status=None, approved_by=None, type=None, group=None, uid=None):
+        date=None, status=None, approved_by=None, approved_date=None, approved_version=None,
+        type=None, group=None, uid=None, parent=None, children=None):
         self.name = name
         self.content = content
         self.description = description
@@ -297,10 +299,14 @@ class Specification(TestObject):
         self.date = date
         self.status = status
         self.approved_by = approved_by
+        self.approved_date = approved_date
+        self.approved_version = approved_version
         self.link = get(link, self.link)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
+        self.parent = parent
+        self.children = children
 
     def __call__(self, *version):
         if not self.version in version:
