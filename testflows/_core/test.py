@@ -32,6 +32,8 @@ import testflows.settings as settings
 
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY
+from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
+from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
@@ -343,6 +345,8 @@ class TestBase(object):
             finally:
                 current(self.caller_test, set_value=True)
                 previous(self)
+                self._apply_eresult_flags()
+                self._apply_xresult_flags()
                 self._apply_xfails()
                 self.io.output.result(self.result)
                 if top() is self:
@@ -355,6 +359,54 @@ class TestBase(object):
                 pause()
 
         return True
+
+    def _apply_eresult_flags(self):
+        """Apply eresult flags to self.result.
+        """
+        if not ERESULT in self.flags:
+            return
+
+        message_template = f"{self.result.message + ', ' if self.result.message else ''}{self.result} result is converted to %(result)s because %(flag)s flag set"
+
+        if EOK in self.flags:
+            if not isinstance(self.result, OK):
+                self.result = self.result(Fail(message_template % dict(result="Fail", flag="EOK")))
+
+        if EFAIL in self.flags:
+            if not isinstance(self.result, Fail):
+                self.result = self.result(Fail(message_template % dict(result="Fail", flag="EFAIL")))
+            else:
+                self.result = self.result(OK(message_template % dict(result="OK", flag="EFAIL")))
+
+        if EERROR in self.flags:
+            if not isinstance(self.result, Error):
+                self.result = self.result(Fail(message_template % dict(result="Fail", flag="EERROR")))
+            else:
+                self.result = self.result(OK(message_template % dict(result="OK", flag="EERROR")))
+
+        if ESKIP in self.flags:
+            if not isinstance(self.result, Skip):
+                self.result = self.result(Fail(message_template % dict(result="Fail", flag="ESKIP")))
+            else:
+                self.result = self.result(OK(message_template% dict(result="OK", flag="ESKIP")))
+
+    def _apply_xresult_flags(self):
+        """Apply xresult flags to self.result.
+        """
+        if not XRESULT in self.flags:
+            return
+
+        if XOK in self.flags and isinstance(self.result, OK):
+            self.result = self.result.xout("XOK flag set")
+
+        if XFAIL in self.flags and isinstance(self.result, Fail):
+            self.result = self.result.xout("XFAIL flag set")
+
+        if XERROR in self.flags and isinstance(self.result, Error):
+            self.result = self.result.xout("XERROR flag set")
+
+        if XNULL in self.flags and isinstance(self.result, Null):
+            self.result = self.result.xout("XNULL flag set")
 
     def _apply_xfails(self):
         """Apply xfails to self.result.
