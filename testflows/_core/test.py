@@ -1621,45 +1621,6 @@ def ordered(tests):
         human_sort(tests, key=lambda test: test.__name__)
     return tests
 
-class has:
-    """Class that contains filters to filter tests
-    by their parameters such as tags.
-    """
-    class Filter:
-        def __init__(self, _op=None):
-            self._op = _op
-
-        def __call__(self, test):
-            if self._op:
-                return self._op(test)
-            return True
-
-        def __or__(self, other):
-            def op(test):
-                return operator.or_(self(test), other(test))
-            return has.Filter(_op=op)
-
-        def __and__(self, other):
-            def op(test):
-                return operator.and_(self(test), other(test))
-            return has.Filter(_op=op)
-
-        def __invert__(self):
-            def op(test):
-                return operator.not_(self(test))
-            return has.Filter(_op=op)
-
-    class tag(Filter):
-        """Tag filter.
-
-        :param name: name
-        """
-        def __init__(self, name):
-            self.name = name
-
-        def __call__(self, test):
-            return self.name in getattr(test, "tags", set())
-
 def loads(name, *types, package=None, frame=None, filter=None):
     """Load multiple tests from module.
 
