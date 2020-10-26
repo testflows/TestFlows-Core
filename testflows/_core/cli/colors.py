@@ -76,31 +76,31 @@ COLORS = dict(
             ))
         )
 
-def reset():
-    return '\033[0m' if not settings.no_colors else ''
+def reset(no_colors=False):
+    return '\033[0m' if not (no_colors and settings.no_colors) else ''
 
-def cursor_up():
-    return '\033[A' if not settings.no_colors else ''
+def cursor_up(no_colors=False):
+    return '\033[A' if not (no_colors and settings.no_colors) else ''
 
-def red(text, on_color=None, attrs=None):
-    return color(text, "red", on_color=on_color, attrs=attrs)
+def red(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "red", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def green(text, on_color=None, attrs=None):
-    return color(text, "green", on_color=on_color, attrs=attrs)
+def green(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "green", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def yellow(text, on_color=None, attrs=None):
-    return color(text, "yellow", on_color=on_color, attrs=attrs)
+def yellow(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "yellow", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def blue(text, on_color=None, attrs=None):
-    return color(text, "blue", on_color=on_color, attrs=attrs)
+def blue(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "blue", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def cyan(text, on_color=None, attrs=None):
-    return color(text, "cyan", on_color=on_color, attrs=attrs)
+def cyan(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "cyan", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def white(text, on_color=None, attrs=None):
-    return color(text, "white", on_color=on_color, attrs=attrs)
+def white(text, on_color=None, attrs=None, no_colors=False):
+    return color(text, "white", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
-def color(text, color=None, on_color=None, attrs=None):
+def color(text, color=None, on_color=None, attrs=None, no_colors=False):
     """Colorize text.
 
     Available text colors:
@@ -116,7 +116,9 @@ def color(text, color=None, on_color=None, attrs=None):
         colored('Hello, World!', 'red', 'on_grey', ['blue', 'blink'])
         colored('Hello, World!', 'green')
     """
-    if not settings.no_colors:
+    if no_colors or settings.no_colors:
+        pass
+    else:
         fmt_str = '\033[%dm%s'
         if color is not None:
             text = fmt_str % (COLORS[color], text)

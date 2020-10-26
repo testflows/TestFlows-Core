@@ -288,7 +288,7 @@ class Handler(HandlerBase):
         started = test["test"]["message_time"]
         ended = test["result"]["message_time"]
 
-        messages = [format_test(test["test"], "", tests_by_parent, tests_by_id)]
+        messages = [format_test(test["test"], "", tests_by_parent, tests_by_id, no_colors=True)]
 
         if getattr(TestType, test["test"]["test_type"]) > TestType.Test:
             for t in tests[idx + 1:]:
@@ -299,8 +299,8 @@ class Handler(HandlerBase):
                     break
                 if getattr(TestType, t["test"]["test_type"]) >= TestType.Test \
                         and t["test"]["test_id"].startswith(test["test"]["test_id"]):
-                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id))
-                    messages.append(format_result(t["result"]))
+                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id, no_colors=True))
+                    messages.append(format_result(t["result"], no_colors=True))
         else:
             for t in tests[idx + 1:]:
                 flags = Flags(t["test"]["test_flags"])
@@ -309,10 +309,10 @@ class Handler(HandlerBase):
                 if t["test"]["message_time"] > ended:
                     break
                 if t["test"]["test_id"].startswith(test["test"]["test_id"]):
-                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id))
-                    messages.append(format_result(t["result"]))
+                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id, no_colors=True))
+                    messages.append(format_result(t["result"], no_colors=True))
 
-        messages.append(format_result(test["result"]))
+        messages.append(format_result(test["result"], no_colors=True))
 
         test["messages"] = "".join(messages)
         return test
