@@ -100,6 +100,18 @@ def format_attribute(msg):
     out.append(color(f"{_indent}{' ' * 6}{msg['attribute_value']}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
+def format_specification(msg):
+    out = []
+    _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
+
+    if last_message[0] and not last_message[0]["message_keyword"] == Message.SPECIFICATION.name:
+        out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Specifications')}"]
+
+    out.append(color(f"{_indent}{' ' * 4}{msg['specification_name']}", "white", attrs=["dim"]))
+    if msg["specification_version"]:
+        out.append(color(f"{_indent}{' ' * 6}version {msg['specification_version']}", "white", attrs=["dim"]))
+    return "\n".join(out) + "\n"
+
 def format_requirement(msg):
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
@@ -280,6 +292,7 @@ formatters = {
     Message.TEST.name: (format_test, f"{mark}  "),
     Message.ATTRIBUTE.name: (format_attribute, ),
     Message.ARGUMENT.name: (format_argument,),
+    Message.SPECIFICATION.name: (format_specification,),
     Message.REQUIREMENT.name: (format_requirement,),
     Message.TAG.name: (format_tag,),
     Message.EXAMPLE.name: (format_example,),
