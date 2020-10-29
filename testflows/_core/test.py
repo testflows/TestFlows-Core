@@ -60,6 +60,11 @@ try:
 except:
     database_module = None
 
+def run_generator(r):
+    """Run generator.
+    """
+    return next(r)
+
 class DummyTest(object):
     """Base class for dummy tests.
     """
@@ -184,7 +189,7 @@ class TestBase(object):
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeat=None, private_key=None):
+                 repeat=None, private_key=None, setup=None):
 
         self.lock = threading.Lock()
 
@@ -239,6 +244,14 @@ class TestBase(object):
         self.repeat = get(repeat, None)
         self.private_key = get(private_key, None)
         self.caller_test = None
+        self.setup = get(setup, None)
+        if self.setup is not None:
+            if isinstance(self.setup, (TestDecorator, TestDefinition)):
+                pass
+            elif inspect.isfunction(self.setup):
+                self.setup = functools.partial(self.setup, self=self)
+            else:
+                raise TypeError(f"'{self.setup}' is not a valid test type")
 
     @classmethod
     def make_name(cls, name, parent=None, args=None, format=True):
@@ -303,6 +316,12 @@ class TestBase(object):
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
+
+        if self.setup is not None:
+            r = self.setup()
+            if inspect.isgenerator(r):
+                res = next(r)
+                self.context.cleanup(run_generator, r)
 
         return self
 
@@ -1505,9 +1524,6 @@ class TestDecorator(object):
         test = current()
 
         def process_func_result(r):
-            def run_generator(r):
-                return next(r)
-
             if inspect.isgenerator(r):
                 res = run_generator(r)
                 test.context.cleanup(run_generator, r)

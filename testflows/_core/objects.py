@@ -489,6 +489,9 @@ class NamedList(list):
         setattr(func, self.name, list(self))
         return func
 
+class Setup(NamedValue):
+    name = "setup"
+
 class XFails(NamedValue):
     """xfails container.
 
