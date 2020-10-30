@@ -1,11 +1,13 @@
 import functools
 
 from testflows.core import *
-from testflows.core.objects import TestBase
+from testflows.asserts import error
 
 @TestScenario
 def test(self):
     note("first line in test")
+    
+    assert self.parent.name == "/setup parameter", error()
 
 @TestStep(Given)
 def presetup(self):
@@ -19,14 +21,16 @@ def presetup(self):
 
 @TestStep(Given)
 @Setup(presetup)
-def setup(self):
+def setup(self, arg):
     with Given("I setup something"):
         pass
     
+    assert self.parent.name == "/setup parameter/test", error()
+
     yield
 
     with By("cleaning up something"):
         pass
 
 with Feature("setup parameter"):
-    Scenario(test=test, setup=setup)()
+    Scenario(test=test, setup=Given(test=setup, args={"arg": "foo"}))()

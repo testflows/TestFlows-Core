@@ -911,7 +911,7 @@ class TestDefinition(object):
             name = test.make_name(kwargs.pop("name", None), parent.name if parent else None, kwargs["args"], format=format_name)
 
             if parent:
-                kwargs["parent"] = parent.name
+                kwargs["parent"] = parent
                 kwargs["id"] = parent.id + [parent.child_count]
                 kwargs["cflags"] = parent.cflags
                 # propagate xfails, xflags that prefix match the name of the test
