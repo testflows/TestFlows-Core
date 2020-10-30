@@ -24,6 +24,7 @@ from .handlers.document.handler import Handler as document_handler
 from .handlers.requirement.handler import Handler as requirement_handler
 from .handlers.report.handler import Handler as report_handler
 from .handlers.show.handler import Handler as show_handler
+from .handlers.log import Handler as log_handler
 
 try:
     from testflows.database.cli.handler import Handler as database_handler
@@ -55,11 +56,13 @@ parser.add_argument("--license", action="version", help="show program's license 
 
 commands = parser.add_subparsers(title='commands', metavar='command', description=None, help=None)
 
+log_handler.add_command(commands)
 report_handler.add_command(commands)
 transform_handler.add_command(commands)
 requirement_handler.add_command(commands)
 document_handler.add_command(commands)
 show_handler.add_command(commands)
+
 if database_handler: 
     database_handler.add_command(commands)
 

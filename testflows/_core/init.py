@@ -13,10 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
-import re
 import sys
 import glob
-import tempfile
 import threading
 
 import testflows.settings as settings
@@ -28,12 +26,11 @@ from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
 from .transform.log.pipeline import SlickLogPipeline
 from .transform.log.pipeline import ClassicLogPipeline
+from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
 
 def cleanup():
     """Clean up old temporary log files.
     """
-    parser = re.compile(r".*testflows.(?P<pid>\d+).log")
-
     def pid_exists(pid):
         """Check if pid is alive on UNIX.
 
@@ -53,8 +50,8 @@ def cleanup():
             #  no error, we can send a signal to the process
             return True
 
-    for file in glob.glob(os.path.join(tempfile.gettempdir(), "testflows.*.log")):
-        match = parser.match(file)
+    for file in glob.glob(os.path.join(templog_dirname(), templog_glob)):
+        match = templog_parser.match(file)
         if not match:
             continue
         pid = int(match.groupdict()['pid'])

@@ -30,6 +30,7 @@ from collections import namedtuple
 
 import testflows.settings as settings
 
+from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
@@ -605,7 +606,7 @@ def parse_cli_args(kwargs, parser):
             settings.write_logfile = logfile
             args.pop("_log")
         else:
-            settings.write_logfile = os.path.join(tempfile.gettempdir(), f"testflows.{os.getpid()}.log")
+            settings.write_logfile = templog_filename()
 
         settings.read_logfile = settings.write_logfile
         if os.path.exists(settings.write_logfile):
