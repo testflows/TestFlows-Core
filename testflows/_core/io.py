@@ -135,8 +135,8 @@ class TestOutput(object):
         self.message(Message.TEST, msg, object_type=MessageObjectType.TEST)
 
         [self.attribute(attr) for attr in self.test.attributes.values()]
-        [self.requirement(req) for req in self.test.requirements.values()]
         [self.specification(spec) for spec in self.test.specifications.values()]
+        [self.requirement(req) for req in self.test.requirements.values()]
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
         [self.example(ExamplesRow(row._idx, row._fields, [str(f) for f in row], row._row_format)) for row in self.test.examples]

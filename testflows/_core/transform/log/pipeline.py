@@ -32,6 +32,7 @@ from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
+from .report.coverage import transform as coverage_report_transform
 from .report.metrics import transform as metrics_transform
 from .report.results import transform as results_transform
 
@@ -120,6 +121,7 @@ class ShortLogPipeline(Pipeline):
                 short_transform(),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
@@ -142,6 +144,7 @@ class NiceLogPipeline(Pipeline):
                 nice_transform(),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
@@ -164,6 +167,7 @@ class SlickLogPipeline(Pipeline):
                 slick_transform(),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
@@ -186,6 +190,7 @@ class ClassicLogPipeline(Pipeline):
                 classic_transform(),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
@@ -208,6 +213,7 @@ class DotsLogPipeline(Pipeline):
                 dots_transform(stop_event),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
@@ -249,6 +255,7 @@ class ResultsReportLogPipeline(Pipeline):
             fanout(
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event)
             ),
