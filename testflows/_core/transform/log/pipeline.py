@@ -332,6 +332,28 @@ class PassingReportLogPipeline(Pipeline):
         ]
         super(PassingReportLogPipeline, self).__init__(steps)
 
+class CoverageReportLogPipeline(Pipeline):
+    def __init__(self, input, output):
+        stop_event = threading.Event()
+
+        message_types = [Message.TEST.name, Message.RESULT.name, Message.REQUIREMENT.name, Message.SPECIFICATION.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
+
+        steps = [
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
+            fanout(
+                coverage_report_transform(stop_event, divider=""),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(CoverageReportLogPipeline, self).__init__(steps)
+
 class VersionReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
