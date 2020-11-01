@@ -45,7 +45,7 @@ class TailingDecompressReader(_compression.DecompressReader):
         while True:
             if self._decompressor.eof:
                 self.rawblock = (self._decompressor.unused_data or
-                            self._fp.read(_compression.BUFFER_SIZE))
+                            self._fp.read1(_compression.BUFFER_SIZE))
                 if not self.rawblock:
                     if not self._tail:
                         break
@@ -61,7 +61,7 @@ class TailingDecompressReader(_compression.DecompressReader):
                     break
             else:
                 if self._decompressor.needs_input:
-                    self.rawblock = self._fp.read(_compression.BUFFER_SIZE)
+                    self.rawblock = self._fp.read1(_compression.BUFFER_SIZE)
                     if not self.rawblock:
                         if not self._tail:
                             break
