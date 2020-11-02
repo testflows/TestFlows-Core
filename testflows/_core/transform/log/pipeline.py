@@ -27,6 +27,7 @@ from .raw import transform as raw_transform
 from .short import transform as short_transform
 from .slick import transform as slick_transform
 from .classic import transform as classic_transform
+from .fails import transform as fails_transform
 from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
@@ -201,6 +202,28 @@ class ClassicLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(ClassicLogPipeline, self).__init__(steps)
+
+class FailsLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, only_new=False):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(stop_event),
+            fanout(
+                fails_transform(only_new=only_new),
+                fails_report_transform(stop_event, only_new=only_new),
+                coverage_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(FailsLogPipeline, self).__init__(steps)
 
 class DotsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False):

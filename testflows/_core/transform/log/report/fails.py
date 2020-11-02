@@ -56,7 +56,7 @@ processors = {
     Message.RESULT.name: (add_result,),
 }
 
-def generate(results, divider):
+def generate(results, divider, only_new=False):
     """Generate report"""
     if not results:
         return
@@ -64,18 +64,19 @@ def generate(results, divider):
     xfails = ""
     fails = ""
 
-    for entry in results:
-        msg, result = results[entry]
-        _color = color_result(result)
-        if not result.startswith("X"):
-            continue
-        xfails += _color('\u2718') + f" [ { _color(result) } ] {msg['result_test']}"
-        if msg["result_reason"]:
-            xfails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
-        xfails += "\n"
+    if not only_new:
+        for entry in results:
+            msg, result = results[entry]
+            _color = color_result(result)
+            if not result.startswith("X"):
+                continue
+            xfails += _color('\u2718') + f" [ { _color(result) } ] {msg['result_test']}"
+            if msg["result_reason"]:
+                xfails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
+            xfails += "\n"
 
-    if xfails:
-        xfails = color("\nKnown\n\n", "white", attrs=["bold"]) + xfails
+        if xfails:
+            xfails = color("\nKnown\n\n", "white", attrs=["bold"]) + xfails
 
     for entry in results:
         msg, result = results[entry]
@@ -90,8 +91,12 @@ def generate(results, divider):
 
     return report or None
 
-def transform(stop, divider="\n"):
+def transform(stop, divider="\n", only_new=False):
     """Transform parsed log line into a short format.
+
+    :param stop: stop event
+    :param divider: report divider, default: `\n`
+    :param only_new: output only new fails, default: `False`
     """
     line = None
     results = {}
@@ -101,7 +106,7 @@ def transform(stop, divider="\n"):
             if processor:
                 processor[0](line, results, *processor[1:])
             if stop.is_set():
-                line = generate(results, divider)
+                line = generate(results, divider, only_new)
             else:
                 line = None
         line = yield line

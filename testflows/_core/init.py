@@ -26,6 +26,7 @@ from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
 from .transform.log.pipeline import SlickLogPipeline
 from .transform.log.pipeline import ClassicLogPipeline
+from .transform.log.pipeline import FailsLogPipeline
 from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
 
 def cleanup():
@@ -87,6 +88,22 @@ def stdout_classic_handler():
         log.seek(0)
         ClassicLogPipeline(log, sys.stdout, tail=True).run()
 
+def stdout_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True).run()
+
+def stdout_new_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format that shows only new fails.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True, only_new=True).run()
+
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
@@ -121,6 +138,8 @@ def start_output_handler():
         "raw": stdout_raw_handler,
         "slick": stdout_slick_handler,
         "classic": stdout_classic_handler,
+        "fails": stdout_fails_handler,
+        "new-fails": stdout_new_fails_handler,
         "nice": stdout_nice_handler,
         "quiet": stdout_silent_handler,
         "short": stdout_short_handler,
