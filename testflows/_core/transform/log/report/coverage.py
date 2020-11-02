@@ -130,7 +130,7 @@ class Coverage:
             if not tests:
                 self.counts.untested += 1
             else:
-                if sum([0 if test["result"]["result_type"] == "OK" else 1 for test in tests]) == 0:
+                if sum([0 if test["result"] is not None and test["result"]["result_type"] == "OK" else 1 for test in tests]) == 0:
                     self.counts.ok += 1
                 else:
                     self.counts.nok += 1
@@ -163,6 +163,9 @@ def format_requirement(msg, coverages, results):
     test_id = msg["test_id"]
     requirement_name = msg["requirement_name"]
 
+    if results.get(test_id) is None:
+        return
+
     results[test_id]["requirements"].append(msg)
 
     for coverage in coverages:
@@ -174,6 +177,9 @@ def format_result(msg, coverages, results):
     if flags  & SKIP and settings.show_skipped is False:
         return
     test_id = msg["test_id"]
+
+    if results.get(test_id) is None:
+        return
 
     if not results[test_id]["requirements"]:
         del results[test_id]
