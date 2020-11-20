@@ -112,7 +112,7 @@ class ReadRawLogPipeline(Pipeline):
         super(ReadRawLogPipeline, self).__init__(steps)
 
 class ShortLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False, show_input=False):
+    def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
