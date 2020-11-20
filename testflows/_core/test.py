@@ -914,11 +914,14 @@ class TestDefinition(object):
                 raise TypeError(f"{test} must be subclass of TestBase")
 
             name = test.make_name(kwargs.pop("name", None), parent.name if parent else None, kwargs["args"], format=format_name)
+            kwargs["flags"] = Flags(kwargs.get("flags"))
 
             if parent:
                 kwargs["parent"] = parent
                 kwargs["id"] = parent.id + [parent.child_count]
                 kwargs["cflags"] = parent.cflags
+                # propagate manual flag
+                kwargs["flags"] |= parent.flags & MANUAL
                 # propagate xfails, xflags that prefix match the name of the test
                 kwargs["xfails"] = {
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
@@ -946,8 +949,6 @@ class TestDefinition(object):
             self.tags = test.make_tags(kwargs.pop("tags", None))
             self.description = test.make_description(kwargs.pop("description", None), kwargs["args"], format=format_description)
             self.parent = parent
-
-            kwargs["flags"] = Flags(kwargs.get("flags"))
 
             # anchor all patterns
             kwargs["xfails"] = {
