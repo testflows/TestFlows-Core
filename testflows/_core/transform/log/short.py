@@ -68,6 +68,20 @@ def format_input(msg, keyword, no_colors=False):
         + cursor_up(no_colors=no_colors) + "\n"
     return out
 
+def format_prompt(msg, keyword, no_colors=False):
+    lines = (msg["message"] or "").splitlines()
+    icon = "\u270d  "
+    if msg["message"].startswith("Paused"):
+        icon = "\u270b "
+    out = color(icon + lines[0], "yellow", attrs=["bold"], no_colors=no_colors)
+    if len(lines) > 1:
+        out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"], no_colors=no_colors)
+    return out
+
+def format_input(msg, keyword, no_colors=False):
+    out = color(msg['message'], "white", no_colors=no_colors) + "\n"
+    return out
+
 def format_multiline(text, indent):
     first, rest = (text.rstrip() + "\n").split("\n", 1)
     first = first.strip()
@@ -255,6 +269,7 @@ def format_result(msg, no_colors=False):
 
 formatters = {
     Message.INPUT.name: (format_input, f""),
+    Message.PROMPT.name: (format_prompt, f""),
     Message.TEST.name: (format_test, f"", tests_by_parent, tests_by_id),
     Message.RESULT.name: (format_result,),
     Message.ATTRIBUTE.name: (format_attribute,),
@@ -265,7 +280,7 @@ formatters = {
     Message.EXAMPLE.name: (format_example,)
 }
 
-def transform(no_colors=False):
+def transform(no_colors=False, show_input=True):
     """Transform parsed log line into a short format.
     """
     line = None
@@ -274,12 +289,15 @@ def transform(no_colors=False):
             msg = line
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
-                flags = Flags(line["test_flags"])
-                if flags & SKIP and settings.show_skipped is False:
+                if formatter[0] is format_input and show_input is False:
                     line = None
                 else:
-                    line = formatter[0](line, *formatter[1:], no_colors=no_colors)
-                    last_message[0] = msg
+                    flags = Flags(line["test_flags"])
+                    if flags & SKIP and settings.show_skipped is False:
+                        line = None
+                    else:
+                        line = formatter[0](line, *formatter[1:], no_colors=no_colors)
+                        last_message[0] = msg
             else:
                 line = None
         line = yield line

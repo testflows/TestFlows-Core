@@ -38,6 +38,27 @@ def color_result(result):
     else:
         raise ValueError(f"unknown result {result}")
 
+def format_prompt(msg):
+    global count
+    lines = (msg["message"] or "").splitlines()
+    icon = "\u270d  "
+    if msg["message"].startswith("Paused"):
+        icon = "\u270b "
+    out = ""
+    if count > 0:
+        out += "\n"
+    out += color(icon + lines[0], "yellow", attrs=["bold"])
+    if len(lines) > 1:
+        out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
+    count = 0
+    return out
+
+def format_input(msg):
+    global count
+    out = color(msg['message'], "white") + "\n"
+    count = 0
+    return out
+
 def format_result(msg):
     global count
     flags = Flags(msg["test_flags"])
@@ -54,10 +75,12 @@ def format_result(msg):
     return _result
 
 formatters = {
-    str(Message.RESULT): (format_result,)
+    Message.INPUT.name: (format_input,),
+    Message.PROMPT.name: (format_prompt,),
+    Message.RESULT.name: (format_result,)
 }
 
-def transform(stop_event):
+def transform(stop_event, show_input=True):
     """Transform parsed log line into a short format.
     """
     line = None
@@ -65,8 +88,11 @@ def transform(stop_event):
         if line is not None:
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
-                line = formatter[0](line, *formatter[1:])
-                n = 0
+                if formatter[0] is format_input and show_input is False:
+                    line = None
+                else:
+                    line = formatter[0](line, *formatter[1:])
+                    n = 0
             else:
                 line = None
 

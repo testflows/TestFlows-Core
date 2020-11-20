@@ -63,9 +63,18 @@ def color_result(result, attrs=None):
     else:
         raise ValueError(f"unknown result {result}")
 
+def format_prompt(msg, keyword):
+    lines = (msg["message"] or "").splitlines()
+    icon = "\u270d  "
+    if msg["message"].startswith("Paused"):
+        icon = "\u270b "
+    out = color(icon + lines[0], "yellow", attrs=["bold"])
+    if len(lines) > 1:
+        out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
+    return out
+
 def format_input(msg, keyword):
-    out = color_other(f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (msg['test_id'].count('/') - 1)}{keyword}")
-    out += color("\u270b " + msg['message'], "yellow", attrs=["bold"]) + cursor_up() + "\n"
+    out = color(msg['message'], "white") + "\n"
     return out
 
 def format_multiline(text, indent):
@@ -289,6 +298,7 @@ result_mark = "\u27e5\u27e4"
 
 formatters = {
     Message.INPUT.name: (format_input, f"{mark} "),
+    Message.PROMPT.name: (format_prompt, f"{mark} "),
     Message.TEST.name: (format_test, f"{mark}  "),
     Message.ATTRIBUTE.name: (format_attribute, ),
     Message.ARGUMENT.name: (format_argument,),
@@ -307,7 +317,7 @@ formatters = {
     Message.RESULT.name: (format_result, f"{result_mark} "),
 }
 
-def transform():
+def transform(show_input=True):
     """Transform parsed log line into a nice format.
     """
     line = None
@@ -317,12 +327,15 @@ def transform():
             msg = line
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
-                flags = Flags(line["test_flags"])
-                if flags & SKIP and settings.show_skipped is False:
+                if formatter[0] is format_input and show_input is False:
                     line = None
                 else:
-                    line = formatter[0](line, *formatter[1:])
-                    last_message[0] = msg
+                    flags = Flags(line["test_flags"])
+                    if flags & SKIP and settings.show_skipped is False:
+                        line = None
+                    else:
+                        line = formatter[0](line, *formatter[1:])
+                        last_message[0] = msg
             else:
                 line = None
 

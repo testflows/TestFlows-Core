@@ -50,6 +50,7 @@ class Message(IntEnum):
     STOP = 20
     #
     SPECIFICATION = 21
+    PROMPT = 22
 
 class MessageObjectType(IntEnum):
     NONE = 0
@@ -63,7 +64,7 @@ MessageMap = namedtuple(
         "VERSION PROTOCOL "
         "INPUT "
         "VALUE METRIC TICKET ARGUMENT TAG ATTRIBUTE REQUIREMENT "
-        "NODE MAP STOP SPECIFICATION"
+        "NODE MAP STOP SPECIFICATION PROMPT"
     )
 
 def dumps(o):

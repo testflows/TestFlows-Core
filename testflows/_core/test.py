@@ -32,7 +32,7 @@ import testflows.settings as settings
 
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
-from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY
+from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
@@ -43,7 +43,7 @@ from .objects import Secret
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, absname, split, isabs
-from .funcs import current, top, previous, main, exception, pause, _set_current_top_previous
+from .funcs import current, top, previous, main, exception, pause, _set_current_top_previous, result, input
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
@@ -348,7 +348,12 @@ class TestBase(object):
             if exc_value is not None:
                 process_exception(exc_type, exc_value, exc_traceback)
             else:
-                if isinstance(self.result, Null):
+                if self.flags & MANUAL and not self.flags & SKIP:
+                    try:
+                        input(result)
+                    except Exception:
+                        process_exception(*sys.exc_info())
+                elif isinstance(self.result, Null):
                     self.result = self.result(OK(test=self.name))
         finally:
             try:

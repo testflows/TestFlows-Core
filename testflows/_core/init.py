@@ -78,7 +78,7 @@ def stdout_slick_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        SlickLogPipeline(log, sys.stdout, tail=True).run()
+        SlickLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_classic_handler():
     """Handler to output messages to sys.stdout
@@ -86,7 +86,7 @@ def stdout_classic_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        ClassicLogPipeline(log, sys.stdout, tail=True).run()
+        ClassicLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_fails_handler():
     """Handler to output messages to sys.stdout
@@ -94,7 +94,7 @@ def stdout_fails_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        FailsLogPipeline(log, sys.stdout, tail=True).run()
+        FailsLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_new_fails_handler():
     """Handler to output messages to sys.stdout
@@ -102,7 +102,7 @@ def stdout_new_fails_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        FailsLogPipeline(log, sys.stdout, tail=True, only_new=True).run()
+        FailsLogPipeline(log, sys.stdout, tail=True, only_new=True, show_input=False).run()
 
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
@@ -110,7 +110,7 @@ def stdout_short_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        ShortLogPipeline(log, sys.stdout, tail=True).run()
+        ShortLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_nice_handler():
     """Handler to output messages to sys.stdout
@@ -118,7 +118,7 @@ def stdout_nice_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        NiceLogPipeline(log, sys.stdout, tail=True).run()
+        NiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_dots_handler():
     """Handler to output messages to sys.stdout
@@ -126,7 +126,7 @@ def stdout_dots_handler():
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        DotsLogPipeline(log, sys.stdout, tail=True).run()
+        DotsLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def stdout_silent_handler():
     """Handler that prints no output to sys.stdout.

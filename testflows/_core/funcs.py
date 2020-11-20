@@ -17,6 +17,8 @@ import sys
 import inspect
 import importlib
 import threading
+import builtins
+import functools
 
 from .message import Message, dumps
 from .objects import OK, Fail, Error, Skip, Null
@@ -241,6 +243,25 @@ def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
         test = current()
     test.io.output.exception(exc_type, exc_value, exc_traceback)
 
+def result(type, *args, test=None):
+    if type is OK:
+        return ok(*args, test=test)
+    elif type is Fail:
+        return fail(*args, test=test)
+    elif type is Skip:
+        return skip(*args, test=test)
+    elif type is Error:
+        return err(*args, test=test)
+    elif type is Null:
+        return null(*args, test=test)
+    elif type is XOK:
+        return xok(*args, test=test)
+    elif type is XFail:
+        return xfail(*args, test=test)
+    elif type is XNull:
+        return xnull(*args, test=test)
+    raise TypeError(f"invalid result type {type}")
+
 def ok(message=None, test=None):
     if test is None:
         test = current()
@@ -298,8 +319,90 @@ def xnull(message=None, reason=None, test=None):
 def pause(test=None):
     if test is None:
         test = current()
-    test.io.output.input("Paused, enter any key to continue...")
-    input()
+    test.io.output.prompt("Paused, enter any key to continue...")
+    builtins.input()
+    test.io.output.input("")
+
+def input(type, multiline=False, choices=None, confirm=True, test=None):
+    nl = "\n"
+
+    if test is None:
+        test = current()
+
+    def confirmed():
+        test.io.output.prompt(f"Is this correct [Y/n]? ")
+        answer = builtins.input()
+        test.io.output.input(answer or "Y")
+        return answer in ["Y", "y", ""]
+
+    def multilined():
+        lines = []
+        while True:
+            try:
+                lines.append(builtins.input())
+            except EOFError:
+                break
+        return '\n'.join(lines)
+
+    if type in (note, debug, trace):
+        while True:
+            test.io.output.prompt(f"Please enter a note{' (press Enter then Ctrl-D to finish)' if multiline else ''}\n"
+                f"{('[' + ','.join([repr(c) for c in choices]) + ']' + nl*2) if choices else ''}")
+            if multiline:
+                text = multilined()
+            else:
+                text = builtins.input()
+
+            test.io.output.input(text)
+
+            if choices:
+                if text not in choices:
+                    continue
+
+            if confirm:
+                if confirmed():
+                    break
+            else:
+                break
+
+        type(text)
+
+    elif type is result:
+        input_results_map = {
+            "O": ok,
+            "o": ok,
+            "": ok,
+            "F": fail,
+            "f": fail,
+            "E": err,
+            "e": err,
+            "X": functools.partial(xfail, None),
+            "x": functools.partial(xfail, None)
+        }
+
+        while True:
+            test.io.output.prompt(f"Please enter result\n[OK/fail/error/xfail] [message/reason]? ")
+            input_result = builtins.input()
+            test.io.output.input(input_result or "OK")
+
+            if input_results_map.get(input_result[:1]) is None:
+                continue
+
+            if confirm:
+                if confirmed():
+                    break
+            else:
+                break
+
+        message_or_reason = None
+
+        if " " in input_result:
+            message_or_reason = input_result.split(" ", 1)[-1]
+
+        input_results_map.get(input_result[:1])(message_or_reason)
+
+    else:
+        raise ValueError(f"invalid type {type}")
 
 def getsattr(obj, name, *default):
     """Get attribute or set it to the default value.

@@ -46,6 +46,8 @@ PAUSE_BEFORE = 1 << 14
 PAUSE = PAUSE_BEFORE
 # pause after test execution
 PAUSE_AFTER = 1 << 15
+# manual test
+MANUAL = 1 << 16
 # report flag
 REPORT = 1 << 26
 # documentation
@@ -72,14 +74,14 @@ class Flags(object):
             TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP,
             XOK, XFAIL, XERROR, XNULL,
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
-            PAUSE_BEFORE, PAUSE_AFTER,
+            PAUSE_BEFORE, PAUSE_AFTER, MANUAL,
             REPORT, DOCUMENT, MANDATORY, CLEAR
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
             "XOK", "XFAIL", "XERROR", "XNULL",
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
-            "PAUSE_BEFORE", "PAUSE_AFTER",
+            "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL",
             "REPORT", "DOCUMENT", "MANDATORY", "CLEAR"
         ]
     

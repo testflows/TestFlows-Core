@@ -107,6 +107,14 @@ class TestOutput(object):
         msg = {"framework_version": __version__}
         self.message(Message.VERSION, msg)
 
+    def prompt(self, message):
+        """Output prompt message.
+
+        :param message: message
+        """
+        msg = {"message": str(message)}
+        self.message(Message.PROMPT, msg)
+
     def input(self, message):
         """Output input message.
 
@@ -232,7 +240,6 @@ class TestOutput(object):
         """
         msg = {"message": str(message)}
         self.message(Message.TRACE, msg)
-
 
 class TestInput(object):
     """Test input.

@@ -112,14 +112,14 @@ class ReadRawLogPipeline(Pipeline):
         super(ReadRawLogPipeline, self).__init__(steps)
 
 class ShortLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output, tail=False, show_input=False):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                short_transform(),
+                short_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 coverage_report_transform(stop_event),
@@ -135,14 +135,14 @@ class ShortLogPipeline(Pipeline):
         super(ShortLogPipeline, self).__init__(steps)
 
 class NiceLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                nice_transform(),
+                nice_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 coverage_report_transform(stop_event),
@@ -158,14 +158,14 @@ class NiceLogPipeline(Pipeline):
         super(NiceLogPipeline, self).__init__(steps)
 
 class SlickLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                slick_transform(),
+                slick_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 coverage_report_transform(stop_event),
@@ -181,14 +181,14 @@ class SlickLogPipeline(Pipeline):
         super(SlickLogPipeline, self).__init__(steps)
 
 class ClassicLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                classic_transform(),
+                classic_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 coverage_report_transform(stop_event),
@@ -204,14 +204,14 @@ class ClassicLogPipeline(Pipeline):
         super(ClassicLogPipeline, self).__init__(steps)
 
 class FailsLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False, only_new=False):
+    def __init__(self, input, output, tail=False, only_new=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                fails_transform(only_new=only_new),
+                fails_transform(only_new=only_new, show_input=show_input),
                 fails_report_transform(stop_event, only_new=only_new),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
@@ -226,14 +226,14 @@ class FailsLogPipeline(Pipeline):
         super(FailsLogPipeline, self).__init__(steps)
 
 class DotsLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False):
+    def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(stop_event),
             fanout(
-                dots_transform(stop_event),
+                dots_transform(stop_event, show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
                 coverage_report_transform(stop_event),

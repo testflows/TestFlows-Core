@@ -65,12 +65,18 @@ def color_result(result):
     # Null
     return color(icon, "cyan", attrs=["bold"])
 
+def format_prompt(msg, last_test_id, keyword):
+    lines = (msg["message"] or "").splitlines()
+    icon = "\u270d  "
+    if msg["message"].startswith("Paused"):
+        icon = "\u270b "
+    out = color(icon + lines[0], "yellow", attrs=["bold"])
+    if len(lines) > 1:
+        out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
+    return out
+
 def format_input(msg, last_test_id, keyword):
-    flags = Flags(msg["test_flags"])
-    if flags & SKIP and settings.show_skipped is False:
-        return
-    out = f"{indent * (msg['test_id'].count('/'))}"
-    out += color("\u270b " + msg["message"], "yellow", attrs=["bold"]) + cursor_up() + "\n\n"
+    out = color(msg['message'], "white") + "\n"
     return out
 
 def format_multiline(text, indent):
@@ -158,11 +164,12 @@ def format_result(msg, last_test_id):
 
 formatters = {
     Message.INPUT.name: (format_input, f""),
+    Message.PROMPT.name: (format_prompt, f""),
     Message.TEST.name: (format_test, f""),
     Message.RESULT.name: (format_result,)
 }
 
-def transform():
+def transform(show_input=True):
     """Transform parsed log line into a clean format.
     """
     last_test_id = []
@@ -171,7 +178,10 @@ def transform():
         if line is not None:
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
-                line = formatter[0](line, last_test_id, *formatter[1:])
+                if formatter[0] is format_input and show_input is False:
+                    line = None
+                else:
+                    line = formatter[0](line, last_test_id, *formatter[1:])
             else:
                 line = None
         line = yield line
