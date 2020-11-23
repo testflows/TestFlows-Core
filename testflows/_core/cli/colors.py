@@ -82,6 +82,9 @@ def reset(no_colors=False):
 def cursor_up(no_colors=False):
     return '\033[A' if not (no_colors and settings.no_colors) else ''
 
+def clear_screen(no_colors=False):
+    return chr(27) + "[2J" + '\033[0;0H'  if not (no_colors and settings.no_colors) else ''
+
 def red(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "red", on_color=on_color, attrs=attrs, no_colors=no_colors)
 

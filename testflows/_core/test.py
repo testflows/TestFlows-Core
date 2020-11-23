@@ -32,7 +32,7 @@ import testflows.settings as settings
 
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
-from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL
+from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
@@ -294,6 +294,10 @@ class TestBase(object):
         return {str(tag) for tag in set(get(tags, cls.tags))}
 
     def _enter(self):
+        if self is not top():
+            if self.flags & MANUAL and not self.flags & SKIP and self.type >= TestType.Test:
+                pause()
+
         self.io = TestIO(self)
 
         if top() is self:
@@ -348,7 +352,7 @@ class TestBase(object):
             if exc_value is not None:
                 process_exception(exc_type, exc_value, exc_traceback)
             else:
-                if self.flags & MANUAL and not self.flags & SKIP:
+                if isinstance(self.result, Null) and self.flags & MANUAL and not self.flags & SKIP:
                     try:
                         input(result)
                     except Exception:
@@ -374,6 +378,7 @@ class TestBase(object):
                 self._apply_xresult_flags()
                 self._apply_xfails()
                 self.io.output.result(self.result)
+
                 if top() is self:
                     self.io.output.stop()
                     self.io.close(final=True)
@@ -541,8 +546,8 @@ def cli_argparser(kwargs, argparser=None):
                         help="disable terminal color highlighting", default=False)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
     parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                        choices=["new-fails", "fails", "classic", "slick", "nice", "quiet", "short", "dots", "raw"], default="nice",
-                        help="""stdout output format, choices are: ['new-fails', 'fails', 'classic', 'slick','nice','short','dots','quiet','raw'],
+                        choices=["new-fails", "fails", "classic", "slick", "nice", "quiet", "short", "manual", "dots", "raw"], default="nice",
+                        help="""stdout output format, choices are: ['new-fails','fails','classic','slick','nice','short','manual','dots','quiet','raw'],
                             default: 'nice'""")
     parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
                         help="path to the log file where test output will be stored, default: uses temporary log file")
@@ -920,8 +925,9 @@ class TestDefinition(object):
                 kwargs["parent"] = parent
                 kwargs["id"] = parent.id + [parent.child_count]
                 kwargs["cflags"] = parent.cflags
-                # propagate manual flag
-                kwargs["flags"] |= parent.flags & MANUAL
+                # propagate manual flag if automatic test flag is not set
+                if not kwargs["flags"] & AUTO:
+                    kwargs["flags"] |= parent.flags & MANUAL
                 # propagate xfails, xflags that prefix match the name of the test
                 kwargs["xfails"] = {
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)

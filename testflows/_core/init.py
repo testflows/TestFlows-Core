@@ -27,6 +27,7 @@ from .transform.log.pipeline import ShortLogPipeline
 from .transform.log.pipeline import SlickLogPipeline
 from .transform.log.pipeline import ClassicLogPipeline
 from .transform.log.pipeline import FailsLogPipeline
+from .transform.log.pipeline import ManualLogPipeline
 from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
 
 def cleanup():
@@ -120,6 +121,14 @@ def stdout_nice_handler():
         log.seek(0)
         NiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+def stdout_manual_handler():
+    """Handler to output messages to sys.stdout
+    using "manual" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        ManualLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 def stdout_dots_handler():
     """Handler to output messages to sys.stdout
     using "dots" format.
@@ -138,6 +147,7 @@ def start_output_handler():
         "raw": stdout_raw_handler,
         "slick": stdout_slick_handler,
         "classic": stdout_classic_handler,
+        "manual": stdout_manual_handler,
         "fails": stdout_fails_handler,
         "new-fails": stdout_new_fails_handler,
         "nice": stdout_nice_handler,

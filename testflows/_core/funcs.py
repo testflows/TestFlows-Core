@@ -21,6 +21,7 @@ import builtins
 import functools
 
 from .message import Message, dumps
+from .name import basename
 from .objects import OK, Fail, Error, Skip, Null
 from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket, Attribute, Tag, Requirement, Node
@@ -236,7 +237,7 @@ def trace(message, test=None):
 def message(message, test=None):
     if test is None:
         test = current()
-    test.io.output.message(Message.NONE, dumps(str(message)))
+    test.io.output.message(Message.NONE, {"message": str(message)})
 
 def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
     if test is None:
@@ -330,7 +331,8 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
         test = current()
 
     def confirmed():
-        test.io.output.prompt(f"Is this correct [Y/n]? ")
+        prompt = "Is this correct [Y/n]? "
+        test.io.output.prompt(prompt)
         answer = builtins.input()
         test.io.output.input(answer or "Y")
         return answer in ["Y", "y", ""]
@@ -344,9 +346,9 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
                 break
         return '\n'.join(lines)
 
-    if type in (note, debug, trace):
+    if builtins.type(type) is str:
         while True:
-            test.io.output.prompt(f"Please enter a note{' (press Enter then Ctrl-D to finish)' if multiline else ''}\n"
+            test.io.output.prompt(f"{type.strip()}{(nl + '(Press Enter then Ctrl-D to finish)') if multiline else ''}\n\n"
                 f"{('[' + ','.join([repr(c) for c in choices]) + ']' + nl*2) if choices else ''}")
             if multiline:
                 text = multilined()
@@ -365,27 +367,28 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
             else:
                 break
 
-        type(text)
+        return text
 
     elif type is result:
         input_results_map = {
-            "O": ok,
-            "o": ok,
+            "ok": ok,
             "": ok,
-            "F": fail,
-            "f": fail,
-            "E": err,
-            "e": err,
-            "X": functools.partial(xfail, None),
-            "x": functools.partial(xfail, None)
+            "fail": fail,
+            "error": err,
+            "null": null,
+            "skip": skip,
+            "xfail": functools.partial(xfail, None),
+            "xerror": functools.partial(xerr, None),
+            "xok": functools.partial(xok, None),
+            "xnull": functools.partial(xnull, None),
         }
 
         while True:
-            test.io.output.prompt(f"Please enter result\n[OK/fail/error/xfail] [message/reason]? ")
+            test.io.output.prompt(f"Enter `{basename(test.name)}` result? ")
             input_result = builtins.input()
             test.io.output.input(input_result or "OK")
 
-            if input_results_map.get(input_result[:1]) is None:
+            if input_results_map.get(input_result.split(" ", 1)[0].lower()) is None:
                 continue
 
             if confirm:
@@ -399,7 +402,7 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
         if " " in input_result:
             message_or_reason = input_result.split(" ", 1)[-1]
 
-        input_results_map.get(input_result[:1])(message_or_reason)
+        input_results_map.get(input_result.split(" ", 1)[0].lower())(message_or_reason)
 
     else:
         raise ValueError(f"invalid type {type}")

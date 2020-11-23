@@ -48,6 +48,8 @@ PAUSE = PAUSE_BEFORE
 PAUSE_AFTER = 1 << 15
 # manual test
 MANUAL = 1 << 16
+# auto test
+AUTO = 1 << 17
 # report flag
 REPORT = 1 << 26
 # documentation
@@ -66,7 +68,7 @@ XRESULT = XOK | XFAIL | XERROR | XNULL
 NOT_COUNTED = FAIL_NOT_COUNTED
 NOT_COUNTED_ANY = FAIL_NOT_COUNTED | ERROR_NOT_COUNTED | NULL_NOT_COUNTED
 # cumulative flags
-CFLAGS = UT | MANDATORY
+CFLAGS = UT | MANDATORY | MANUAL
 
 class Flags(object):
     """Test flags."""
@@ -74,14 +76,14 @@ class Flags(object):
             TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP,
             XOK, XFAIL, XERROR, XNULL,
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
-            PAUSE_BEFORE, PAUSE_AFTER, MANUAL,
+            PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
             REPORT, DOCUMENT, MANDATORY, CLEAR
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
             "XOK", "XFAIL", "XERROR", "XNULL",
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
-            "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL",
+            "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
             "REPORT", "DOCUMENT", "MANDATORY", "CLEAR"
         ]
     

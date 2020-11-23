@@ -39,7 +39,7 @@ from testflows._core.funcs import current_dir, current_module, load_module
 from testflows._core.flags import TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP
 from testflows._core.flags import XOK, XFAIL, XERROR, XNULL
 from testflows._core.flags import FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
-from testflows._core.flags import PAUSE, PAUSE_BEFORE, PAUSE_AFTER, REPORT, DOCUMENT, MANUAL
+from testflows._core.flags import PAUSE, PAUSE_BEFORE, PAUSE_AFTER, REPORT, DOCUMENT, MANUAL, AUTO
 from testflows._core.flags import MANDATORY, CLEAR
 from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core import __author__, __version__, __license__
