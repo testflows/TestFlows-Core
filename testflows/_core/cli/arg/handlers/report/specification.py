@@ -27,6 +27,7 @@ from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.testtype import TestType
 from testflows._core.name import basename, sep
+from testflows._core.utils.string import title as make_title
 
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
@@ -127,7 +128,7 @@ class Formatter(object):
                 for req in test["requirements"]:
                     s.append(f'* **{req["requirement_name"]}**')
                     s.append(textwrap.indent(f'<div markdown="1" class="text-small">\nversion: {req["requirement_version"]}</div>', "  "))
-                    s.append(textwrap.indent(f'<div markdown="1" class="test-description">\n{req["requirement_description"].strip()}</div>', "  "))
+                    s.append(textwrap.indent(f'<div markdown="1" class="test-description">\n{(req["requirement_description"] or "").strip()}</div>', "  "))
                 s.append("\n")
 
             def add_steps(s, test, level):
@@ -198,8 +199,8 @@ class Handler(HandlerBase):
     def title(self, results):
         if results["tests"]:
             title = basename(list(results["tests"].values())[0]["test"]["test_name"])
-            if title and title[0].upper() != title[0]:
-                title = title.title()
+            if title:
+                title = make_title(title)
             return title
         return ""
 

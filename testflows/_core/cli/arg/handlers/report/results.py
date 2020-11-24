@@ -30,6 +30,7 @@ from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
+from testflows._core.utils.string import title as make_title
 
 FailResults = ["Fail", "Error", "Null"]
 XoutResults = ["XOK", "XFail", "XError", "XNull"]
@@ -366,8 +367,8 @@ class Handler(HandlerBase):
         name = ""
         if results["tests"]:
             name = list(results["tests"].values())[0]["test"]["test_name"].lstrip("/")
-        if name and name[0] != name[0].upper():
-            name = name.title()
+        if name:
+            name = make_title(name)
         return name
 
     def company(self, args):

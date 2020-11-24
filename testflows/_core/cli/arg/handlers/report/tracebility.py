@@ -31,6 +31,7 @@ from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.testtype import TestType
 from testflows._core.name import basename, sep
 from testflows._core.utils.sort import human
+from testflows._core.utils.string import title as make_title
 
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'
 testflows = '<span class="testflows-logo"></span> [<span class="logo-test">Test</span><span class="logo-flows">Flows</span>]'
@@ -119,7 +120,7 @@ class Formatter(object):
             s.append(f'version **{version}**')
 
             s.append("###### DESCRIPTION\n")
-            s.append(f'{description.strip()}')
+            s.append(f'{(description or "").strip()}')
             s.append("\n")
 
             if tests:
@@ -185,8 +186,8 @@ class Handler(HandlerBase):
     def title(self, results):
         if results["tests"]:
             title = basename(list(results["tests"].values())[0]["test"]["test_name"])
-            if title and title[0].upper() != title[0]:
-                title = title.title()
+            if title:
+                title = make_title(title)
             return title
         return ""
 
