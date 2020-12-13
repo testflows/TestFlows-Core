@@ -333,6 +333,7 @@ class Handler(HandlerBase):
         parser.add_argument("--confidential", help="mark as confidential", action="store_true")
         parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
                 help='use logo image (.png)')
+        parser.add_argument("--title", metavar="name", help="custom title", type=str)
 
         parser.set_defaults(func=cls())
 
@@ -410,7 +411,7 @@ class Handler(HandlerBase):
 
     def data(self, results, args):
         d = dict()
-        d["name"] = self.name(results)
+        d["name"] = args.title or self.name(results)
         d["company"] = self.company(args)
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(results)

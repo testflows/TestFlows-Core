@@ -170,6 +170,7 @@ class Handler(HandlerBase):
         parser.add_argument("--confidential", help="mark as confidential", action="store_true")
         parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
                 help='use logo image (.png)')
+        parser.add_argument("--title", metavar="name", help="custom title", type=str)
 
         parser.set_defaults(func=cls())
 
@@ -208,7 +209,7 @@ class Handler(HandlerBase):
     def data(self, results, args):
         d = OrderedDict()
         d["requirements"] = self.requirements(results)
-        d["title"] = self.title(results)
+        d["title"] = args.title or self.title(results)
         d["company"] = self.company(args)
         return d
 
