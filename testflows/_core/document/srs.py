@@ -14,44 +14,50 @@
 # limitations under the License.
 import re
 
+from collections import namedtuple
+
 from testflows._core import __version__
 from testflows._core.utils.strip import wstrip
 from testflows._core.contrib.arpeggio import RegExMatch as _
 from testflows._core.contrib.arpeggio import OneOrMore, ZeroOrMore, EOF, Optional, Not
 from testflows._core.contrib.arpeggio import ParserPython as PEGParser
 from testflows._core.contrib.arpeggio import PTNodeVisitor, visit_parse_tree
+from testflows._core.objects import Specification, Requirement
 
 specification_template = """
 %(pyname)s = Specification(
-        name=%(name)s, 
-        description=%(description)s,
-        author=%(author)s,
-        date=%(date)s, 
-        status=%(status)s, 
-        approved_by=%(approved_by)s,
-        approved_date=%(approved_date)s,
-        approved_version=%(approved_version)s,
-        version=%(version)s,
-        group=%(group)s,
-        type=%(type)s,
-        link=%(link)s,
-        uid=%(uid)s,
-        parent=%(parent)s,
-        children=%(children)s,
-        content=%(content)s)
-
+    name=%(name)s, 
+    description=%(description)s,
+    author=%(author)s,
+    date=%(date)s, 
+    status=%(status)s, 
+    approved_by=%(approved_by)s,
+    approved_date=%(approved_date)s,
+    approved_version=%(approved_version)s,
+    version=%(version)s,
+    group=%(group)s,
+    type=%(type)s,
+    link=%(link)s,
+    uid=%(uid)s,
+    parent=%(parent)s,
+    children=%(children)s,
+    headings=%(headings)s,
+    requirements=%(requirements)s,
+    content=%(content)s)
 """
 
 requirement_template = """
 %(pyname)s = Requirement(
-        name=%(name)s,
-        version=%(version)s,
-        priority=%(priority)s,
-        group=%(group)s,
-        type=%(type)s,
-        uid=%(uid)s,
-        description=%(description)s,
-        link=%(link)s)
+    name=%(name)s,
+    version=%(version)s,
+    priority=%(priority)s,
+    group=%(group)s,
+    type=%(type)s,
+    uid=%(uid)s,
+    description=%(description)s,
+    link=%(link)s,
+    level=%(level)s,
+    num=%(num)s),
 
 """
 
@@ -66,12 +72,36 @@ class Visitor(PTNodeVisitor):
             "# using \'tfs requirements generate\' command.\n"
             "from testflows.core import Specification\n"
             "from testflows.core import Requirement\n\n"
+            "Heading = Specification.Heading\n\n"
             )
+        self.levels = [0]
+        self.current_level = 0
+        self.requirements = []
+        self.headings = []
+        self.specification = None
         self.pyname_fmt = re.compile(r"[^a-zA-Z0-9]")
         super(Visitor, self).__init__(*args, **kwargs)
 
     def visit_line(self, node, children):
         pass
+
+    def process_heading(self, node, children):
+        level = node[0].value.count("#")
+        # normalize header level
+        level -= 1
+        if self.current_level < level:
+            self.levels = self.levels[:level - 1]
+        if len(self.levels) < level:
+            self.levels += [0] * (level - len(self.levels))
+        self.current_level = level
+        self.levels[self.current_level - 1] += 1
+        num = '.'.join([str(l) for l in self.levels[:self.current_level]])
+        return level, num
+
+    def visit_heading(self, node, children):
+        level, num = self.process_heading(node, children)
+        name = node.heading_name.value
+        self.headings.append(Specification.Heading(name=name, level=level, num=num))
 
     def visit_specification(self, node, children):
         name = str(node.specification_heading.specification_name.value).strip()
@@ -120,30 +150,17 @@ class Visitor(PTNodeVisitor):
         except:
             pass
 
-        self.output += specification_template.lstrip() % {
-            "pyname": pyname,
-            "name": repr(name),
-            "description": repr(description),
-            "author": repr(author),
-            "date": repr(date),
-            "status": repr(status),
-            "approved_by": repr(approved_by),
-            "approved_date": repr(approved_date),
-            "approved_version": repr(approved_version),
-            "version": repr(version),
-            "group": repr(group),
-            "type": repr(type),
-            "link": repr(link),
-            "uid": repr(uid),
-            "parent": repr(parent),
-            "children": repr(children),
-            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "\'\'\'").rstrip()
-        }
+        self.specification = Specification(
+            name=name, description=description, author=author,
+            date=date, status=status, approved_by=approved_by,
+            approved_date=approved_date, approved_version=approved_version,
+            version=version, group=group, type=type,
+            link=link, uid=uid, parent=parent, children=children, content=None)
 
     def visit_requirement(self, node, children):
+        level, num = self.process_heading(node, children)
         name = node.requirement_heading.requirement_name.value
         version = str(node.requirement_version.word)
-        pyname = re.sub(r"_+", "_", self.pyname_fmt.sub("_", name))
         description = None
         group = None
         priority = None
@@ -174,19 +191,58 @@ class Visitor(PTNodeVisitor):
         except:
             pass
 
-        self.output += requirement_template.lstrip() % {
-            "pyname": pyname,
-            "name": repr(name),
-            "version": repr(version),
-            "description": description,
-            "priority": repr(priority),
-            "group": repr(group),
-            "type": repr(type),
-            "uid": repr(uid),
-            "link": repr(link)
-        }
+        self.headings.append(Specification.Heading(name=name, level=level, num=num))
+        self.requirements.append(Requirement(
+            name=name, version=version, description=description,
+            priority=priority, group=group, type=type,
+            uid=uid, link=link, level=level, num=num))
 
     def visit_document(self, node, children):
+        requirements = []
+
+        for rq in self.requirements:
+            pyname = re.sub(r"_+", "_", self.pyname_fmt.sub("_", rq.name))
+
+            self.output += requirement_template.lstrip() % {
+                "pyname": pyname,
+                "name": repr(rq.name),
+                "version": repr(rq.version),
+                "description": rq.description,
+                "priority": repr(rq.priority),
+                "group": repr(rq.group),
+                "type": repr(rq.type),
+                "uid": repr(rq.uid),
+                "link": repr(rq.link),
+                "level": repr(rq.level),
+                "num": repr(rq.num)
+            }
+
+            requirements.append(pyname)
+
+        sep = ",\n" + "    " * 2
+
+        self.output += specification_template.lstrip() % {
+            "pyname": re.sub(r"_+", "_", self.pyname_fmt.sub("_", self.specification.name)),
+            "name": repr(self.specification.name),
+            "description": repr(self.specification.description),
+            "author": repr(self.specification.author),
+            "date": repr(self.specification.date),
+            "status": repr(self.specification.status),
+            "approved_by": repr(self.specification.approved_by),
+            "approved_date": repr(self.specification.approved_date),
+            "approved_version": repr(self.specification.approved_version),
+            "version": repr(self.specification.version),
+            "group": repr(self.specification.group),
+            "type": repr(self.specification.type),
+            "link": repr(self.specification.link),
+            "uid": repr(self.specification.uid),
+            "parent": repr(self.specification.parent),
+            "children": repr(self.specification.children),
+            "headings": f"(\n{'    ' * 2}{sep.join(f'{heading}' for heading in self.headings)}{sep})",
+            "requirements": f"(\n{'    ' * 2}{sep.join(rq for rq in requirements)}{sep})",
+            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "\'\'\'").rstrip()
+        }
+
         return self.output.rstrip() + "\n"
 
 def Parser():
@@ -200,6 +256,9 @@ def Parser():
 
     def heading():
         return _(r"#+[ \t]+"), heading_name, _(r"\n")
+
+    def inline_heading():
+        return heading()
 
     def toc_heading():
         return _(r"#+[ \t]+"), _(r"Table of Contents"), _(r"[ \t]*\n")
@@ -287,7 +346,7 @@ def Parser():
         ])
 
     def specification():
-        return specification_heading, ZeroOrMore(heading), ZeroOrMore([
+        return specification_heading, ZeroOrMore(inline_heading), ZeroOrMore([
             specification_author,
             specification_date,
             specification_version,

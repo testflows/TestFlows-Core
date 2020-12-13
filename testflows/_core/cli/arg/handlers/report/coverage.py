@@ -321,14 +321,15 @@ class Handler(HandlerBase):
         tests = list(results["tests"].values())
         for i, test in enumerate(tests):
             flags = Flags(test["test"]["test_flags"])
+
             if flags & SKIP and settings.show_skipped is False:
                 continue
             result = test["result"]
-            if getattr(TestType, result["test_type"]) < TestType.Test:
-                continue
+
             for requirement in test["test"]["requirements"]:
                 if requirement["requirement_name"] in requirements:
                     requirements[requirement["requirement_name"]]["tests"].append(self.add_test_messages(test, i, tests, results["tests_by_parent"], results["tests_by_id"]))
+
         return requirements
 
     def counts(self, requirements):

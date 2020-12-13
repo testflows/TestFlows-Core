@@ -206,8 +206,8 @@ class Attribute(TestObject):
 
 class Requirement(TestObject):
     _fields = ("name", "version", "description",
-            "link", "priority", "type", "group", "uid")
-    _defaults = (None,) * 6
+            "link", "priority", "type", "group", "uid", "level", "num")
+    _defaults = (None,) * 8
     uid = None
     link = None
     priority = None
@@ -215,7 +215,7 @@ class Requirement(TestObject):
     group = None
 
     def __init__(self, name, version, description=None, link=None,
-            priority=None, type=None, group=None, uid=None):
+            priority=None, type=None, group=None, uid=None, level=None, num=None):
         self.name = name
         self.version = version
         self.description = get(description, self.__doc__)
@@ -224,6 +224,8 @@ class Requirement(TestObject):
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
+        self.level = level
+        self.num = num
         return super(Requirement, self).__init__()
 
     def __call__(self, *version):
@@ -281,16 +283,19 @@ class Ticket(TestObject):
 class Specification(TestObject):
     _fields = ("name", "content", "description", "link", "author", "version",
         "date", "status", "approved_by", "approved_date", "approved_version",
-        "type", "group", "uid", "parent", "children")
-    _defaults = (None,) * 10
+        "type", "group", "uid", "parent", "children", "headings", "requirements")
+    _defaults = (None,) * 16
     uid = None
     link = None
     type = None
     group = None
 
+    Heading = namedtuple("Heading", "name level num")
+
     def __init__(self, name, content, description=None, link=None, author=None, version=None,
         date=None, status=None, approved_by=None, approved_date=None, approved_version=None,
-        type=None, group=None, uid=None, parent=None, children=None):
+        type=None, group=None, uid=None, parent=None, children=None, headings=None,
+        requirements=None):
         self.name = name
         self.content = content
         self.description = description
@@ -307,6 +312,8 @@ class Specification(TestObject):
         self.uid = get(uid, self.uid)
         self.parent = parent
         self.children = children
+        self.headings = headings
+        self.requirements = requirements
 
     def __call__(self, *version):
         if not self.version in version:
