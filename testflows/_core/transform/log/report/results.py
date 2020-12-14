@@ -31,7 +31,11 @@ def process_test(msg, results, names, unique):
         return
 
     add_name(msg["test_name"], names, unique, msg["test_id"])
-    test = {"attributes":[], "arguments":[], "tags": [], "requirements": [], "node": None, "map": [], "examples": []}
+    test = {
+        "attributes":[], "arguments":[], "tags": [],
+        "specifications": [], "requirements": [],
+        "node": None, "map": [], "examples": []
+    }
     test.update(msg)
     results["tests"][names[msg["test_id"]]] = {"test": test, "result": {"tickets":[], "values":[], "metrics":[]}}
     process_test_counts(msg, results["counts"])
@@ -63,6 +67,10 @@ def process_tag(msg, results, names, unique):
 def process_requirement(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["requirements"].append(msg)
 
+def process_specification(msg, results, names, unique):
+    results["specifications"].append(msg)
+    results["tests"][names[msg["test_id"]]]["test"]["specifications"].append(msg)
+
 def process_argument(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["arguments"].append(msg)
 
@@ -91,6 +99,7 @@ processors = {
     Message.RESULT.name: process_result,
     Message.ATTRIBUTE.name: process_attribute,
     Message.TAG.name: process_tag,
+    Message.SPECIFICATION.name: process_specification,
     Message.REQUIREMENT.name: process_requirement,
     Message.ARGUMENT.name: process_argument,
     Message.EXAMPLE.name: process_example,
@@ -125,6 +134,9 @@ def transform(results):
 
     if results.get("version") is None:
         results["version"] = ""
+
+    if results.get("specifications") is None:
+        results["specifications"] = []
 
     line = None
     while True:

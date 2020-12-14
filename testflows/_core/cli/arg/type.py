@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import io
 import sys
 import csv
@@ -106,6 +107,12 @@ class LogFileType(object):
                               if arg is not None])
         return '%s(%s)' % (type(self).__name__, args_str)
 
+def path(p, special=None):
+    if p in special or []:
+        return p
+    if not os.path.exists(p):
+        raise ArgumentTypeError(f"path does not exist: '{p}'")
+    return p
 
 def file(*args, **kwargs):
     """File type."""

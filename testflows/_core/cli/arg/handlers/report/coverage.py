@@ -21,6 +21,7 @@ import threading
 import importlib.util
 
 from datetime import datetime
+from functools import partial
 
 import testflows.settings as settings
 import testflows._core.cli.arg.type as argtype
@@ -223,8 +224,8 @@ class Handler(HandlerBase):
             description="Generate requirements coverage report.",
             formatter_class=HelpFormatter)
 
-        parser.add_argument("requirements", metavar="source", type=str,
-                help="requirements source file")
+        parser.add_argument("requirements", metavar="requirements", type=partial(argtype.path, special=["-"]),
+                help="requirements source file, default: '-' (from input log)", nargs="?", default="-")
         parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
@@ -271,16 +272,22 @@ class Handler(HandlerBase):
             "version": __version__,
         }
 
-    def requirements(self, path):
-        spec = importlib.util.spec_from_file_location("requirements", path)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+    def requirements(self, path, results):
         _requirements = {}
 
-        for name, value in vars(module).items():
-            if not isinstance(value, Requirement):
-                continue
-            _requirements[value.name] = {"requirement": value, "tests": []}
+        if path == "-":
+            for spec in results["specifications"]:
+                for req in spec["specification_requirements"]:
+                    _requirements[req["name"]] = {"requirement": Requirement(**req), "tests": []}
+        else:
+            spec = importlib.util.spec_from_file_location("requirements", path)
+            module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(module)
+
+            for name, value in vars(module).items():
+                if not isinstance(value, Requirement):
+                    continue
+                _requirements[value.name] = {"requirement": value, "tests": []}
 
         return _requirements
 
@@ -367,7 +374,7 @@ class Handler(HandlerBase):
 
     def data(self, source, results, args):
         d = dict()
-        requirements = self.requirements(source)
+        requirements = self.requirements(source, results)
         d["requirements"] = self.add_tests(requirements, results)
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(d["requirements"])

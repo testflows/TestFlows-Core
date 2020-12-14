@@ -27,7 +27,7 @@ from .objects import Tag, ExamplesRow
 from . import __version__
 
 def object_fields(obj, prefix):
-    return {f"{prefix}_{field}":getattr(obj, field) for field in obj._fields}
+    return {f"{prefix}{'_' if prefix else ''}{field}":getattr(obj, field) for field in obj._fields}
 
 def str_or_repr(v):
     try:
@@ -166,6 +166,10 @@ class TestOutput(object):
 
     def specification(self, specification, object_type=MessageObjectType.TEST):
         msg = object_fields(specification, "specification")
+        _requirements = []
+        for r in msg["specification_requirements"]:
+            _requirements.append(object_fields(r[0], ""))
+        msg["specification_requirements"] = _requirements
         self.message(Message.SPECIFICATION, msg, object_type=object_type)
 
     def argument(self, argument, object_type=MessageObjectType.TEST):

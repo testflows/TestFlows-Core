@@ -435,6 +435,7 @@ class ResultsLogPipeline(Pipeline):
             Message.ATTRIBUTE.name,
             Message.TAG.name,
             Message.ARGUMENT.name,
+            Message.SPECIFICATION.name,
             Message.REQUIREMENT.name,
             Message.EXAMPLE.name,
             Message.TICKET.name,
