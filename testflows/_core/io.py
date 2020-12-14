@@ -167,8 +167,8 @@ class TestOutput(object):
     def specification(self, specification, object_type=MessageObjectType.TEST):
         msg = object_fields(specification, "specification")
         _requirements = []
-        for r in msg["specification_requirements"]:
-            _requirements.append(object_fields(r[0], ""))
+        for req in msg["specification_requirements"]:
+            _requirements.append(object_fields(req, ""))
         msg["specification_requirements"] = _requirements
         self.message(Message.SPECIFICATION, msg, object_type=object_type)
 

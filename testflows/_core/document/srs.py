@@ -57,7 +57,7 @@ requirement_template = """
     description=%(description)s,
     link=%(link)s,
     level=%(level)s,
-    num=%(num)s),
+    num=%(num)s)
 
 """
 
