@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2021 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,20 +18,22 @@ import testflows._core.cli.arg.type as argtype
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
+from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
-from testflows._core.transform.log.short import transform as short_transform
+from testflows._core.transform.log.tests import transform as tests_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
+from testflows._core.transform.log.sort import transform as sort_transform
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("details", help="details", epilog=epilog(),
-            description="Show details.",
+        parser = commands.add_parser("tests", help="tests", epilog=epilog(),
+            description="Show tests.",
             formatter_class=HelpFormatter)
 
-        parser.add_argument("name", metavar="name", type=str, help="test name", default="")
+        parser.add_argument("name", metavar="name", type=str, help="test name", default="", nargs="?")
         parser.add_argument("--log", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("--output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
@@ -43,14 +45,21 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = "grep -E '\"message_object\":1,.+\"test_name\":\"%s\"'" % name.replace("'", r"'\''")
+            message_types = [
+                Message.TEST.name
+            ]
+
+            command = "grep -E '^{\"message_keyword\":\""
+            command = f"{command}({'|'.join(message_types)})\""
+            command += ".+,\"test_name\":\"%s.*?\",'" % name.replace("'", r"'\''")
             steps = [
-                read_and_filter_transform(input, command=command, tail=tail, stop=stop_event),
+                read_and_filter_transform(input, command=command, stop=stop_event, tail=tail),
                 parse_transform(),
-                short_transform(),
+                sort_transform(stop_event),
+                tests_transform(),
                 write_transform(output),
             ]
-            super(Handler.Pipeline, self).__init__(steps)
+            super(Handler.Pipeline, self).__init__(steps, restart_on_none=False)
 
     def handle(self, args):
         self.Pipeline(args.name, args.log, args.output).run()

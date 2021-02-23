@@ -70,9 +70,7 @@ setup(
         "testflows._core.cli.arg.handlers.document",
         "testflows._core.cli.arg.handlers.document.new",
         "testflows._core.cli.arg.handlers.requirement",
-        "testflows._core.cli.arg.handlers.show",
-        "testflows._core.cli.arg.handlers.show.test",
-        "testflows._core.cli.arg.handlers.show.tests"
+        "testflows._core.cli.arg.handlers.show"
         ],
     package_data={
         "testflows._core.document": ["*.css"],

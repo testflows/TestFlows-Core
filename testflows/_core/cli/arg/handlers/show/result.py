@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2021 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,36 +15,25 @@
 import threading
 import testflows._core.cli.arg.type as argtype
 
-from testflows._core.message import Message
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.testtype import TestType
+from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
-from testflows._core.transform.log.report.results import transform as results_transform
-from testflows._core.transform.log.values import transform as values_transform
+from testflows._core.transform.log.flat import transform as flat_transform
 from testflows._core.transform.log.parse import transform as parse_transform
+from testflows._core.transform.log.sort import transform as sort_transform
 from testflows._core.transform.log.write import transform as write_transform
-
-def test_details_transform():
-    """Transform parsed log line into a short format.
-    """
-    test = None
-    while True:
-        line = None
-        if test is not None:
-            if getattr(TestType, test["test"]["test_type"]) >= TestType.Test:
-                line = f"{test['test']['test_name']}\n"
-        test = yield line
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("details", help="details", epilog=epilog(),
-            description="Show details.",
+        parser = commands.add_parser("result", help="result", epilog=epilog(),
+            description="Show result.",
             formatter_class=HelpFormatter)
 
+        parser.add_argument("name", metavar="name", type=str, help="test name", default="", nargs="?")
         parser.add_argument("--log", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("--output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
@@ -52,31 +41,25 @@ class Handler(HandlerBase):
 
         parser.set_defaults(func=cls())
 
-    class FirstStage(PipelineBase):
-        def __init__(self, results, input):
+    class Pipeline(PipelineBase):
+        def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            message_types = [Message.TEST.name]
-            grep = "grep -E '^{\"message_keyword\":\""
-            command = f"{grep}({'|'.join(message_types)})\"'"
-
-            steps = [
-                read_and_filter_transform(input, command=command),
-                parse_transform(stop_event),
-                results_transform(results),
+            message_types = [
+                Message.RESULT.name
             ]
-            super(Handler.FirstStage, self).__init__(steps)
 
-    class SecondStage(PipelineBase):
-        def __init__(self, results, output):
+            command = "grep -E '^{\"message_keyword\":\""
+            command = f"{command}({'|'.join(message_types)})\""
+            command += ".+,\"test_name\":\"%s.*?\",'" % name.replace("'", r"'\''")
             steps = [
-                values_transform(results.values()),
-                test_details_transform(),
-                write_transform(output)
+                read_and_filter_transform(input, command=command, stop=stop_event, tail=tail),
+                parse_transform(),
+                sort_transform(stop_event),
+                flat_transform(),
+                write_transform(output),
             ]
-            super(Handler.SecondStage, self).__init__(steps)
+            super(Handler.Pipeline, self).__init__(steps, restart_on_none=False)
 
     def handle(self, args):
-        results = {}
-        self.FirstStage(results, args.log).run()
-        self.SecondStage(results["tests"], args.output).run()
+        self.Pipeline(args.name, args.log, args.output).run()

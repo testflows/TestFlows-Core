@@ -42,8 +42,9 @@ class Pipeline(object):
     """Combines multiple steps into a pipeline
     that can be executed.
     """
-    def __init__(self, steps):
+    def __init__(self, steps, restart_on_none=True):
         self.steps = steps
+        self.restart_on_none = restart_on_none
         # start all the generators
         for step in self.steps:
             next(step)
@@ -54,9 +55,9 @@ class Pipeline(object):
         item = None
         while True:
             try:
-                for step in self.steps:
+                for i, step in enumerate(self.steps):
                     item = step.send(item)
-                    if item is None:
+                    if self.restart_on_none and item is None:
                         break
             except StopIteration:
                 break
