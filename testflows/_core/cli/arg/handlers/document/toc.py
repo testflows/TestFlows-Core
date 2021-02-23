@@ -31,7 +31,10 @@ class Handler(HandlerBase):
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
 
+        parser.add_argument("--start-after", metavar="heading", type=str, default="Table of Contents",
+                help="heading name after which to start indexing, default: 'Table of Contents'")
+
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        generate(args.input, args.output)
+        generate(args.input, args.output, args.start_after)

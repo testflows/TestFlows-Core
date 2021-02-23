@@ -23,9 +23,9 @@ class Visitor(PTNodeVisitor):
     # FIXME: add support for alternative headers H2 "-" and H1 "="
     def __init__(self, *args, **kwargs):
         self.header_ids = {}
-        self.start_at = kwargs.pop("start_at", None)
+        self.start_after = kwargs.pop("start_after", None)
         self.started = True
-        if self.start_at is not None:
+        if self.start_after is not None:
             self.started = False
         self.levels = []
         self.current_level = 0
@@ -38,8 +38,9 @@ class Visitor(PTNodeVisitor):
         if level < 2:
             return None
         if not self.started:
-            if self.start_at in node.heading_name.value:
+            if self.start_after in node.heading_name.value:
                 self.started = True
+                return None
         if not self.started:
             return None
         # normalize header level
@@ -95,15 +96,16 @@ def Parser():
 
     return PEGParser(document)
 
-def generate(source, destination):
+def generate(source, destination, start_after):
     """Generate requirements from markdown source.
 
     :param source: source file-like object
     :param destination: destination file-like object
+    :param start_after: heading name after which toc should be started
     """
     parser = Parser()
     source_data = source.read()
     tree = parser.parse(source_data)
-    destination_data = visit_parse_tree(tree, Visitor(start_at="Revision History"))
+    destination_data = visit_parse_tree(tree, Visitor(start_after=start_after))
     if destination_data:
         destination.write(destination_data)

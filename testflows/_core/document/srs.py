@@ -261,7 +261,7 @@ def Parser():
         return heading()
 
     def toc_heading():
-        return _(r"#+[ \t]+"), _(r"Table of Contents"), _(r"[ \t]*\n")
+        return _(r"#+[ \t]+"), _(r"[Tt][Aa][Bb][Ll][Ee] [Oo][Ff] [Cc][Oo][Nn][Tt][Ee][Nn][Tt][Ss]"), _(r"[ \t]*\n")
 
     def heading_name():
         return _(r"[^\n]+")
@@ -354,7 +354,7 @@ def Parser():
             specification_approval,
             empty_line,
             _(r"[ \t]*[^\*#\n][^\n]*\n")
-        ]), toc_heading
+        ]), [toc_heading, heading]
 
     def requirement():
         return requirement_heading, requirement_version, ZeroOrMore([
