@@ -134,7 +134,7 @@ def format_attribute(msg, no_colors=False):
         out = [f"{_indent}{color_secondary_keyword('Attributes', no_colors=no_colors)}"]
 
     out.append(color(f"{_indent}{' ' * 2}{msg['attribute_name']}", "white", attrs=["dim"], no_colors=no_colors))
-    out.append(color(f"{textwrap.indent(msg['attribute_value'], prefix=(' ' * 4))}", "white", attrs=["dim"], no_colors=no_colors))
+    out.append(color(f"{textwrap.indent(str(msg['attribute_value']), prefix=(' ' * 4))}", "white", attrs=["dim"], no_colors=no_colors))
     return "\n".join(out) + "\n"
 
 def format_tag(msg, no_colors=False):

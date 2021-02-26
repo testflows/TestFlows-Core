@@ -106,7 +106,7 @@ def format_attribute(msg):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Attributes')}"]
 
     out.append(color(f"{_indent}{' ' * 4}{msg['attribute_name']}", "white", attrs=["dim"]))
-    out.append(color(f"{textwrap.indent(msg['attribute_value'], prefix=(_indent + ' ' * 6))}", "white", attrs=["dim"]))
+    out.append(color(f"{textwrap.indent(str(msg['attribute_value']), prefix=(_indent + ' ' * 6))}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
 def format_specification(msg):
