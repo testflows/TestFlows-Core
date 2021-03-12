@@ -923,7 +923,9 @@ class TestDefinition(object):
 
             if parent:
                 kwargs["parent"] = parent
-                kwargs["id"] = parent.id + [parent.child_count]
+                with parent.lock:
+                    kwargs["id"] = parent.id + [parent.child_count]
+                    parent.child_count += 1
                 kwargs["cflags"] = parent.cflags
                 # propagate manual flag if automatic test flag is not set
                 if not kwargs["flags"] & AUTO:
@@ -948,8 +950,6 @@ class TestDefinition(object):
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
-                with parent.lock:
-                    parent.child_count += 1
 
             self.name = name
             self.tags = test.make_tags(kwargs.pop("tags", None))
