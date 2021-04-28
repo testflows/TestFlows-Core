@@ -91,7 +91,12 @@ class Handler(HandlerBase):
     def handle(self, args):
         try:
             with tempfile.NamedTemporaryFile("w+") as saved_input:
-                saved_input.write(args.log.read())
+                while True:
+                    data = args.log.read(65536)
+                    if not data:
+                        break
+                    saved_input.write(data)
+                saved_input.flush()
                 saved_input.seek(0)
                 id, offset = self.convert_name_to_id(args.name, saved_input)
                 saved_input.seek(int(offset))
