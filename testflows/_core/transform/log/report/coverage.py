@@ -197,12 +197,22 @@ def generate(coverages, divider):
     """Generate report.
     """
     report = ""
+    total_counts = Counts("requirements", units=0, ok=0, nok=0, untested=0)
 
     if coverages:
         report += color(f"{divider}Coverage\n", "white", attrs=["bold"])
 
     for coverage in coverages:
         report += f"\n{coverage.calculate()}"
+        total_counts.units += coverage.counts.units
+        total_counts.ok += coverage.counts.ok
+        total_counts.nok += coverage.counts.nok
+        total_counts.untested += coverage.counts.untested
+
+    if len(coverages) > 1:
+        s = color("Total", "white", attrs=["bold", "dim"])
+        s += f"\n  {total_counts}"
+        report += f"\n{s}"
 
     return report
 
