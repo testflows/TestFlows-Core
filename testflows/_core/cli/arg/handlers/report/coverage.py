@@ -250,9 +250,9 @@ class Handler(HandlerBase):
         parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
                 help='use logo image (.png)')
         parser.add_argument("--title", metavar="name", help="custom title", type=str)
-        parser.add_argument("--specs", metavar="name", type=str, default=[], nargs="+",
+        parser.add_argument("--only", metavar="name", type=str, default=[], nargs="+",
                 help=("name of one or more specifications for which to generate coverage report"
-                    ", default: include all specifications"
+                    ", default: include all specifications. Only a unique part of the name can be specified."
             ))
 
         parser.set_defaults(func=cls())
@@ -396,11 +396,11 @@ class Handler(HandlerBase):
 
     def data(self, source, results, args):
         d = dict()
-        specs, requirements = self.requirements(args.specs, source, results)
+        specs, requirements = self.requirements(args.only, source, results)
         # if custom title was not specified generate a title
         # that include all specification names
-        title = args.title or ""
-        if not title and specs:
+        title = args.title
+        if title is None and specs:
             title = "<br>".join([spec["specification_name"] for spec in specs])
         d["title"] = title
         d["requirements"] = self.add_tests(requirements, results)
