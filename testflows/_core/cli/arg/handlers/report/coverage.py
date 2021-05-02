@@ -51,7 +51,7 @@ template = f"""
 <section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
 
 ---
-# %(title)sRequirements Coverage Report
+# Requirements Coverage Report%(title)s
 %(body)s
 
 ---
@@ -195,7 +195,7 @@ class Formatter:
 
     def format_title(self, data):
         if data["title"]:
-            return make_title(data["title"]) + "<br>"
+            return "<br>" + make_title(data["title"])
         return ""
 
     def format(self, data):
@@ -250,6 +250,10 @@ class Handler(HandlerBase):
         parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
                 help='use logo image (.png)')
         parser.add_argument("--title", metavar="name", help="custom title", type=str)
+        parser.add_argument("--specs", metavar="name", type=str, default=[], nargs="+",
+                help=("name of one or more specifications for which to generate coverage report"
+                    ", default: include all specifications"
+            ))
 
         parser.set_defaults(func=cls())
 
@@ -280,11 +284,21 @@ class Handler(HandlerBase):
             "version": __version__,
         }
 
-    def requirements(self, path, results):
+    def requirements(self, spec_names, path, results):
         _requirements = {}
+        _specs = []
 
         if path == "-":
             for spec in results["specifications"]:
+                if spec_names:
+                    matched = False
+                    for name in spec_names:
+                        if name in spec["specification_name"]:
+                            matched = True
+                            break
+                    if not matched:
+                        continue
+                _specs.append(spec)
                 for req in spec["specification_requirements"]:
                     _requirements[req["name"]] = {"requirement": Requirement(**req), "tests": []}
         else:
@@ -297,7 +311,7 @@ class Handler(HandlerBase):
                     continue
                 _requirements[value.name] = {"requirement": value, "tests": []}
 
-        return _requirements
+        return (_specs, _requirements)
 
     def add_test_messages(self, test, idx, tests, tests_by_parent, tests_by_id):
         started = test["test"]["message_time"]
@@ -382,8 +396,13 @@ class Handler(HandlerBase):
 
     def data(self, source, results, args):
         d = dict()
-        requirements = self.requirements(source, results)
-        d["title"] = args.title
+        specs, requirements = self.requirements(args.specs, source, results)
+        # if custom title was not specified generate a title
+        # that include all specification names
+        title = args.title or ""
+        if not title and specs:
+            title = "<br>".join([spec["specification_name"] for spec in specs])
+        d["title"] = title
         d["requirements"] = self.add_tests(requirements, results)
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(d["requirements"])
