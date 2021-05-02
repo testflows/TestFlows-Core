@@ -52,6 +52,11 @@ except (ExitException, KeyboardInterrupt, Exception) as exc:
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:
         pass
+    if not sys.stdout.isatty():
+        try:
+            sys.stdout.close()
+        except BrokenPipeError:
+            pass
     if isinstance(exc, ExitException):
         sys.exit(exc.exitcode)
     else:

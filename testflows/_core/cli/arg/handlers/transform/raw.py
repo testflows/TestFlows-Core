@@ -34,7 +34,4 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        try:
-            RawLogPipeline(args.input, args.output).run()
-        finally:
-            args.output.close()
+        RawLogPipeline(args.input, args.output).run()
