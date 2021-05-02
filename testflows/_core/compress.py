@@ -30,6 +30,10 @@ class TailingDecompressReader(_compression.DecompressReader):
     def __init__(self, *args, **kwargs):
         self._tail = kwargs.pop("tail", True)
         self._tail_sleep = float(kwargs.pop("tail_sleep", 0.15))
+        # default compressed file marker '.7zXZ'
+        self._COMPRESSED_FILE_MARKER = b"\xfd\x37\x7a\x58\x5a"
+        # default uncompressed file marker is start of the message  
+        self._UNCOMPRESSED_FILE_MARKER = "{\"message_keyword\"".encode("utf-8")
 
         super(TailingDecompressReader, self).__init__(*args, **kwargs)
 
@@ -69,8 +73,27 @@ class TailingDecompressReader(_compression.DecompressReader):
                         continue
                 else:
                     self.rawblock = b""
-                data = self._decompressor.decompress(self.rawblock, size)
-
+                try:
+                    data = self._decompressor.decompress(self.rawblock, size)
+                except lzma.LZMAError as e:
+                    # try to find valid compressed block by looking for the compressed file marker
+                    # or determine that file is not compressed by finding uncompressed file marker
+                    if "Input format not supported by decoder" in str(e):
+                        while True:
+                            self.rawblock += self._fp.read1(65536)
+                            # try to find compressed file marker
+                            compressed_file_marker_idx = self.rawblock.find(self._COMPRESSED_FILE_MARKER)
+                            if compressed_file_marker_idx >= 0:
+                                self.rawblock = self.rawblock[compressed_file_marker_idx:]
+                                break
+                            # try to find uncompressed file marker
+                            uncompressed_file_marker_idx = self.rawblock.find(self._UNCOMPRESSED_FILE_MARKER)
+                            if uncompressed_file_marker_idx >= 0:
+                                self.rawblock = self.rawblock[uncompressed_file_marker_idx:]
+                                raise
+                        # decompress compressed raw block that we found           
+                        self._decompressor = self._decomp_factory(**self._decomp_args)
+                        return self._decompressor.decompress(self.rawblock, size)
             if data:
                 break
 

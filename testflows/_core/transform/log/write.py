@@ -20,6 +20,13 @@ def transform(file):
     line = None
     while True:
         if line is not None:
-            file.write(line)
-            file.flush()
+            try:
+                file.write(line)
+                file.flush()
+            except BrokenPipeError:
+                try:
+                    file.close()
+                except BrokenPipeError:
+                    pass
+                return
         line = yield line
