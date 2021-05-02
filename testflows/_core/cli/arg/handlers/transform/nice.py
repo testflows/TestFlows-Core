@@ -34,4 +34,7 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        NiceLogPipeline(args.input, args.output).run()
+        try:
+            NiceLogPipeline(args.input, args.output).run()
+        finally:
+            args.output.close()

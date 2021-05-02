@@ -35,4 +35,7 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        FailsLogPipeline(args.input, args.output, only_new=args.new).run()
+        try:
+            FailsLogPipeline(args.input, args.output, only_new=args.new).run()
+        finally:
+            args.output.close()

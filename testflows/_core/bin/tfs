@@ -13,14 +13,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
+try:
+    import sys
 
-import testflows.settings as settings
+    import testflows.settings as settings
 
-from testflows._core.exceptions import exception
-from testflows._core.cli.text import danger, warning
-from testflows._core.cli.arg.exit import *
-from testflows._core.cli.arg.parser import parser
+    from testflows._core.exceptions import exception
+    from testflows._core.cli.text import danger, warning
+    from testflows._core.cli.arg.exit import *
+    from testflows._core.cli.arg.parser import parser
+except KeyboardInterrupt:
+    import sys
+    sys.exit(1)
 
 try:
     if len(sys.argv) == 1:
@@ -47,7 +51,7 @@ except (ExitException, KeyboardInterrupt, Exception) as exc:
     if not isinstance(exc, KeyboardInterrupt):
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:
-        sys.stderr.write("\n")
+        pass
     if isinstance(exc, ExitException):
         sys.exit(exc.exitcode)
     else:

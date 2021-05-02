@@ -34,4 +34,7 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        SlickLogPipeline(args.input, args.output).run()
+        try:
+            SlickLogPipeline(args.input, args.output).run()
+        finally:
+            args.output.close()

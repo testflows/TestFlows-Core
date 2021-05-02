@@ -36,7 +36,7 @@ from testflows._core.cli.arg.handlers.report.copyright import copyright
 from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.short import format_test, format_result
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
-from testflows._core.name import sep
+from testflows._core.utils.string import title as make_title
 from testflows._core.transform.log.report.totals import Counts
 from testflows._core.objects import Requirement
 
@@ -51,7 +51,7 @@ template = f"""
 <section class="clearfix">%(logo)s%(confidential)s%(copyright)s</section>
 
 ---
-# Requirements Coverage Report
+# %(title)sRequirements Coverage Report
 %(body)s
 
 ---
@@ -193,6 +193,11 @@ class Formatter:
             s += "\n"
         return s + "\n"
 
+    def format_title(self, data):
+        if data["title"]:
+            return make_title(data["title"]) + "<br>"
+        return ""
+
     def format(self, data):
         body = ""
         body += self.format_metadata(data)
@@ -204,7 +209,9 @@ class Formatter:
             "confidential": self.format_confidential(data),
             "copyright": self.format_copyright(data),
             "body": body,
-            "script": script}
+            "script": script,
+            "title": self.format_title(data)
+        }
 
 class Counts(object):
     def __init__(self, name, units, satisfied, unsatisfied, untested):
@@ -242,6 +249,7 @@ class Handler(HandlerBase):
         parser.add_argument("--confidential", help="mark as confidential", action="store_true")
         parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
                 help='use logo image (.png)')
+        parser.add_argument("--title", metavar="name", help="custom title", type=str)
 
         parser.set_defaults(func=cls())
 
@@ -375,6 +383,7 @@ class Handler(HandlerBase):
     def data(self, source, results, args):
         d = dict()
         requirements = self.requirements(source, results)
+        d["title"] = args.title
         d["requirements"] = self.add_tests(requirements, results)
         d["metadata"] = self.metadata(results)
         d["counts"] = self.counts(d["requirements"])

@@ -36,4 +36,7 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        CompactRawLogPipeline(args.input, args.output, steps=(not args.without_steps)).run()
+        try:
+            CompactRawLogPipeline(args.input, args.output, steps=(not args.without_steps)).run()
+        finally:
+            args.output.close()

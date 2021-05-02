@@ -34,4 +34,7 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        DotsLogPipeline(args.input, args.output).run()
+        try:
+            DotsLogPipeline(args.input, args.output).run()
+        finally:
+            args.output.close()

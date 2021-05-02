@@ -24,9 +24,5 @@ def transform(file):
                 file.write(line)
                 file.flush()
             except BrokenPipeError:
-                try:
-                    file.close()
-                except BrokenPipeError:
-                    pass
                 return
         line = yield line

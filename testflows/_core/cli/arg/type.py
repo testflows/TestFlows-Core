@@ -28,6 +28,15 @@ import testflows._core.contrib.rsa as rsa
 
 KeyValue = namedtuple("KeyValue", "key value")
 
+class TextIOWrapper(io.TextIOWrapper):
+    """Customize io.TextIOWrapper to ignore BrokenPipeError on close.
+    """
+    def close(self):
+        try:
+            super(TextIOWrapper, self).close()
+        except BrokenPipeError:
+            pass
+
 class FileType(object):
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
         self._mode = mode
@@ -45,7 +54,7 @@ class FileType(object):
             elif 'w' in self._mode:
                 if 'b' in self._mode:
                     return sys.stdout.buffer
-                return sys.stdout
+                return TextIOWrapper(sys.stdout.buffer)
             else:
                 msg = argparse._('argument "-" with mode %r') % self._mode
                 raise ValueError(msg)
@@ -78,12 +87,12 @@ class LogFileType(object):
             if 'r' in self._mode:
                 fp = CompressedFile(sys.stdin.buffer, self._mode)
                 if self._encoding:
-                    return io.TextIOWrapper(fp, self._encoding, self._errors)
+                    return TextIOWrapper(fp, self._encoding, self._errors)
                 return fp
             elif 'w' in self._mode:
                 fp = CompressedFile(sys.stdout.buffer, self._mode)
                 if self._encoding:
-                    return io.TextIOWrapper(fp, self._encoding, self._errors)
+                    return TextIOWrapper(fp, self._encoding, self._errors)
                 return fp
             else:
                 msg = argparse._('argument "-" with mode %r') % self._mode
@@ -93,7 +102,7 @@ class LogFileType(object):
         try:
             fp = CompressedFile(string, self._mode)
             if self._encoding:
-                return io.TextIOWrapper(fp, self._encoding, self._errors)
+                return TextIOWrapper(fp, self._encoding, self._errors)
             return fp
         except OSError as e:
             message = argparse._("can't open '%s': %s")

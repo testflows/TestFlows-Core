@@ -18,8 +18,8 @@ import subprocess
 from testflows._core.message import Message
 
 def transform(file, command, tail=False, stop=None):
-    """Read lines from a file-like object and filter them using
-    Unix tail and grep utilities.
+    """Read lines from a file-like object and
+    filter them using Unix grep utility.
 
     :param file: open file handle
     :param command: filter command (like grep)
@@ -31,7 +31,7 @@ def transform(file, command, tail=False, stop=None):
     stop_keyword = ('{"message_keyword":"%s"' % str(Message.STOP)).encode("utf-8")
     stop_keyword_len = len(stop_keyword)
 
-    process = subprocess.Popen(f"tfs transform raw | {command}", stdin=file, stdout=subprocess.PIPE, shell=True, bufsize=0)
+    process = subprocess.Popen(f"tfs transform raw | {command}", stdin=file, stdout=subprocess.PIPE, shell=True)
 
     while True:
         line = process.stdout.readline()
