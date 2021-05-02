@@ -48,7 +48,7 @@ try:
 except (ExitException, KeyboardInterrupt, Exception) as exc:
     if settings.debug:
         sys.stderr.write(warning(exception(), eol='\n'))
-    if not isinstance(exc, KeyboardInterrupt):
+    if not isinstance(exc, (KeyboardInterrupt, BrokenPipeError)):
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:
         pass
