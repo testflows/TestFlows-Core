@@ -26,6 +26,8 @@ except KeyboardInterrupt:
     import sys
     sys.exit(1)
 
+exitcode = 0
+
 try:
     if len(sys.argv) == 1:
         sys.argv.append("-h")
@@ -52,12 +54,14 @@ except (ExitException, KeyboardInterrupt, Exception) as exc:
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:
         pass
+    if isinstance(exc, ExitException):
+        exitcode = exc.exitcode
+    else:
+        exitcode = 1
+finally:
     if not sys.stdout.isatty():
         try:
             sys.stdout.close()
         except BrokenPipeError:
             pass
-    if isinstance(exc, ExitException):
-        sys.exit(exc.exitcode)
-    else:
-        sys.exit(1)
+    sys.exit(exitcode)
