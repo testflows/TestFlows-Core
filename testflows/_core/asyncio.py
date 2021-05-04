@@ -17,18 +17,7 @@ import time
 import asyncio
 import threading
 
-try:
-    import uvloop
-    asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-except ImportError:
-    pass
-
-if sys.platform == "win32":
-    _loop = asyncio.ProactorEventLoop()
-    asyncio.set_event_loop(_loop)
-else:
-    _loop = asyncio.get_event_loop()
-
+_loop = asyncio.get_event_loop()
 
 if not _loop.is_running():
     threading.Thread(target=_loop.run_forever, daemon=True).start()
