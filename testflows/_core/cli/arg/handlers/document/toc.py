@@ -35,7 +35,7 @@ class Handler(HandlerBase):
         parser.add_argument("--heading", metavar="name", type=str, default="Table of Contents",
                 help="table of contents heading name, default: 'Table of Contents'")
         parser.add_argument("-u", "--update", action="store_true", default=False,
-                help="update table of contents in the source file, default: False")
+                help="output original document with an updated table of contents")
 
         parser.set_defaults(func=cls())
 
