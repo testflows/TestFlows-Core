@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import tempfile
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core.cli.arg.common import epilog
@@ -28,7 +29,7 @@ class Handler(HandlerBase):
 
         parser.add_argument("input", metavar="input", type=argtype.file("r", bufsize=1, encoding="utf-8"),
                 nargs="?", help="input file, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
+        parser.add_argument("output", metavar="output", type=str,
                 nargs="?", help='output file, default: stdout', default="-")
 
         parser.add_argument("--heading", metavar="name", type=str, default="Table of Contents",
@@ -39,4 +40,9 @@ class Handler(HandlerBase):
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        generate(args.input, args.output, args.heading, args.update)
+        with tempfile.TemporaryFile("w+", encoding="utf-8") as temporary_file:
+            generate(args.input, temporary_file, args.heading, args.update)
+            output = argtype.file("w", encoding="utf-8")(args.output)
+            temporary_file.seek(0)
+            output.write(temporary_file.read())
+
