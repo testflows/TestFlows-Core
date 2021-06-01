@@ -20,7 +20,6 @@ from testflows._core.contrib.arpeggio import ParserPython as PEGParser
 from testflows._core.contrib.arpeggio import PTNodeVisitor, visit_parse_tree
 
 class Visitor(PTNodeVisitor):
-    # FIXME: add support for alternative headers H2 "-" and H1 "="
     def __init__(self, *args, **kwargs):
         self.header_ids = {}
         self.start_after = kwargs.pop("start_after", None)
@@ -76,6 +75,37 @@ class Visitor(PTNodeVisitor):
             self.output += "\n"
         return self.output or None
 
+
+class UpdateVisitor(PTNodeVisitor):
+    def __init__(self, *args, **kwargs):
+        self.heading = kwargs.pop("heading", None)
+        self.toc = kwargs.pop("toc", "")
+        self.output = []
+        # states
+        self.state_inside_toc = False
+        self.state_done = False
+        super(UpdateVisitor, self).__init__(*args, **kwargs)
+
+    def visit_line(self, node, children):
+        if not self.state_inside_toc:
+            self.output.append(str(node))
+
+    def visit_heading(self, node, children):
+        self.output.append("".join(children))
+        if not self.state_done and node.heading_name.value == self.heading:
+            self.state_inside_toc = True
+            self.output.append("\n")
+            self.output.append(self.toc)
+        else:
+            if self.state_inside_toc:
+                self.state_done = True
+            self.state_inside_toc = False
+
+    def visit_document(self, node, children):
+        self.output = "".join(self.output)
+        return self.output or None
+
+
 def Parser():
     """Returns markdown heading parser.
     """
@@ -94,18 +124,25 @@ def Parser():
     def document():
         return Optional(OneOrMore([heading, line])), EOF
 
-    return PEGParser(document)
+    return PEGParser(document, skipws=False)
 
-def generate(source, destination, start_after):
-    """Generate requirements from markdown source.
+
+def generate(source, destination, heading, update=False):
+    """Generate TOC for markdown source.
 
     :param source: source file-like object
     :param destination: destination file-like object
-    :param start_after: heading name after which toc should be started
+    :param heading: table of contents heading name
+    :param update: write to destination source with the updated table of contents, default: False
     """
     parser = Parser()
     source_data = source.read()
     tree = parser.parse(source_data)
-    destination_data = visit_parse_tree(tree, Visitor(start_after=start_after))
+    toc = visit_parse_tree(tree, Visitor(start_after=heading))
+    destination_data = ""
+    if update:
+        destination_data = visit_parse_tree(tree, UpdateVisitor(heading=heading, toc=toc))
+    else:
+        destination_data = toc
     if destination_data:
         destination.write(destination_data)
