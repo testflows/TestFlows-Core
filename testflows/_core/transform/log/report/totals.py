@@ -209,32 +209,31 @@ def transform(stop, divider="\n"):
                 formatter[0](line, *formatter[1:], counts=counts)
             line = None
 
-            if stop.is_set():
-                if line is None:
-                    line = ""
-                line += divider
-                line_icon = "" #"\u27a4 "
-                if counts["module"]:
-                    line += line_icon + str(counts["module"])
-                if counts["suite"]:
-                    line += line_icon + str(counts["suite"])
-                if counts["test"]:
-                    line += line_icon + str(counts["test"])
-                if counts["feature"]:
-                    line += line_icon + str(counts["feature"])
-                if counts["scenario"]:
-                    line += line_icon + str(counts["scenario"])
-                if counts["check"]:
-                    line += line_icon + str(counts["check"])
-                if counts["recipe"]:
-                    line += line_icon + str(counts["recipe"])
-                if counts["example"]:
-                    line += line_icon + str(counts["example"])
-                if counts["outline"]:
-                    line += line_icon + str(counts["outline"])
-                if counts["iteration"]:
-                    line += line_icon + str(counts["iteration"])
-                if counts["step"]:
-                    line += line_icon + str(counts["step"])
-                line += color_line(f"\nTotal time {strftimedelta(msg['message_rtime'])}\n")
+        if stop.is_set():
+            line = divider
+            line_icon = "" #"\u27a4 "
+            if counts["module"]:
+                line += line_icon + str(counts["module"])
+            if counts["suite"]:
+                line += line_icon + str(counts["suite"])
+            if counts["test"]:
+                line += line_icon + str(counts["test"])
+            if counts["feature"]:
+                line += line_icon + str(counts["feature"])
+            if counts["scenario"]:
+                line += line_icon + str(counts["scenario"])
+            if counts["check"]:
+                line += line_icon + str(counts["check"])
+            if counts["recipe"]:
+                line += line_icon + str(counts["recipe"])
+            if counts["example"]:
+                line += line_icon + str(counts["example"])
+            if counts["outline"]:
+                line += line_icon + str(counts["outline"])
+            if counts["iteration"]:
+                line += line_icon + str(counts["iteration"])
+            if counts["step"]:
+                line += line_icon + str(counts["step"])
+            line += color_line(f"\nTotal time {strftimedelta(msg['message_rtime'])}\n")
+
         line = yield line

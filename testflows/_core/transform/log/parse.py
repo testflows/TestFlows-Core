@@ -17,25 +17,18 @@ import testflows.settings as settings
 from testflows._core.constants import id_sep
 from testflows._core.message import Message, loads
 
-def transform(stop=None):
-    """Transform log line into parsed list.
-
-    :param stop: stop event, default: None
+def transform():
+    """Transform log line by parsing it.
     """
     msg = None
-    m = None
-    stop_id = None
+    parsed_msg = None
 
     while True:
         if msg is not None:
             try:
-                m = loads(msg)
-                if stop_id is None:
-                    stop_id = m["test_id"]
-                if m["message_keyword"] == Message.RESULT:
-                    if stop and m["test_id"] == stop_id:
-                        stop.set()
+                parsed_msg = loads(msg)
             except (IndexError, Exception):
                 yield None
                 continue
-        msg = yield m
+
+        msg = yield parsed_msg

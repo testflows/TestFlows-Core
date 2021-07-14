@@ -20,6 +20,7 @@ from .read import transform as read_transform
 from .read_raw import transform as read_raw_transform
 from .parse import transform as parse_transform
 from .nice import transform as nice_transform
+from .brisk import transform as brisk_transform
 from .dots import transform as dots_transform
 from .write import transform as write_transform
 from .stop import transform as stop_transform
@@ -42,9 +43,9 @@ class Pipeline(object):
     """Combines multiple steps into a pipeline
     that can be executed.
     """
-    def __init__(self, steps, restart_on_none=True):
+    def __init__(self, steps, stop=None):
         self.steps = steps
-        self.restart_on_none = restart_on_none
+        self.stop = stop
         # start all the generators
         for step in self.steps:
             next(step)
@@ -55,9 +56,11 @@ class Pipeline(object):
         item = None
         while True:
             try:
-                for i, step in enumerate(self.steps):
+                for step in self.steps:
                     item = step.send(item)
-                    if self.restart_on_none and item is None:
+                    if self.stop and self.stop.is_set():
+                        continue
+                    if item is None:
                         break
             except StopIteration:
                 break
@@ -100,7 +103,7 @@ class RawLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(RawLogPipeline, self).__init__(steps)
+        super(RawLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ReadRawLogPipeline(Pipeline):
     def __init__(self, input, output, encoding=None):
@@ -111,7 +114,7 @@ class ReadRawLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(ReadRawLogPipeline, self).__init__(steps)
+        super(ReadRawLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ShortLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -119,7 +122,7 @@ class ShortLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 short_transform(show_input=show_input),
                 passing_report_transform(stop_event),
@@ -134,7 +137,7 @@ class ShortLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(ShortLogPipeline, self).__init__(steps)
+        super(ShortLogPipeline, self).__init__(steps, stop=stop_event)
 
 class NiceLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -142,7 +145,7 @@ class NiceLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 nice_transform(show_input=show_input),
                 passing_report_transform(stop_event),
@@ -157,7 +160,30 @@ class NiceLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(NiceLogPipeline, self).__init__(steps)
+        super(NiceLogPipeline, self).__init__(steps, stop=stop_event)
+
+class BriskLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, show_input=True):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(),
+            fanout(
+                brisk_transform(show_input=show_input),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                coverage_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(BriskLogPipeline, self).__init__(steps, stop=stop_event)
 
 class SlickLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -165,7 +191,7 @@ class SlickLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 slick_transform(show_input=show_input),
                 passing_report_transform(stop_event),
@@ -180,7 +206,7 @@ class SlickLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(SlickLogPipeline, self).__init__(steps)
+        super(SlickLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ManualLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -188,7 +214,7 @@ class ManualLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 manual_transform(show_input=show_input),
                 passing_report_transform(stop_event),
@@ -203,7 +229,7 @@ class ManualLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(ManualLogPipeline, self).__init__(steps)
+        super(ManualLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ClassicLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -211,7 +237,7 @@ class ClassicLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 classic_transform(show_input=show_input),
                 passing_report_transform(stop_event),
@@ -226,7 +252,7 @@ class ClassicLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(ClassicLogPipeline, self).__init__(steps)
+        super(ClassicLogPipeline, self).__init__(steps, stop=stop_event)
 
 class FailsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, only_new=False, show_input=True):
@@ -234,7 +260,7 @@ class FailsLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 fails_transform(only_new=only_new, show_input=show_input),
                 fails_report_transform(stop_event, only_new=only_new),
@@ -248,7 +274,7 @@ class FailsLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(FailsLogPipeline, self).__init__(steps)
+        super(FailsLogPipeline, self).__init__(steps, stop=stop_event)
 
 class DotsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -256,7 +282,7 @@ class DotsLogPipeline(Pipeline):
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             fanout(
                 dots_transform(stop_event, show_input=show_input),
                 passing_report_transform(stop_event),
@@ -271,7 +297,7 @@ class DotsLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(DotsLogPipeline, self).__init__(steps)
+        super(DotsLogPipeline, self).__init__(steps, stop=stop_event)
 
 class MetricsLogPipeline(Pipeline):
     def __init__(self, input, metrics):
@@ -287,7 +313,7 @@ class MetricsLogPipeline(Pipeline):
             metrics_transform(metrics),
             stop_transform(stop_event)
         ]
-        super(MetricsLogPipeline, self).__init__(steps)
+        super(MetricsLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ResultsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -313,7 +339,7 @@ class ResultsReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(ResultsReportLogPipeline, self).__init__(steps)
+        super(ResultsReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -335,7 +361,7 @@ class TotalsReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(TotalsReportLogPipeline, self).__init__(steps)
+        super(TotalsReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class FailsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -357,7 +383,7 @@ class FailsReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(FailsReportLogPipeline, self).__init__(steps)
+        super(FailsReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class PassingReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -378,7 +404,7 @@ class PassingReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(PassingReportLogPipeline, self).__init__(steps)
+        super(PassingReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class CoverageReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -400,7 +426,7 @@ class CoverageReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(CoverageReportLogPipeline, self).__init__(steps)
+        super(CoverageReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class VersionReportLogPipeline(Pipeline):
     def __init__(self, input, output):
@@ -421,7 +447,7 @@ class VersionReportLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(VersionReportLogPipeline, self).__init__(steps)
+        super(VersionReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results, steps=True):
@@ -451,11 +477,11 @@ class ResultsLogPipeline(Pipeline):
             + "'")
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
-            parse_transform(stop_event),
+            parse_transform(),
             results_transform(results),
             stop_transform(stop_event)
         ]
-        super(ResultsLogPipeline, self).__init__(steps)
+        super(ResultsLogPipeline, self).__init__(steps, stop=stop_event)
 
 class CompactRawLogPipeline(Pipeline):
     def __init__(self, input, output, steps=True):
@@ -488,4 +514,4 @@ class CompactRawLogPipeline(Pipeline):
             write_transform(output),
             stop_transform(stop_event)
         ]
-        super(CompactRawLogPipeline, self).__init__(steps)
+        super(CompactRawLogPipeline, self).__init__(steps, stop=stop_event)

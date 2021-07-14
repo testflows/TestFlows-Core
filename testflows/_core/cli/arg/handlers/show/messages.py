@@ -25,11 +25,9 @@ from testflows._core.message import Message
 from testflows._core.transform.log.pipeline import Pipeline as PipelineBase
 from testflows._core.transform.log.read_and_filter import transform as read_and_filter_transform
 from testflows._core.transform.log.nice import transform as nice_transform
-from testflows._core.transform.log.raw import transform as raw_transform
-from testflows._core.transform.log.short import transform as short_transform
-from testflows._core.transform.log.slick import transform as slick_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
+from testflows._core.transform.log.stop import transform as stop_transform
 
 class Handler(HandlerBase):
     @classmethod
@@ -43,7 +41,7 @@ class Handler(HandlerBase):
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("--output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output, default: stdout', default="-")
-        format_choices = ["nice", "raw", "short", "slick"]
+        format_choices = ["nice", "raw"]
         parser.add_argument("--format", "-f", metavar="name", type=str, choices=format_choices,
             default="nice", help=f"output format, choices are {format_choices}, default: nice")
         parser.set_defaults(func=cls())
@@ -51,56 +49,24 @@ class Handler(HandlerBase):
     class Pipeline(PipelineBase):
         def __init__(self, name, input, output, format=None, tail=False):
             stop_event = threading.Event()
+            command = f"grep -E \',\"test_name\":\"%s'" % name
 
-            command = f"grep -E \',\"test_id\":\"%s'" % name
             steps = [
-                read_and_filter_transform(input, command=command, tail=tail)
+                read_and_filter_transform(input, command=command, stop=stop_event, tail=tail)
             ]
+
+            if format != "raw":
+                steps += [parse_transform()]
+
             if format == "nice":
                 steps += [
-                    parse_transform(stop_event),
                     nice_transform()
                 ]
-            elif format == "short":
-                steps += [
-                    parse_transform(stop_event),
-                    short_transform()
-                ]
-            elif format == "slick":
-                steps += [
-                    parse_transform(stop_event),
-                    slick_transform()
-                ]
+
             steps.append(write_transform(output))
+            steps.append(stop_transform(stop_event))
 
-            super(Handler.Pipeline, self).__init__(steps)
-
-    def convert_name_to_id(self, name, input):
-        command = "grep --byte-offset -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
-        command += ".+\"test_name\":\"%s\"' -m 1" % name.replace("'", r"'\''")
-        process = subprocess.Popen(command, stdin=input, stdout=subprocess.PIPE, shell=True)
-        process.wait()
-        parse_generator = parse_transform(None)
-        parse_generator.send(None)
-        line = process.stdout.readline().decode("utf-8")
-        if not line:
-            raise ValueError("test not found")
-        offset, msg = line.split(":", 1)
-        return (parse_generator.send(msg)["test_id"], offset)
+            super(Handler.Pipeline, self).__init__(steps, stop=stop_event)
 
     def handle(self, args):
-        try:
-            with tempfile.NamedTemporaryFile("w+") as saved_input:
-                while True:
-                    data = args.log.read(65536)
-                    if not data:
-                        break
-                    saved_input.write(data)
-                saved_input.flush()
-                saved_input.seek(0)
-                id, offset = self.convert_name_to_id(args.name, saved_input)
-                saved_input.seek(int(offset))
-                self.Pipeline(id, saved_input, args.output, args.format).run()
-        except ValueError as exc:
-            if "test not found" in str(exc):
-                return
+        self.Pipeline(args.name.replace("'", r"'\''"), args.log, args.output, args.format).run()

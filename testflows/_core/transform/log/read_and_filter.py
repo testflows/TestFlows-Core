@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import sys
 import subprocess
 
 from testflows._core.message import Message
@@ -35,22 +34,25 @@ def transform(file, command, tail=False, stop=None):
 
     while True:
         line = process.stdout.readline()
+
         if line == b"":
             if not tail:
-                if stop:
-                    stop.set()
-                else:
-                    break
+                break
+
             if process.poll() is not None:
-                if stop:
-                    stop.set()
-                else:
-                    break
-            else:
-                continue
+                break
+
+            continue
 
         if stop and line[:stop_keyword_len] == stop_keyword:
             stop.set()
 
         yield line.decode("utf-8")
 
+        if stop and stop.is_set():
+            break
+
+    if stop:
+        stop.set()
+
+    yield None

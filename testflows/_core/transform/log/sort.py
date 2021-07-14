@@ -12,28 +12,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-def transform(stop, key="test_id"):
-    """Sort messages.
+def transform(msgs, stop=None, key="test_id"):
+    """Sort messages by key.
     """
-    msgs = []
-
-    while True:
-        msg = yield None
-
-        if msg is None:
-            if stop.is_set():
-                break
-            continue
-
-        msgs.append(msg)
-
-        if stop.is_set():
-            break
-
     def sorting_key(msg):
         return msg[key]
 
     msgs.sort(key=sorting_key)
 
-    for msg in msgs:
+    length = len(msgs)
+
+    yield None
+
+    for i, msg in enumerate(msgs):
+        if stop:
+            if i + 1 == length:
+                stop.set()
         yield msg

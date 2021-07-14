@@ -166,3 +166,9 @@ def tags_filter(value):
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
 
+def onoff(value):
+    if value in ["yes", "1", "on"]:
+        return True
+    elif value in ["no", "0", "off"]:
+        return False
+    raise ArgumentTypeError(f"'{value}' is invalid")

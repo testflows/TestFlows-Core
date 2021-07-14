@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import io
+import csv
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core.cli.arg.common import epilog
@@ -39,6 +41,28 @@ class OpenMetricsFormatter:
              body += self.format_metric(metric)
         return body
 
+class CSVMetricsFormatter:
+    def format_metric_name(self, name):
+        return name.replace(" ", "_")
+
+    def format_metric(self, writer, metric):
+        metric_name = self.format_metric_name(metric["metric_name"])
+        metric_value = metric["metric_value"]
+        metric_units = metric["metric_units"]
+        metric_time = metric["message_time"]
+        test_name = metric["test_name"]
+        writer.writerow((test_name, metric_name, metric_units, metric_value, int(metric_time)))
+
+    def format(self, data):
+        body = io.StringIO()
+        header = "test_name", "metric_name", "metric_units", "metric_value", "metric_time"
+        writer = csv.writer(body, quoting=csv.QUOTE_NONNUMERIC)
+        writer.writerow(header)
+        for metric in data["metrics"]:
+             self.format_metric(writer, metric)
+        return body.getvalue()
+
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
@@ -51,7 +75,7 @@ class Handler(HandlerBase):
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
         parser.add_argument("--format", metavar="type", type=str,
-            help="output format choices: 'openmetrics', default: openmetrics", choices=["openmetrics"], default="openmetrics")
+            help="output format choices: 'openmetrics', 'csv' default: openmetrics", choices=["openmetrics", "csv"], default="openmetrics")
 
         parser.set_defaults(func=cls())
 
@@ -69,5 +93,8 @@ class Handler(HandlerBase):
     def handle(self, args):
         metrics = []
         MetricsLogPipeline(args.input, metrics).run()
-        formatter = OpenMetricsFormatter()
+        if args.format == "openmetrics":
+            formatter = OpenMetricsFormatter()
+        elif args.format == "csv":
+            formatter = CSVMetricsFormatter()
         self.generate(formatter, metrics, args)

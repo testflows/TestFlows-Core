@@ -23,7 +23,7 @@ EOK = 1 << 3
 # expected Fail
 EFAIL = 1 << 4
 # expected Error
-EERROR = 1 << 5 
+EERROR = 1 << 5
 # expected Skip
 ESKIP = 1 << 6
 # crossed out ok
@@ -56,10 +56,14 @@ REPORT = 1 << 26
 DOCUMENT = 1 << 27
 # mandatory test
 MANDATORY = 1 << 28
+# parallel test
+PARALLEL = 1 << 29
+# disable parallel tests
+NO_PARALLEL = 1 << 30
 # clear flags mask
 CLEAR = 1 << 31
 # expected result
-ERESULT = EOK | EFAIL | ESKIP | EERROR 
+ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
 EANY = EOK | EFAIL | ESKIP
 # crossed out result
@@ -68,7 +72,7 @@ XRESULT = XOK | XFAIL | XERROR | XNULL
 NOT_COUNTED = FAIL_NOT_COUNTED
 NOT_COUNTED_ANY = FAIL_NOT_COUNTED | ERROR_NOT_COUNTED | NULL_NOT_COUNTED
 # cumulative flags
-CFLAGS = UT | MANDATORY | MANUAL
+CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL
 
 class Flags(object):
     """Test flags."""
@@ -77,16 +81,16 @@ class Flags(object):
             XOK, XFAIL, XERROR, XNULL,
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
-            REPORT, DOCUMENT, MANDATORY, CLEAR
+            REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
             "XOK", "XFAIL", "XERROR", "XNULL",
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
-            "REPORT", "DOCUMENT", "MANDATORY", "CLEAR"
+            "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR"
         ]
-    
+
     def __init__(self, flags=0):
         if flags is None:
             flags = 0
@@ -97,7 +101,7 @@ class Flags(object):
                     self.flags |= flag
         else:
             self.flags = int(flags)
-    
+
     def __str__(self):
         l = [self.all_str[self.all.index(f)] for f in self.all if self.flags & f == f]
         return "|".join(l) or ""
@@ -113,16 +117,16 @@ class Flags(object):
 
     def __and__(self, o):
         return Flags(self.flags & int(Flags(o)))
-    
+
     def __or__(self, o):
         return Flags(self.flags | int(Flags(o)))
-    
+
     def __xor__(self, o):
         return Flags(self.flags ^ int(Flags(o)))
-    
+
     def __invert__(self):
         return Flags(~self.flags)
-    
+
     def __contains__(self, o):
         return bool(self & o)
 

@@ -33,6 +33,7 @@ import testflows.settings as settings
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
+from .flags import PARALLEL, NO_PARALLEL
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
@@ -40,21 +41,24 @@ from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
 from .objects import RepeatTest, ExamplesTable, Specification
 from .objects import Secret
-from .constants import name_sep, id_sep
-from .io import TestIO, LogWriter
-from .name import join, depth, match, absname, split, isabs
-from .funcs import current, top, previous, main, exception, pause, _set_current_top_previous, result, input
+from .constants import name_sep
+from .io import TestIO
+from .name import join, depth, match, absname, isabs
+from .funcs import exception, pause, result, value, input
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
+from .cli.arg.type import onoff as onoff_type, count as count_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import The, TheTags
 from .utils.sort import human as human_sort
 from .transform.log.pipeline import ResultsLogPipeline
+from .parallel import current, top, previous, _check_parallel_context
+from .parallel import Pool as ParallelPool, join as parallel_join
 
 try:
     import testflows.database as database_module
@@ -190,7 +194,7 @@ class TestBase(object):
                  xfails=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeat=None, private_key=None, setup=None):
+                 repeat=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
 
         self.lock = threading.Lock()
 
@@ -228,8 +232,6 @@ class TestBase(object):
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
-        if self.subtype in [TestSubType.Given, TestSubType.Finally]:
-            self.flags |= MANDATORY
         self.cflags = Flags(cflags) | (self.flags & CFLAGS)
         self.uid = get(uid, self.uid)
         if self.uid is not None:
@@ -246,6 +248,12 @@ class TestBase(object):
         self.private_key = get(private_key, None)
         self.caller_test = None
         self.setup = get(setup, None)
+        self.futures = []
+        self.executor = None
+        self.terminating = None
+        self.first_fail = get(first_fail, None)
+        self.test_to_end = get(test_to_end, None)
+
         if self.setup is not None:
             if isinstance(self.setup, (TestDecorator, TestDefinition)):
                 pass
@@ -349,6 +357,27 @@ class TestBase(object):
                 self.result = self.result(result)
 
         try:
+            parallel_exception = None
+            # join any left over parallel tests and save
+            try:
+                parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
+            except (Exception, KeyboardInterrupt) as exc:
+                parallel_exception = exc
+
+            # close parallel executor if any
+            if self.executor is not None:
+                self.executor.__exit__(None, None, None)
+
+            # close global parallel pool if present and opened
+            if top() is self and settings.global_parallel_pool is not None:
+                settings.global_parallel_pool.__exit__(None, None, None)
+
+            # set parallel exception if exc_value is None
+            if exc_value is None and parallel_exception is not None:
+                exc_type = type(parallel_exception)
+                exc_value = parallel_exception
+                exc_traceback = parallel_exception.__traceback__
+
             if exc_value is not None:
                 process_exception(exc_type, exc_value, exc_traceback)
             else:
@@ -546,8 +575,8 @@ def cli_argparser(kwargs, argparser=None):
                         help="disable terminal color highlighting", default=False)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
     parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                        choices=["new-fails", "fails", "classic", "slick", "nice", "quiet", "short", "manual", "dots", "raw"], default="nice",
-                        help="""stdout output format, choices are: ['new-fails','fails','classic','slick','nice','short','manual','dots','quiet','raw'],
+                        choices=["new-fails", "fails", "classic", "slick", "nice", "brisk", "quiet", "short", "manual", "dots", "raw"], default="nice",
+                        help="""stdout output format, choices are: ['new-fails','fails','classic','slick','nice','brisk','short','manual','dots','quiet','raw'],
                             default: 'nice'""")
     parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
                         help="path to the log file where test output will be stored, default: uses temporary log file")
@@ -571,8 +600,19 @@ def cli_argparser(kwargs, argparser=None):
     parser.add_argument("--individually", dest="_individually", action="store_true", default=False,
                         help="if --rerun is specified then rerun tests in the --reference log file individually.")
 
+    parser.add_argument("--parallel", dest="_parallel", type=onoff_type, default=True, choices=["yes", "no", "on", "off", 0, 1],
+        help="enable or disable parallelism for tests that support it, default: on")
+    parser.add_argument("--parallel-pool", dest="_parallel_pool", metavar="size", type=count_type,
+        help="for parallel tests force to use global parallel pool of the specified size")
+
     parser.add_argument("--private-key", dest="_private_key", metavar="file", type=rsa_private_key_pem_file_type,
         help="RSA private key PEM file that can be used to encrypt secrets.")
+
+    exit_group = parser.add_mutually_exclusive_group()
+    exit_group.add_argument('--first-fail', dest="_first_fail", action='store_true',
+        help="force all tests to be first fail and abort the run on the first failing test")
+    exit_group.add_argument('--test-to-end', dest="_test_to_end", action='store_true',
+        help="force all tests to be test to end and continue the run even if one of the tests fails")
 
     if database_module:
         database_module.argparser(parser)
@@ -694,8 +734,21 @@ def parse_cli_args(kwargs, parser):
                 if args.get(attr.name, None):
                     raise AttributeError(f"use test argument '--{attr.name}' instead of '--attr {attr.name}=<value>'")
 
+        if args.get("_first_fail"):
+            kwargs["first_fail"] = args.pop("_first_fail")
+
+        elif args.get("_test_to_end"):
+            kwargs["test_to_end"] = args.pop("_test_to_end")
+
         if args.get("_private_key"):
             kwargs["private_key"] = args.pop("_private_key")
+
+        if args.get("_parallel") is False:
+            kwargs["flags"] = kwargs.get("flags", Flags())
+            kwargs["flags"] |= NO_PARALLEL
+
+        if args.get("_parallel_pool"):
+            settings.global_parallel_pool = ParallelPool(args.pop("_parallel_pool"))
 
         if args.get("_repeat"):
             repeat = []
@@ -863,6 +916,8 @@ class TestDefinition(object):
         self.name = None
         self.test = None
         self.parent = None
+        self.parallel = kwargs.pop("parallel", None)
+        self.executor = kwargs.pop("executor", None)
         self.kwargs = kwargs
         self.tags = None
         self.repeat = None
@@ -881,18 +936,43 @@ class TestDefinition(object):
 
         self.no_arguments = get(self.no_arguments, not args)
 
-        if test and isinstance(test, TestDecorator):
-            self.repeatable_func = test
-            with self as _test:
-                test(**self.kwargs["args"])
-            return _test
-        else:
-            with self as _test:
+        def callable():
+            if test and isinstance(test, TestDecorator):
+                self.repeatable_func = test
+                with self as _test:
+                    r = test(**self.kwargs["args"])
+                    if r is not None:
+                        value("return", value=r)
+                return _test
+            else:
+                with self as _test:
+                    pass
+                return _test
+
+        current_test = current()
+
+        if current_test:
+            if current_test.cflags & NO_PARALLEL:
                 pass
-            return _test
+            elif self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel:
+                self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | PARALLEL
+                executor = self.executor
+                if settings.global_parallel_pool is not None:
+                    executor = settings.global_parallel_pool
+                if executor is None:
+                    executor = current_test.executor or ParallelPool()
+                    if current_test.executor is None:
+                        current_test.executor = executor
+                if not executor.open:
+                    executor.__enter__()
+                future = executor.submit(callable)
+                current_test.futures.append(future)
+                return future
+
+        return callable()
 
     def __enter__(self):
-        _set_current_top_previous()
+        _check_parallel_context()
 
         def dummy(*args, **kwargs):
             pass
@@ -905,8 +985,9 @@ class TestDefinition(object):
             keep_type = kwargs.pop("keep_type", None)
             format_name = kwargs.pop("format_name", False)
             format_description = kwargs.pop("format_description", False)
+            top_test = top()
 
-            if not top():
+            if not top_test:
                 cli_args = parse_cli_args(self.kwargs, cli_argparser(self.kwargs, argparser if not isinstance(argparser, ArgumentParser) else argparser.value))
                 kwargs["args"].update({k: v for k,v in cli_args.items() if not k.startswith("_")})
 
@@ -950,6 +1031,10 @@ class TestDefinition(object):
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
+                # propagate first_fail and test_to_end
+                if kwargs["type"] >= TestType.Iteration:
+                    kwargs["first_fail"] = parent.first_fail or kwargs.get("first_fail")
+                    kwargs["test_to_end"] = parent.test_to_end or kwargs.get("test_to_end")
 
             self.name = name
             self.tags = test.make_tags(kwargs.pop("tags", None))
@@ -987,6 +1072,11 @@ class TestDefinition(object):
             self._apply_end(name, parent, kwargs)
             self._apply_only(name, kwargs)
 
+            if kwargs.get("first_fail"):
+                kwargs["flags"] &= ~TE
+            elif kwargs.get("test_to_end"):
+                kwargs["flags"] |= TE
+
             # for And subtype we change the subtype to be that of its sibling
             if kwargs.get("subtype") is TestSubType.And:
                 sibling = None
@@ -999,8 +1089,12 @@ class TestDefinition(object):
                     raise TypeError("`And` subtype can't be used here as it sibling is not of the same type")
                 kwargs["subtype"] = sibling.subtype
 
-            # should not skip Background, Given and Finally steps
-            if kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given, TestSubType.Finally) or kwargs["flags"] & MANDATORY:
+            # auto set mandatory flag for Background, Given and Finally steps
+            if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given, TestSubType.Finally]:
+                kwargs["flags"] |= MANDATORY
+
+            # should not skip mandatory steps
+            if kwargs["flags"] & MANDATORY:
                 kwargs["flags"] &= ~SKIP
                 kwargs["only"] = None
                 kwargs["skip"] = None
@@ -1009,7 +1103,7 @@ class TestDefinition(object):
                 kwargs["only_tags"] = None
                 kwargs["skip_tags"] = None
 
-            if not top():
+            if not top_test:
                 # can't skip, pause before or after top level test
                 kwargs["flags"] &= ~SKIP
                 kwargs["flags"] &= ~PAUSE_BEFORE
@@ -1036,6 +1130,12 @@ class TestDefinition(object):
                 kwargs["end"] = The(transform_pattern(str(kwargs.get("end")))) if kwargs.get("end") else None
                 for r in self.repeat or []:
                     r.pattern.set(transform_pattern(str(r.pattern)))
+
+            if not kwargs["flags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
+                if (parent and parent.terminating is not None):
+                    raise parent.terminating
+                if (top_test and top_test.terminating is not None):
+                    raise Skip("top test is terminating")
 
             self.test = test(name, tags=self.tags, description=self.description, repeat=self.repeat, **kwargs)
             if getattr(self, "parent_type", None):
@@ -1240,132 +1340,140 @@ class TestDefinition(object):
         if exception_value:
             exception_traceback = make_complete_traceback(exception_traceback, frame)
 
-        if isinstance(exception_value, TestIteration):
-            try:
-                repeat = exception_value.repeat
-
-                self.test._enter()
-                if self.repeatable_func is None:
-                    raise Error("not repeatable")
-
-                __kwargs = dict(self.kwargs)
-                __kwargs.pop("name", None)
-                __kwargs.pop("parent", None)
-                __kwargs["type"] = TestType.Iteration
-                __args = __kwargs.pop("args", {})
-
-                if repeat.until == "fail":
-                    __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
-                else:
-                    # pass or complete
-                    __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
-
-                for i in range(repeat.number):
-                    with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
-                        if isinstance(self.repeatable_func, TestOutline):
-                            iteration._run_outline_with_no_arguments = self.no_arguments
-                            iteration._run_outline = True
-                        self.repeatable_func(**__args)
-                    if repeat.until == "pass" and isinstance(iteration.result, PassResults):
-                        break
-            except:
+        try:
+            if isinstance(exception_value, TestIteration):
                 try:
-                    test__exit__ = self.test._exit(*sys.exc_info())
-                except(KeyboardInterrupt, Exception):
-                    raise
-            else:
-                try:
-                    test__exit__ = self.test._exit(None, None, None)
-                except(KeyboardInterrupt, Exception):
-                    raise
+                    repeat = exception_value.repeat
 
-        elif isinstance(exception_value, TestRerunIndividually):
-            try:
-                rerun_tests = exception_value.tests
+                    self.test._enter()
+                    if self.repeatable_func is None:
+                        raise Error("not repeatable")
 
-                self.test._enter()
-
-                if self.repeatable_func is None:
-                    raise Error("not repeatable")
-
-                for i, rerun_test in enumerate(rerun_tests):
                     __kwargs = dict(self.kwargs)
                     __kwargs.pop("name", None)
                     __kwargs.pop("parent", None)
-                    __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
                     __kwargs["type"] = TestType.Iteration
                     __args = __kwargs.pop("args", {})
 
-                    rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
-
-                    self._apply_start(rerun_name, self.parent, __kwargs)
-                    self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
-                    self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
-                    self._apply_skip(rerun_name, __kwargs)
-                    self._apply_end(rerun_name, self.parent, __kwargs)
-                    self._apply_only(rerun_name, __kwargs)
-
-                    __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
-
-                    with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
-                        if isinstance(self.repeatable_func, TestOutline):
-                            iteration._run_outline_with_no_arguments = self.no_arguments
-                            iteration._run_outline = True
-                        self.repeatable_func(**__args)
-            except:
-                try:
-                    test__exit__ = self.test._exit(*sys.exc_info())
-                except(KeyboardInterrupt, Exception):
-                    raise
-            else:
-                try:
-                    test__exit__ = self.test._exit(None, None, None)
-                except(KeyboardInterrupt, Exception):
-                    raise
-        else:
-            try:
-                test__exit__ = self.test._exit(exception_type, exception_value, exception_traceback)
-            except (KeyboardInterrupt, Exception):
-                raise
-
-        if not self.parent:
-            if not test__exit__:
-                sys.stderr.write(warning(get_exception(exception_type, exception_value, exception_traceback), eol='\n'))
-                sys.stderr.write(danger("error: " + str(exception_value).strip()))
-                sys.exit(1)
-            sys.exit(0 if self.test.result else 1)
-
-        if isinstance(exception_value, KeyboardInterrupt):
-            raise KeyboardInterrupt
-
-        # if test did not handle the exception in _exit then re-raise it
-        if exception_value and not test__exit__:
-            raise exception_value
-
-        if not self.test.result:
-            if isinstance(self.test.result, Fail):
-                result = Fail(test=self.parent.name, message=self.test.result.message)
-            else:
-                # convert Null into an Error
-                result = Error(test=self.parent.name, message=self.test.result.message)
-
-            if TE not in self.test.flags:
-                raise result
-            else:
-                with self.parent.lock:
-                    if isinstance(self.parent.result, Error):
-                        pass
-                    elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
-                    elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
-                    elif isinstance(self.parent.result, Fail):
-                        pass
-                    elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
+                    if repeat.until == "fail":
+                        __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
                     else:
-                        pass
-        return True
+                        # pass or complete
+                        __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+
+                    for i in range(repeat.number):
+                        with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
+                            if isinstance(self.repeatable_func, TestOutline):
+                                iteration._run_outline_with_no_arguments = self.no_arguments
+                                iteration._run_outline = True
+                            self.repeatable_func(**__args)
+                        if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+                            break
+                except:
+                    try:
+                        test__exit__ = self.test._exit(*sys.exc_info())
+                    except(KeyboardInterrupt, Exception):
+                        raise
+                else:
+                    try:
+                        test__exit__ = self.test._exit(None, None, None)
+                    except(KeyboardInterrupt, Exception):
+                        raise
+
+            elif isinstance(exception_value, TestRerunIndividually):
+                try:
+                    rerun_tests = exception_value.tests
+
+                    self.test._enter()
+
+                    if self.repeatable_func is None:
+                        raise Error("not repeatable")
+
+                    for i, rerun_test in enumerate(rerun_tests):
+                        __kwargs = dict(self.kwargs)
+                        __kwargs.pop("name", None)
+                        __kwargs.pop("parent", None)
+                        __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+                        __kwargs["type"] = TestType.Iteration
+                        __args = __kwargs.pop("args", {})
+
+                        rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
+
+                        self._apply_start(rerun_name, self.parent, __kwargs)
+                        self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
+                        self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
+                        self._apply_skip(rerun_name, __kwargs)
+                        self._apply_end(rerun_name, self.parent, __kwargs)
+                        self._apply_only(rerun_name, __kwargs)
+
+                        __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
+
+                        with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
+                            if isinstance(self.repeatable_func, TestOutline):
+                                iteration._run_outline_with_no_arguments = self.no_arguments
+                                iteration._run_outline = True
+                            self.repeatable_func(**__args)
+                except:
+                    try:
+                        test__exit__ = self.test._exit(*sys.exc_info())
+                    except(KeyboardInterrupt, Exception):
+                        raise
+                else:
+                    try:
+                        test__exit__ = self.test._exit(None, None, None)
+                    except(KeyboardInterrupt, Exception):
+                        raise
+            else:
+                try:
+                    test__exit__ = self.test._exit(exception_type, exception_value, exception_traceback)
+                except (KeyboardInterrupt, Exception):
+                    raise
+
+            if not self.parent:
+                if not test__exit__:
+                    sys.stderr.write(warning(get_exception(exception_type, exception_value, exception_traceback), eol='\n'))
+                    sys.stderr.write(danger("error: " + str(exception_value).strip()))
+                    sys.exit(1)
+                sys.exit(0 if self.test.result else 1)
+
+            if isinstance(exception_value, KeyboardInterrupt):
+                raise KeyboardInterrupt
+
+            # if test did not handle the exception in _exit then re-raise it
+            if exception_value and not test__exit__:
+                raise exception_value
+
+            if not self.test.result:
+                if isinstance(self.test.result, Fail):
+                    result = Fail(test=self.parent.name, message=self.test.result.message)
+                else:
+                    # convert Null into an Error
+                    result = Error(test=self.parent.name, message=self.test.result.message)
+
+                if TE not in self.test.flags:
+                    raise result
+                else:
+                    with self.parent.lock:
+                        if isinstance(self.parent.result, Error):
+                            pass
+                        elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        elif isinstance(self.parent.result, Fail):
+                            pass
+                        elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        else:
+                            pass
+            return True
+        except (Exception, KeyboardInterrupt) as exc:
+            if self.parent:
+                with self.parent.lock:
+                    self.parent.terminating = exc
+            else:
+                self.terminating = exc
+            raise
 
 class Module(TestDefinition):
     """Module definition."""
@@ -1532,7 +1640,7 @@ class TestDecorator(object):
         return self.__run__(**args)
 
     def __run__(self, **args):
-        _set_current_top_previous()
+        _check_parallel_context()
 
         test = current()
 
@@ -1728,8 +1836,8 @@ def loads(name, *types, package=None, frame=None, filter=None):
             return member.type in types
 
     tests = ordered([test for name, test in inspect.getmembers(module, is_type)])
-    
+
     if filter:
         return builtins.filter(filter, tests)
-    
+
     return tests

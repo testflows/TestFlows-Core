@@ -32,7 +32,7 @@ class TailingDecompressReader(_compression.DecompressReader):
         self._tail_sleep = float(kwargs.pop("tail_sleep", 0.15))
         # default compressed file marker '.7zXZ'
         self._COMPRESSED_FILE_MARKER = b"\xfd\x37\x7a\x58\x5a"
-        # default uncompressed file marker is start of the message  
+        # default uncompressed file marker is start of the message
         self._UNCOMPRESSED_FILE_MARKER = "{\"message_keyword\"".encode("utf-8")
 
         super(TailingDecompressReader, self).__init__(*args, **kwargs)
@@ -80,7 +80,12 @@ class TailingDecompressReader(_compression.DecompressReader):
                     # or determine that file is not compressed by finding uncompressed file marker
                     if "Input format not supported by decoder" in str(e):
                         while True:
-                            self.rawblock += self._fp.read1(65536)
+                            raw_data = self._fp.read1(65536)
+                            # abort on EOF if not tailing
+                            if not raw_data:
+                                if not self._tail:
+                                    raise
+                            self.rawblock += raw_data
                             # try to find compressed file marker
                             compressed_file_marker_idx = self.rawblock.find(self._COMPRESSED_FILE_MARKER)
                             if compressed_file_marker_idx >= 0:
@@ -91,7 +96,7 @@ class TailingDecompressReader(_compression.DecompressReader):
                             if uncompressed_file_marker_idx >= 0:
                                 self.rawblock = self.rawblock[uncompressed_file_marker_idx:]
                                 raise
-                        # decompress compressed raw block that we found           
+                        # decompress compressed raw block that we found
                         self._decompressor = self._decomp_factory(**self._decomp_args)
                         return self._decompressor.decompress(self.rawblock, size)
             if data:

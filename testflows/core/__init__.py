@@ -21,14 +21,14 @@ from testflows._core.test import TestFeature, TestScenario, TestCheck, loads, or
 from testflows._core.has import has
 from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
-from testflows._core.objects import Name, Description, Uid, Tags, Args, Setup
+from testflows._core.objects import Name, Description, Uid, Tags, Args, Setup, Parallel, Executor
 from testflows._core.objects import XFails, XFlags, Repeat, RepeatTest
 from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
 from testflows._core.objects import Secret
 from testflows._core.baseobject import Table
 from testflows._core.filters import The, TheTags
-from testflows._core.funcs import top, current, previous, load, append_path
+from testflows._core.funcs import load, append_path
 from testflows._core.funcs import main, args, private_key
 from testflows._core.funcs import metric, ticket, value, note, debug, trace
 from testflows._core.funcs import attribute, requirement, tag
@@ -42,8 +42,9 @@ from testflows._core.flags import FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_
 from testflows._core.flags import PAUSE, PAUSE_BEFORE, PAUSE_AFTER, REPORT, DOCUMENT, MANUAL, AUTO
 from testflows._core.flags import MANDATORY, CLEAR
 from testflows._core.flags import EANY, ERESULT, XRESULT
+from testflows._core.flags import PARALLEL, NO_PARALLEL
 from testflows._core import __author__, __version__, __license__
-from testflows._core import threading
+from testflows._core.parallel import Pool, join, top, current, previous
 
 import testflows._core.utils as utils
 import testflows._core.contrib.rsa as rsa

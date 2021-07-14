@@ -214,7 +214,7 @@ def generate(coverages, divider):
         s += f"\n  {total_counts}"
         report += f"\n{s}"
 
-    return report
+    return report or None
 
 def transform(stop, divider="\n"):
     """Totals report.
@@ -232,9 +232,7 @@ def transform(stop, divider="\n"):
                 formatter[0](line, *formatter[1:], coverages, results)
             line = None
 
-            if stop.is_set():
-                if line is None:
-                    line = ""
-                line += generate(coverages, divider)
+        if stop.is_set():
+            line = generate(coverages, divider)
 
         line = yield line

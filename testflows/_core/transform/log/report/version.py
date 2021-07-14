@@ -27,15 +27,15 @@ def transform(stop, divider="\n"):
     version = None
     started = None
     while True:
-        if line and line["message_keyword"] == Message.VERSION.name:
-            version = line["framework_version"]
-            started = localfromtimestamp(line["message_time"])
+        if line is not None:
+            if line["message_keyword"] == Message.VERSION.name:
+                version = line["framework_version"]
+                started = localfromtimestamp(line["message_time"])
+            line = None
+
         if stop.is_set():
             if started is not None and version is not None:
                 line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}\n",
                     "white", attrs=["dim"])
-            else:
-                line = None
-        else:
-            line = None
+
         line = yield line

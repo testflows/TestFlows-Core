@@ -61,6 +61,10 @@ class Result(TestObject, ResultException):
         self.values = get(values, list(self.values))
         return super(Result, self).__init__()
 
+    @property
+    def value(self):
+        return self.values[-1].value if self.values else None
+
     def __call__(self, result=None):
         if result is None:
             result = getattr(self.__module__, str(self.type))
@@ -609,6 +613,18 @@ class Tags(NamedList):
 
 class Uid(NamedString):
     name = "uid"
+
+class Parallel(NamedValue):
+    name = "parallel"
+
+    def __init__(self, value):
+        self.value = bool(value)
+
+class Executor(NamedValue):
+    name = "executor"
+
+    def __init__(self, executor):
+        self.value = executor
 
 class ArgumentParser(NamedValue):
     name = "argparser"

@@ -24,6 +24,7 @@ from testflows._core.transform.log.read_and_filter import transform as read_and_
 from testflows._core.transform.log.procedure import transform as procedure_transform
 from testflows._core.transform.log.parse import transform as parse_transform
 from testflows._core.transform.log.write import transform as write_transform
+from testflows._core.transform.log.stop import transform as stop_transform
 
 class Handler(HandlerBase):
     @classmethod
@@ -47,12 +48,13 @@ class Handler(HandlerBase):
             command = "grep -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
             command += ".+,\"test_name\":\"%s.*?\",'" % name.replace("'", r"'\''")
             steps = [
-                read_and_filter_transform(input, command=command, tail=tail),
-                parse_transform(stop_event),
+                read_and_filter_transform(input, command=command, stop=stop_event, tail=tail),
+                parse_transform(),
                 procedure_transform(),
                 write_transform(output),
+                stop_transform(stop_event)
             ]
-            super(Handler.Pipeline, self).__init__(steps)
+            super(Handler.Pipeline, self).__init__(steps, stop=stop_event)
 
     def handle(self, args):
         self.Pipeline(args.name, args.log, args.output).run()

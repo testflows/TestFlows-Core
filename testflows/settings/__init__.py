@@ -38,3 +38,5 @@ database = None
 show_skipped = False
 #: randomize order of loaded tests
 random_order = False
+#: global parallel pool
+global_parallel_pool = None

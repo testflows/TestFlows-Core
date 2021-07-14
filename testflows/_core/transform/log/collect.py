@@ -1,4 +1,4 @@
-# Copyright 2020 Katteli Inc.
+# Copyright 2021 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,10 +12,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from threading import *
-from threading import Thread as _PythonThread
+def transform(msgs):
+    """Collect messages.
+    """
+    msg = None
 
-class Thread(_PythonThread):
-    def __init__(self, *args, **kwargs):
-        self._parent = current_thread()
-        _PythonThread.__init__(self, *args, **kwargs)
+    while True:
+        if msg is not None:
+            msgs.append(msg)
+
+        msg = yield msg

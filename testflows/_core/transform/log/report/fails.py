@@ -105,8 +105,9 @@ def transform(stop, divider="\n", only_new=False):
             processor = processors.get(line["message_keyword"], None)
             if processor:
                 processor[0](line, results, *processor[1:])
-            if stop.is_set():
-                line = generate(results, divider, only_new)
-            else:
-                line = None
+            line = None
+
+        if stop.is_set():
+            line = generate(results, divider, only_new)
+
         line = yield line
