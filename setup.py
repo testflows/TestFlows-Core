@@ -32,7 +32,7 @@ setup(
         "License :: OSI Approved :: Apache Software License",
         "Operating System :: POSIX :: Linux",
     ],
-    python_requires=">=3.6",
+    python_requires=">=3.8",
     license="Apache-2.0",
     packages=[
         "testflows.core",

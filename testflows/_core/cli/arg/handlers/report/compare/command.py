@@ -283,6 +283,8 @@ class Handler(HandlerBase):
             for testname in tests:
                 test = result["tests"].get(testname)
                 if test and test.get("result"):
+                    if not test["result"].get("result_type"):
+                        raise ValueError(f"no result for '{test['test']['test_name']}'")
                     _name = test["result"]["result_type"].lower()
                     setattr(_counts, _name, getattr(_counts, _name) + 1)
                 _counts.units += 1
