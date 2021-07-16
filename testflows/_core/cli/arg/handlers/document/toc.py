@@ -43,6 +43,7 @@ class Handler(HandlerBase):
         with tempfile.TemporaryFile("w+", encoding="utf-8") as temporary_file:
             generate(args.input, temporary_file, args.heading, args.update)
             output = argtype.file("w", encoding="utf-8")(args.output)
+            temporary_file.flush()
             temporary_file.seek(0)
             output.write(temporary_file.read())
-
+            output.flush()
