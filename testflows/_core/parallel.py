@@ -21,15 +21,24 @@ from concurrent.futures import TimeoutError
 from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor as _PythonThreadPoolExecutor
 
-context = namedtuple("ParallelContext", "current previous top is_valid")(
-    contextvars.ContextVar('current', default=None),
-    contextvars.ContextVar('previous', default=None),
-    contextvars.ContextVar('top', default=None),
-    contextvars.ContextVar('id', default=None)
+def Context(**kwargs):
+    """Convenience function to create
+    a namedtuple to store parallel context variables.
+    """
+    return namedtuple("ParallelContext", " ".join(kwargs.keys()))(*kwargs.values())
+
+context = Context(
+    current=contextvars.ContextVar('_tfs_current', default=None),
+    previous=contextvars.ContextVar('_tfs_previous', default=None),
+    top=contextvars.ContextVar('_tfs_top', default=None),
+    is_valid=contextvars.ContextVar('_tfs_is_valid', default=None),
 )
 
 # set current parallel context as valid
 context.is_valid.set(True)
+
+ContextVar = contextvars.ContextVar
+copy_context = contextvars.copy_context
 
 class Pool(_PythonThreadPoolExecutor):
     """Parallel thread pool.
@@ -46,6 +55,15 @@ class Pool(_PythonThreadPoolExecutor):
 
     def submit(self, fn, *args, **kwargs):
         ctx = contextvars.copy_context()
+
+        # clear any user context variables to None
+        for var in ctx.keys():
+            if not var.name.startswith("_tfs"):
+                # in Python 3.8 ContextVar can't be cleared
+                # and therefore the best we can do is to set
+                # user context variable to None
+                var.set(None)
+
         if not self.open:
             raise RuntimeError("parallel pool is not opened. Use `with` statement to open the pool.")
         if self._shutdown:

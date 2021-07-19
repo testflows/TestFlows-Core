@@ -44,7 +44,11 @@ from testflows._core.flags import MANDATORY, CLEAR
 from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core.flags import PARALLEL, NO_PARALLEL
 from testflows._core import __author__, __version__, __license__
-from testflows._core.parallel import Pool, join, top, current, previous
+from testflows._core.parallel import join, top, current, previous
+
+import testflows.core.parallel as parallel
+import testflows.core.objects as objects
+import testflows.core.name as name
 
 import testflows._core.utils as utils
 import testflows._core.contrib.rsa as rsa
