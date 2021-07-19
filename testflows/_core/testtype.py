@@ -30,7 +30,10 @@ class TestSubType(IntEnum):
     Example = 45
     Background = 40
     Recipe = 35
+    Critical = 34
     Check = 33
+    Major = 32
+    Minor = 31
     Given = 30
     When = 20
     Then = 10

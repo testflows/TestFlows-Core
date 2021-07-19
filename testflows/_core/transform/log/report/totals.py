@@ -136,6 +136,12 @@ def format_test(msg, counts):
             counts["scenario"].units += 1
         elif test_subtype == TestSubType.Check:
             counts["check"].units += 1
+        elif test_subtype == TestSubType.Critical:
+            counts["critical"].units += 1
+        elif test_subtype == TestSubType.Major:
+            counts["major"].units += 1
+        elif test_subtype == TestSubType.Minor:
+            counts["minor"].units += 1
         elif test_subtype == TestSubType.Recipe:
             counts["recipe"].units += 1
         else:
@@ -168,6 +174,12 @@ def format_result(msg, counts):
             setattr(counts["scenario"], _name, getattr(counts["scenario"], _name) + 1)
         elif test_subtype == TestSubType.Check:
             setattr(counts["check"], _name, getattr(counts["check"], _name) + 1)
+        elif test_subtype == TestSubType.Critical:
+            setattr(counts["critical"], _name, getattr(counts["critical"], _name) + 1)
+        elif test_subtype == TestSubType.Major:
+            setattr(counts["major"], _name, getattr(counts["major"], _name) + 1)
+        elif test_subtype == TestSubType.Minor:
+            setattr(counts["minor"], _name, getattr(counts["minor"], _name) + 1)
         elif test_subtype == TestSubType.Recipe:
             setattr(counts["recipe"], _name, getattr(counts["recipe"], _name) + 1)
         else:
@@ -190,6 +202,9 @@ def all_counts():
         "scenario": Counts("scenarios", *([0] * 10)),
         "recipe": Counts("recipes", *([0] * 10)),
         "check": Counts("checks", *([0] * 10)),
+        "critical": Counts("critical", *([0] * 10)),
+        "major": Counts("major", *([0] * 10)),
+        "minor": Counts("minor", *([0] * 10)),
         "example": Counts("examples", *([0] * 10))
     }
 
@@ -224,6 +239,12 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["scenario"])
             if counts["check"]:
                 line += line_icon + str(counts["check"])
+            if counts["critical"]:
+                line += line_icon + str(counts["critical"])
+            if counts["major"]:
+                line += line_icon + str(counts["major"])
+            if counts["minor"]:
+                line += line_icon + str(counts["minor"])
             if counts["recipe"]:
                 line += line_icon + str(counts["recipe"])
             if counts["example"]:

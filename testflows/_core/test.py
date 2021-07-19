@@ -1552,6 +1552,21 @@ class Check(Test):
         kwargs["subtype"] = TestSubType.Check
         return super(Check, cls).__new__(cls, name, **kwargs)
 
+class Critical(Test):
+    def __new__(cls, name=None, **kwargs):
+        kwargs["subtype"] = TestSubType.Critical
+        return super(Critical, cls).__new__(cls, name, **kwargs)
+
+class Major(Test):
+    def __new__(cls, name=None, **kwargs):
+        kwargs["subtype"] = TestSubType.Major
+        return super(Major, cls).__new__(cls, name, **kwargs)
+
+class Minor(Test):
+    def __new__(cls, name=None, **kwargs):
+        kwargs["subtype"] = TestSubType.Minor
+        return super(Minor, cls).__new__(cls, name, **kwargs)
+
 class BackgroundTest(TestBase):
     def __init__(self, *args, **kwargs):
         self.contexts = []
@@ -1782,6 +1797,15 @@ class TestScenario(TestCase):
 
 class TestCheck(TestCase):
     type = Check
+
+class TestCritical(TestCase):
+    type = Critical
+
+class TestMajor(TestCase):
+    type = Major
+
+class TestMinor(TestCase):
+    type = Minor
 
 class TestSuite(TestDecorator):
     type = Suite

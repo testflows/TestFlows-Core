@@ -16,7 +16,7 @@ from testflows._core.test import Module, Suite, Test, Step, NullStep
 from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, TestBackground, TestOutline
 from testflows._core.test import Context
 from testflows._core.test import Feature, Background, Scenario, Example, Outline
-from testflows._core.test import Check, Given, When, Then, And, But, By, Finally
+from testflows._core.test import Critical, Major, Minor, Check, Given, When, Then, And, But, By, Finally
 from testflows._core.test import TestFeature, TestScenario, TestCheck, loads, ordered
 from testflows._core.has import has
 from testflows._core.flags import Flags

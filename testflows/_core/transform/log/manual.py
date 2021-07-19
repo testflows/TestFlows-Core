@@ -239,6 +239,12 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
             keyword += "SCENARIO"
         elif test_subtype == TestSubType.Check:
             keyword += "CHECK"
+        elif test_subtype == TestSubType.Critical:
+            keyword += "CRITICAL"
+        elif test_subtype == TestSubType.Major:
+            keyword += "MAJOR"
+        elif test_subtype == TestSubType.Minor:
+            keyword += "MINOR"
         elif test_subtype == TestSubType.Recipe:
             keyword += "RECIPE"
         else:
