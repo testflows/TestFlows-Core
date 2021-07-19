@@ -117,24 +117,21 @@ class MarkdownFormatter:
     def format_summary(self, data):
         counts = data["counts"]
 
-        units = (counts["module"].units + counts["suite"].units + counts["test"].units
-            + counts["feature"].units + counts["scenario"].units)
-        passed = (counts["module"].ok + counts["suite"].ok + counts["test"].ok
-            + counts["feature"].ok + counts["scenario"].ok)
+        def total(attribute, skip_keys=["step", "iteration"]):
+            count = 0
+            for key in counts.keys():
+                if key in skip_keys:
+                    continue
+                count += getattr(counts[key], attribute)
+            return count
 
-        def xout_counts(testtype):
-            return counts[testtype].xok + counts[testtype].xfail + counts[testtype].xerror + counts[testtype].xnull
-
-        xout = (xout_counts("module") + xout_counts("suite") + xout_counts("test")
-            + xout_counts("feature") + xout_counts("scenario"))
-        failed = (counts["module"].fail + counts["suite"].fail + counts["test"].fail
-            + counts["feature"].fail + counts["scenario"].fail)
-        nulled = (counts["module"].null + counts["suite"].null + counts["test"].null
-            + counts["feature"].null + counts["scenario"].null)
-        errored = (counts["module"].error + counts["suite"].error + counts["test"].error
-            + counts["feature"].error + counts["scenario"].error)
-        skipped = (counts["module"].skip + counts["suite"].skip + counts["test"].skip
-            + counts["feature"].skip + counts["scenario"].skip)
+        units = total("units")
+        passed = total("ok")
+        xout = total("xok") + total("xfail") + total("xerror") + total("xnull")
+        failed = total("fail")
+        nulled = total("null")
+        errored = total("error")
+        skipped = total("skip")
 
         def template(value, title, color):
             return (
@@ -185,6 +182,18 @@ class MarkdownFormatter:
             statistics["types"]["feature"] = counts["feature"].__data__()
         if counts["scenario"]:
             statistics["types"]["scenario"] = counts["scenario"].__data__()
+        if counts["recipe"]:
+            statistics["types"]["recipe"] = counts["recipe"].__data__()
+        if counts["check"]:
+            statistics["types"]["check"] = counts["check"].__data__()
+        if counts["critical"]:
+            statistics["types"]["critical"] = counts["critical"].__data__()
+        if counts["major"]:
+            statistics["types"]["major"] = counts["major"].__data__()
+        if counts["minor"]:
+            statistics["types"]["minor"] = counts["minor"].__data__()
+        if counts["example"]:
+            statistics["types"]["example"] = counts["example"].__data__()
         if counts["iteration"]:
             statistics["types"]["iteration"] = counts["iteration"].__data__()
         if counts["step"]:

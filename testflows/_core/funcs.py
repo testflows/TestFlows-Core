@@ -175,10 +175,10 @@ def trace(message, test=None):
         test = current()
     test.io.output.trace(message)
 
-def message(message, test=None):
+def message(message, test=None, stream=None):
     if test is None:
         test = current()
-    test.io.output.message(Message.NONE, {"message": str(message)})
+    test.io.output.message(Message.NONE, {"message": str(message)}, stream=stream)
 
 def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
     if test is None:
