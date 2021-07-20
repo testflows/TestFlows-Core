@@ -550,8 +550,10 @@ def cli_argparser(kwargs, argparser=None):
 
     parser = main_parser.add_argument_group("common arguments")
 
-    parser.add_argument("--config", "-c", dest ="_config", metavar="yml",
-                        help="test run YAML configuration file", type=file_type("r"))
+    parser.add_argument("--config", "-c", dest ="_config", metavar="yml ...", action="append", default=[],
+                        help=("test run YAML configuration file. Can be specified more than once "
+                              "to apply multiple configuration files that are "
+                              "applied left to right"), type=file_type("r"))
     parser.add_argument("--name", dest="_name", metavar="name",
                         help="test run name", type=str, required=False)
     parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
@@ -641,18 +643,30 @@ def parse_cli_args(kwargs, parser):
         args, unknown = parser.parse_known_args()
         args = vars(args)
         exc = None
+        default_config = os.path.join(os.path.expanduser("~"), ".testflows.yml")
+        configs = []
+
+        if os.path.exists(default_config):
+            configs.insert(0, open(default_config, "r"))
 
         if args.get("_config"):
-            try:
-                config = yaml.safe_load(args.pop("_config")) or {}
-                _args = { f"_{k.replace('-','_')}" : v for k,v in config.pop("test run", {}).items()}
-                _args.update(config)
+            configs += args.pop("_config")
+
+        try:
+            configs.reverse()
+            for config in configs:
+                obj = yaml.safe_load(config) or {}
+                _args = { f"_{k.replace('-','_')}" : v for k,v in obj.pop("test run", {}).items()}
+                _args.update(obj)
                 _args.update({k:v for k,v in args.items() if v is not None})
                 args = _args
-            except Exception as e:
-                exc = e
+        except Exception as e:
+            exc = e
+        finally:
+            for config in configs:
+                config.close()
 
-        settings.debug = args.pop("_debug", False)
+        settings.debug = args.pop("_debug", None) or False
         debug_processed = True
 
         if exc is not None:
@@ -661,7 +675,7 @@ def parse_cli_args(kwargs, parser):
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
 
-        settings.no_colors = args.pop("_no_colors", False)
+        settings.no_colors = args.pop("_no_colors", None) or False
 
         if args.get("_name"):
             kwargs["name"] = args.pop("_name")
@@ -681,13 +695,13 @@ def parse_cli_args(kwargs, parser):
         if os.path.exists(settings.write_logfile):
             os.remove(settings.write_logfile)
 
-        settings.output_format = args.pop("_output", "nice")
+        settings.output_format = args.pop("_output", None) or "nice"
 
         if args.get("_database"):
             settings.database = args.pop("_database")
 
-        settings.show_skipped = args.pop("_show_skipped", False)
-        settings.random_order = args.pop("_random", False)
+        settings.show_skipped = args.pop("_show_skipped", None) or False
+        settings.random_order = args.pop("_random", None) or False
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})
@@ -757,7 +771,7 @@ def parse_cli_args(kwargs, parser):
         if args.get("_private_key"):
             kwargs["private_key"] = args.pop("_private_key")
 
-        if args.get("_parallel", None) in ("no", 0, False):
+        if args.get("_parallel") in ("no", 0, False):
             kwargs["flags"] = kwargs.get("flags", Flags())
             kwargs["flags"] |= NO_PARALLEL
 
@@ -771,7 +785,7 @@ def parse_cli_args(kwargs, parser):
             kwargs["repeat"] = repeat
 
         if args.get("_rerun"):
-            rerun_individually = args.pop("_individually", False)
+            rerun_individually = args.pop("_individually", None) or False
             rerun = args.pop("_rerun")
 
             if not args.get("_reference"):
