@@ -640,23 +640,31 @@ def parse_cli_args(kwargs, parser):
     try:
         args, unknown = parser.parse_known_args()
         args = vars(args)
+        exc = None
 
         if args.get("_config"):
-            config = yaml.safe_load(args.pop("_config")) or {}
-            _args = { f"_{k.replace('-','_')}" : v for k,v in config.pop("test run", {}).items()}
-            _args.update(config)
-            _args.update({k:v for k,v in args.items() if v is not None})
-            args = _args
-
-        if args.get("_name"):
-            kwargs["name"] = args.pop("_name")
+            try:
+                config = yaml.safe_load(args.pop("_config")) or {}
+                _args = { f"_{k.replace('-','_')}" : v for k,v in config.pop("test run", {}).items()}
+                _args.update(config)
+                _args.update({k:v for k,v in args.items() if v is not None})
+                args = _args
+            except Exception as e:
+                exc = e
 
         settings.debug = args.pop("_debug", False)
         debug_processed = True
-        settings.no_colors = args.pop("_no_colors", False)
+
+        if exc is not None:
+            raise exc
 
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
+
+        settings.no_colors = args.pop("_no_colors", False)
+
+        if args.get("_name"):
+            kwargs["name"] = args.pop("_name")
 
         if args.get("_id"):
             settings.test_id = args.get("_id")
