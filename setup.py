@@ -55,6 +55,8 @@ setup(
         "testflows._core.contrib.pyasn1.codec.cer",
         "testflows._core.contrib.pyasn1.codec.der",
         "testflows._core.contrib.pyasn1.codec.native",
+        "testflows._core.contrib.yaml",
+        "testflows._core.contrib.schema",
         "testflows._core.utils",
         "testflows._core.transform",
         "testflows._core.transform.log",

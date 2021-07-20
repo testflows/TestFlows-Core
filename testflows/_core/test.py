@@ -508,7 +508,7 @@ class TestBase(object):
         return self.io.message_io(name=name)
 
 epilog = """
-option values:
+argument values:
 
 pattern
   used to match test names using a unix-like file path pattern that supports wildcards
