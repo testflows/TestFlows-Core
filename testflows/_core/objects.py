@@ -529,6 +529,31 @@ class XFails(NamedValue):
         self.value[pattern] = results
         return self
 
+class XSkips(NamedValue):
+    """xskips container.
+
+    xskips = {
+        "pattern": "reason",
+        ...
+        }
+    """
+    name = "xskips"
+
+    def __init__(self, value):
+        super(XSkips, self).__init__(dict(value))
+
+    def items(self):
+        return self.value.items()
+
+    def add(self, pattern, reason):
+        """Add an entry to the xskips.
+
+        :param pattern: test name pattern to match
+        :param reason: reason
+        """
+        self.value[pattern] = reason
+        return self
+
 class XFlags(NamedValue):
     """xflags container.
 

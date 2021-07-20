@@ -191,7 +191,7 @@ class TestBase(object):
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None, specifications=None,
                  examples=None, description=None, parent=None,
-                 xfails=None, xflags=None, only=None, skip=None,
+                 xfails=None, xskips=None, xflags=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
                  repeat=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
@@ -237,6 +237,7 @@ class TestBase(object):
         if self.uid is not None:
             self.uid = str(self.uid)
         self.xfails = get(xfails, None)
+        self.xskips = get(xskips, None)
         self.xflags = get(xflags, None)
         self.only = get(only, None)
         self.skip = get(skip, None)
@@ -329,6 +330,10 @@ class TestBase(object):
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
+
+        for pattern, reason in (self.xskips or {}).items():
+            if match(self.name, pattern):
+                raise Skip(reason=reason, test=self.name)
 
         if self.setup is not None:
             r = self.setup()
@@ -1011,10 +1016,13 @@ class TestDefinition(object):
                 # propagate manual flag if automatic test flag is not set
                 if not kwargs["flags"] & AUTO:
                     kwargs["flags"] |= parent.flags & MANUAL
-                # propagate xfails, xflags that prefix match the name of the test
+                # propagate xfails, xskips, xflags that prefix match the name of the test
                 kwargs["xfails"] = {
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
                 } if parent.xfails else None or kwargs.get("xfails")
+                kwargs["xskips"] = {
+                    k: v for k, v in parent.xskips.items() if match(name, k, prefix=True)
+                } if parent.xskips else None or kwargs.get("xskips")
                 kwargs["xflags"] = {
                     k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
                 } if parent.xflags else None or kwargs.get("xflags")
@@ -1044,6 +1052,9 @@ class TestDefinition(object):
             # anchor all patterns
             kwargs["xfails"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xfails") or {}).items()
+            } or None
+            kwargs["xskips"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xskips") or {}).items()
             } or None
             kwargs["xflags"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xflags") or {}).items()
@@ -1122,6 +1133,8 @@ class TestDefinition(object):
                 # need to fix all anchored patterns
                 kwargs["xfails"] = {transform_pattern(k): v for k, v in
                     (kwargs.pop("xfails", {}) or {}).items()} or None
+                kwargs["xskips"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("xskips", {}) or {}).items()} or None
                 kwargs["xflags"] = {transform_pattern(k): v for k, v in
                     (kwargs.pop("xflags", {}) or {}).items()} or None
                 kwargs["only"] = [The(transform_pattern(str(f))) for f in kwargs.get("only") or []] or None
