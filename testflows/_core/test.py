@@ -29,6 +29,7 @@ from contextlib import ExitStack, contextmanager
 from collections import namedtuple
 
 import testflows.settings as settings
+import testflows._core.contrib.yaml as yaml
 
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
@@ -51,6 +52,7 @@ from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
+from .cli.arg.type import file as file_type
 from .cli.arg.type import onoff as onoff_type, count as count_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
@@ -548,6 +550,8 @@ def cli_argparser(kwargs, argparser=None):
 
     parser = main_parser.add_argument_group("common arguments")
 
+    parser.add_argument("--config", "-c", dest ="_config", metavar="yml",
+                        help="test run YAML configuration file", type=file_type("r"))
     parser.add_argument("--name", dest="_name", metavar="name",
                         help="test run name", type=str, required=False)
     parser.add_argument("--tag", dest="_tags", metavar="value", nargs="+",
@@ -572,21 +576,21 @@ def cli_argparser(kwargs, argparser=None):
                         help="pause before executing selected tests", type=str, required=False)
     parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
                         help="pause after executing selected tests", type=str, required=False)
-    parser.add_argument("--random", dest="_random_order", action="store_true",
-                        help="randomize order of auto loaded tests", required=False)
+    parser.add_argument("--random", dest="_random", action="store_true",
+                        help="randomize order of auto loaded tests", required=False, default=None)
     parser.add_argument("--debug", dest="_debug", action="store_true",
-                        help="enable debugging mode", default=False)
+                        help="enable debugging mode", default=None)
     parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
-                        help="disable terminal color highlighting", default=False)
+                        help="disable terminal color highlighting", default=None)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
     parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                        choices=["new-fails", "fails", "classic", "slick", "nice", "brisk", "quiet", "short", "manual", "dots", "raw"], default="nice",
+                        choices=["new-fails", "fails", "classic", "slick", "nice", "brisk", "quiet", "short", "manual", "dots", "raw"],
                         help="""stdout output format, choices are: ['new-fails','fails','classic','slick','nice','brisk','short','manual','dots','quiet','raw'],
                             default: 'nice'""")
     parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
                         help="path to the log file where test output will be stored, default: uses temporary log file")
     parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
-                        help="show skipped tests, default: False", default=False)
+                        help="show skipped tests, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
                         help=("number of times to repeat a test until it either fails or passes.\n"
                               "Where `pattern` is a test name pattern, "
@@ -602,10 +606,11 @@ def cli_argparser(kwargs, argparser=None):
                         choices=choices, nargs="+",
                         help=("rerun tests in the --reference log file.\n"
                               f"Where `result` is either {choices}"))
-    parser.add_argument("--individually", dest="_individually", action="store_true", default=False,
+    parser.add_argument("--individually", dest="_individually", action="store_true", default=None,
                         help="if --rerun is specified then rerun tests in the --reference log file individually.")
 
-    parser.add_argument("--parallel", dest="_parallel", type=onoff_type, default=True, choices=["yes", "no", "on", "off", 0, 1],
+    parser.add_argument("--parallel", dest="_parallel", type=onoff_type,
+        choices=["yes", "no", "on", "off", 0, 1],
         help="enable or disable parallelism for tests that support it, default: on")
     parser.add_argument("--parallel-pool", dest="_parallel_pool", metavar="size", type=count_type,
         help="for parallel tests force to use global parallel pool of the specified size")
@@ -614,9 +619,9 @@ def cli_argparser(kwargs, argparser=None):
         help="RSA private key PEM file that can be used to encrypt secrets.")
 
     exit_group = parser.add_mutually_exclusive_group()
-    exit_group.add_argument('--first-fail', dest="_first_fail", action='store_true',
+    exit_group.add_argument('--first-fail', dest="_first_fail", action='store_true', default=None,
         help="force all tests to be first fail and abort the run on the first failing test")
-    exit_group.add_argument('--test-to-end', dest="_test_to_end", action='store_true',
+    exit_group.add_argument('--test-to-end', dest="_test_to_end", action='store_true', default=None,
         help="force all tests to be test to end and continue the run even if one of the tests fails")
 
     if database_module:
@@ -636,18 +641,19 @@ def parse_cli_args(kwargs, parser):
         args, unknown = parser.parse_known_args()
         args = vars(args)
 
+        if args.get("_config"):
+            config = yaml.safe_load(args.pop("_config")) or {}
+            _args = { f"_{k.replace('-','_')}" : v for k,v in config.pop("test run", {}).items()}
+            _args.update(config)
+            _args.update({k:v for k,v in args.items() if v is not None})
+            args = _args
+
         if args.get("_name"):
             kwargs["name"] = args.pop("_name")
 
-        if args.get("_debug"):
-            settings.debug = True
-            args.pop("_debug")
-
+        settings.debug = args.pop("_debug", False)
         debug_processed = True
-
-        if args.get("_no_colors"):
-            settings.no_colors = True
-            args.pop("_no_colors")
+        settings.no_colors = args.pop("_no_colors", False)
 
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
@@ -667,18 +673,13 @@ def parse_cli_args(kwargs, parser):
         if os.path.exists(settings.write_logfile):
             os.remove(settings.write_logfile)
 
-        settings.output_format = args.pop("_output")
+        settings.output_format = args.pop("_output", "nice")
 
         if args.get("_database"):
             settings.database = args.pop("_database")
 
-        if args.get("_show_skipped"):
-            settings.show_skipped = True
-            args.pop("_show_skipped")
-
-        if args.get("_random_order"):
-            settings.random_order = True
-            args.pop("_random_order")
+        settings.show_skipped = args.pop("_show_skipped", False)
+        settings.random_order = args.pop("_random", False)
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})
@@ -748,7 +749,7 @@ def parse_cli_args(kwargs, parser):
         if args.get("_private_key"):
             kwargs["private_key"] = args.pop("_private_key")
 
-        if args.get("_parallel") is False:
+        if args.get("_parallel", None) in ("no", 0, False):
             kwargs["flags"] = kwargs.get("flags", Flags())
             kwargs["flags"] |= NO_PARALLEL
 
