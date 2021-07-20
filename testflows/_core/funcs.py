@@ -204,34 +204,34 @@ def result(type, *args, test=None):
         return xnull(*args, test=test)
     raise TypeError(f"invalid result type {type}")
 
-def ok(message=None, test=None):
+def ok(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = OK(test=test.name, message=message)
+    test.result = OK(test=test.name, message=message, reason=reason)
     raise test.result
 
-def fail(message=None, test=None):
+def fail(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Fail(test=test.name, message=message)
+    test.result = Fail(test=test.name, message=message, reason=reason)
     raise test.result
 
-def skip(message=None, test=None):
+def skip(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Skip(test=test.name, message=message)
+    test.result = Skip(test=test.name, message=message, reason=reason)
     raise test.result
 
-def err(message=None, test=None):
+def err(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Error(test=test.name, message=message)
+    test.result = Error(test=test.name, message=message, reason=reason)
     raise test.result
 
-def null(message=None, test=None):
+def null(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Null(test=test.name, message=message)
+    test.result = Null(test=test.name, message=message, reason=reason)
     raise test.result
 
 def xok(message=None, reason=None, test=None):

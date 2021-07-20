@@ -83,7 +83,11 @@ def generate(results, divider, only_new=False):
         _color = color_result(result)
         if result.startswith("X"):
             continue
-        fails += _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}\n"
+        fails += _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}"
+        if msg["result_reason"]:
+            fails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
+        fails += "\n"
+
     if fails:
         fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
 
