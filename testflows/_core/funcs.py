@@ -210,9 +210,16 @@ def ok(message=None, reason=None, test=None):
     test.result = OK(test=test.name, message=message, reason=reason)
     raise test.result
 
-def fail(message=None, reason=None, test=None):
+def fail(message=None, reason=None, test=None, type=None):
     if test is None:
         test = current()
+
+    if type is not None:
+        if not message:
+            raise ValueError("message must be specified")
+        with type(message):
+           fail(reason=reason)
+
     test.result = Fail(test=test.name, message=message, reason=reason)
     raise test.result
 
