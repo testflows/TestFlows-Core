@@ -62,6 +62,8 @@ PARALLEL = 1 << 29
 NO_PARALLEL = 1 << 30
 # clear flags mask
 CLEAR = 1 << 31
+# async test
+ASYNC = 1 << 32
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -81,14 +83,16 @@ class Flags(object):
             XOK, XFAIL, XERROR, XNULL,
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
-            REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR
+            REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
+            ASYNC
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
             "XOK", "XFAIL", "XERROR", "XNULL",
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
-            "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR"
+            "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
+            "ASYNC"
         ]
 
     def __init__(self, flags=0):

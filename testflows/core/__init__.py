@@ -45,6 +45,8 @@ from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core.flags import PARALLEL, NO_PARALLEL
 from testflows._core import __author__, __version__, __license__
 from testflows._core.parallel import join, top, current, previous
+from testflows._core.parallel.executor.thread import ThreadPoolExecutor as Pool, ThreadPoolExecutor as ThreadPool
+from testflows._core.parallel.executor.asyncio import AsyncPoolExecutor as AsyncPool
 
 import testflows.core.parallel as parallel
 import testflows.core.objects as objects

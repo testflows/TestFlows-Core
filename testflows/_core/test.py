@@ -16,16 +16,14 @@ import os
 import sys
 import time
 import random
+import asyncio
 import inspect
 import builtins
-import operator
 import functools
-import tempfile
 import threading
-import textwrap
 import importlib
 
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack
 from collections import namedtuple
 
 import testflows.settings as settings
@@ -34,7 +32,7 @@ import testflows._core.contrib.yaml as yaml
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
-from .flags import PARALLEL, NO_PARALLEL
+from .flags import PARALLEL, NO_PARALLEL, ASYNC
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
@@ -59,8 +57,11 @@ from .exceptions import exception as get_exception
 from .filters import The, TheTags
 from .utils.sort import human as human_sort
 from .transform.log.pipeline import ResultsLogPipeline
-from .parallel import current, top, previous, _check_parallel_context
-from .parallel import Pool as ParallelPool, join as parallel_join
+from .parallel import current, top, previous, _check_parallel_context, join as parallel_join
+from .parallel import convert_result_to_concurrent_future
+from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
+from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
+from .parallel.asyncio import is_running_in_event_loop
 
 try:
     import testflows.database as database_module
@@ -367,7 +368,9 @@ class TestBase(object):
             parallel_exception = None
             # join any left over parallel tests and save
             try:
-                parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
+                # maybe we should raise an error if self.futures is not empty to force users
+                # to explicitly join their explicit and implicit parallel tests
+                parallel_join(*self.futures, cancel=(exc_value is not None), test=self, _awaited=False)
             except (Exception, KeyboardInterrupt) as exc:
                 parallel_exception = exc
 
@@ -375,9 +378,12 @@ class TestBase(object):
             if self.executor is not None:
                 self.executor.__exit__(None, None, None)
 
-            # close global parallel pool if present and opened
-            if top() is self and settings.global_parallel_pool is not None:
-                settings.global_parallel_pool.__exit__(None, None, None)
+            # close global pools if present and opened
+            if top() is self:
+                if settings.global_thread_pool is not None:
+                    settings.global_thread_pool.__exit__(None, None, None)
+                if settings.global_async_pool is not None:
+                    settings.global_async_pool.__exit__(None, None, None)
 
             # set parallel exception if exc_value is None
             if exc_value is None and parallel_exception is not None:
@@ -776,7 +782,9 @@ def parse_cli_args(kwargs, parser):
             kwargs["flags"] |= NO_PARALLEL
 
         if args.get("_parallel_pool"):
-            settings.global_parallel_pool = ParallelPool(args.pop("_parallel_pool"))
+            pool_size = args.pop("_parallel_pool")
+            settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=pool_size)
+            settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=pool_size)
 
         if args.get("_repeat"):
             repeat = []
@@ -965,10 +973,37 @@ class TestDefinition(object):
         self.no_arguments = get(self.no_arguments, not args)
 
         def callable():
+            if is_running_in_event_loop():
+                raise RuntimeError("should not be running inside the async event loop")
+
             if test and isinstance(test, TestDecorator):
                 self.repeatable_func = test
                 with self as _test:
                     r = test(**self.kwargs["args"])
+                    if asyncio.iscoroutine(r):
+                        def _wrapper(r):
+                            return r
+                        with AsyncPoolExecutor() as executor:
+                            r = executor.submit(_wrapper, args=(r,)).result()
+                    if r is not None:
+                        value("return", value=r)
+                return _test
+            else:
+                with self as _test:
+                    pass
+                return _test
+
+        async def async_callable():
+            if test and isinstance(test, TestDecorator):
+                self.repeatable_func = test
+                with self as _test:
+                    if not asyncio.iscoroutinefunction(test.func):
+                        with ThreadPoolExecutor() as executor:
+                            def _wrapper(test):
+                                return test(**self.kwargs["args"])
+                            r = await asyncio.get_event_loop().run_in_executor(executor, _wrapper, (test,))
+                    else:
+                        r = await test(**self.kwargs["args"])
                     if r is not None:
                         value("return", value=r)
                 return _test
@@ -978,25 +1013,61 @@ class TestDefinition(object):
                 return _test
 
         current_test = current()
+        is_async = is_running_in_event_loop()
+        is_parallel = self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel
 
         if current_test:
             if current_test.cflags & NO_PARALLEL:
                 pass
-            elif self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel:
+
+            elif is_parallel:
                 self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | PARALLEL
                 executor = self.executor
-                if settings.global_parallel_pool is not None:
-                    executor = settings.global_parallel_pool
+                if is_async:
+                    if settings.global_async_pool is not None:
+                        executor = settings.global_async_pool
+                else:
+                    if settings.global_thread_pool is not None:
+                        executor = settings.global_thread_pool
+
                 if executor is None:
-                    executor = current_test.executor or ParallelPool()
+                    if is_async:
+                        executor = current_test.executor or AsyncPoolExecutor()
+                    else:
+                        executor = current_test.executor or ThreadPoolExecutor()
                     if current_test.executor is None:
                         current_test.executor = executor
+
                 if not executor.open:
                     executor.__enter__()
-                future = executor.submit(callable)
+
+                if isinstance(executor, AsyncPoolExecutor):
+                    if executor is settings.global_async_pool:
+                        future = executor.submit(async_callable, block=False)
+                    else:
+                        future = executor.submit(async_callable)
+                else:
+                    if executor is settings.global_thread_pool:
+                        future = executor.submit(callable, block=False)
+                    else:
+                        future = executor.submit(callable)
+
                 current_test.futures.append(future)
                 return future
 
+        if is_async:
+            if is_parallel:
+                future = asyncio.ensure_future(async_callable())
+                if current_test:
+                    current_test.futures.append(future)
+                return future
+            else:
+                return async_callable()
+        if is_parallel:
+            future = convert_result_to_concurrent_future(callable)
+            if current_test:
+                current_test.futures.append(future)
+            return future
         return callable()
 
     def __enter__(self):
@@ -1680,6 +1751,9 @@ class TestDecorator(object):
 
         self.func.kwargs = kwargs
 
+        if asyncio.iscoroutinefunction(self.func):
+            self.func.kwargs["flags"] = Flags(self.func.kwargs.pop("flags", None)) | ASYNC
+
         _type = self.type
         functools.update_wrapper(self, self.func)
         self.type = _type
@@ -1688,7 +1762,36 @@ class TestDecorator(object):
         if pargs:
             raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
 
-        return self.__run__(**args)
+        if is_running_in_event_loop():
+            if not asyncio.iscoroutinefunction(self.func):
+                with ThreadPoolExecutor() as executor:
+                    def _wrapper():
+                        return self.__run__(**args)
+                    r = asyncio.get_event_loop().run_in_executor(executor, _wrapper)
+                    current().futures.append(r)
+                    return r
+
+        r = self.__run__(**args)
+        if asyncio.iscoroutine(r):
+            if not is_running_in_event_loop():
+                def _wrapper(r):
+                    return r
+                current_test = current()
+                executor = current_test.executor if current_test else None
+                if not isinstance(executor, AsyncPoolExecutor):
+                    with AsyncPoolExecutor() as executor:
+                        r = executor.submit(_wrapper, args=(r,)).result()
+                else:
+                    executor = settings.global_async_pool or executor
+
+                    if not executor.open:
+                        executor.__enter__()
+
+                    if executor is settings.global_async_pool:
+                        r = executor.submit(_wrapper, args=(r,), block=False).result()
+                    else:
+                        r = executor.submit(_wrapper, args=(r,)).result()
+        return r
 
     def __run__(self, **args):
         _check_parallel_context()
