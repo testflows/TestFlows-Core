@@ -79,11 +79,24 @@ async def _worker(executor_weakref, work_queue):
             del executor
 
 
-def _async_loop_thread(loop):
+async def _loop_send_stop_event(stop_event):
+    """Set stop event to stop event loop.
+    """
+    stop_event.set()
+
+
+async def _loop_main(stop_event):
+    """Event loop main function
+    that blocks until stop event is set.
+    """
+    await stop_event.wait()
+
+
+def _async_loop_thread(loop, stop_event):
     """Async loop thread.
     """
     asyncio.set_event_loop(loop)
-    loop.run_forever()
+    loop.run_until_complete(_loop_main(stop_event))
 
 
 class AsyncPoolExecutor(_base._base.Executor):
@@ -98,6 +111,7 @@ class AsyncPoolExecutor(_base._base.Executor):
         self._open = False
         self._max_workers = max_workers
         self._loop = loop or asyncio.new_event_loop()
+        self._loop_stop_event = asyncio.Event(loop=self._loop)
         self._work_queue = asyncio.Queue(loop=self._loop)
         self._tasks = set()
         self._shutdown = False
@@ -113,7 +127,8 @@ class AsyncPoolExecutor(_base._base.Executor):
     def __enter__(self):
         if not self._open:
             self._async_loop_thread = threading.Thread(target=_async_loop_thread,
-                kwargs={"loop": self._loop}, daemon=True)
+                kwargs={"loop": self._loop, "stop_event": self._loop_stop_event},
+                daemon=True)
             self._async_loop_thread.start()
             self._open = True
         return self
@@ -196,12 +211,11 @@ class AsyncPoolExecutor(_base._base.Executor):
                 if exc is not None:
                     raise exc
             finally:
-                # we can't close the pool as it might be needed
-                # for cleanups so live it running
-                # The following resources are left behind:
-                #   self._loop - event loop
-                #   self._async_loop_thread - daemon thread that is left running
-                pass
+                asyncio.run_coroutine_threadsafe(
+                        _loop_send_stop_event(self._loop_stop_event), loop=self._loop
+                    ).result()
+                if self._async_loop_thread is not None:
+                    self._async_loop_thread.join()
 
 
 class GlobalAsyncPoolExecutor(AsyncPoolExecutor):

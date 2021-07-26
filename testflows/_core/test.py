@@ -130,7 +130,10 @@ class Context(object):
                     if loop is None:
                         asyncio.run(_task(r))
                     else:
-                        asyncio.run_coroutine_threadsafe(_task(r), loop=loop).result()
+                        if loop.is_running():
+                            asyncio.run_coroutine_threadsafe(_task(r), loop=loop).result()
+                        else:
+                            loop.run_until_complete(_task(r))
 
         self._cleanups.append(func_wrapper)
 

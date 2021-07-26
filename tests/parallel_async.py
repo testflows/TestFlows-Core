@@ -106,11 +106,11 @@ async def in_async(self):
         with Step("run step as function"):
             assert (await async_step(delay=0.1)) == "done"
 
-        for i in range(100):
+        for i in range(10):
             assert (await Step(run=async_step, name=f"step {i}")).result.value == "done"
 
     with Scenario("run non parallel inline test with parallel async steps"):
-        for i in range(100):
+        for i in range(10):
             Step(run=async_step, name=f"step {i}", parallel=True, args={"delay":1})
         await join()
 
