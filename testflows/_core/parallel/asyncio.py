@@ -13,8 +13,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # to the end flag
+import inspect
 import asyncio
 from asyncio import *
+
+async def async_await(coroutine):
+    r = coroutine
+    while inspect.isawaitable(r):
+        r = await r
+    return r
+
+async def async_next(async_iterator):
+    return await async_iterator.__anext__()
 
 def is_running_in_event_loop():
     """Check if running in async event loop.

@@ -91,12 +91,13 @@ class AsyncPoolExecutor(_base._base.Executor):
     """
     _counter = itertools.count().__next__
 
-    def __init__(self, max_workers=1024, task_name_prefix="", _check_max_workers=True):
+    def __init__(self, max_workers=1024, task_name_prefix="",
+            loop=None, _check_max_workers=True):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
         self._max_workers = max_workers
-        self._loop = asyncio.new_event_loop()
+        self._loop = loop or asyncio.new_event_loop()
         self._work_queue = asyncio.Queue(loop=self._loop)
         self._tasks = set()
         self._shutdown = False
@@ -112,7 +113,8 @@ class AsyncPoolExecutor(_base._base.Executor):
     def __enter__(self):
         if not self._open:
             self._async_loop_thread = threading.Thread(target=_async_loop_thread,
-                kwargs={"loop": self._loop}, daemon=True).start()
+                kwargs={"loop": self._loop}, daemon=True)
+            self._async_loop_thread.start()
             self._open = True
         return self
 
@@ -169,7 +171,7 @@ class AsyncPoolExecutor(_base._base.Executor):
 
         return False
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_value, exc_tb):
         self.shutdown(wait=True)
         return False
 
@@ -194,9 +196,12 @@ class AsyncPoolExecutor(_base._base.Executor):
                 if exc is not None:
                     raise exc
             finally:
-                self._loop.stop()
-                if self._async_loop_thread is not None:
-                    self._async_loop_thread.join()
+                # we can't close the pool as it might be needed
+                # for cleanups so live it running
+                # The following resources are left behind:
+                #   self._loop - event loop
+                #   self._async_loop_thread - daemon thread that is left running
+                pass
 
 
 class GlobalAsyncPoolExecutor(AsyncPoolExecutor):

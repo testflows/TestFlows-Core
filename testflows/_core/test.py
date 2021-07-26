@@ -61,12 +61,17 @@ from .parallel import current, top, previous, _check_parallel_context, join as p
 from .parallel import convert_result_to_concurrent_future
 from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
-from .parallel.asyncio import is_running_in_event_loop
+from .parallel.asyncio import is_running_in_event_loop, async_next
 
 try:
     import testflows.database as database_module
 except:
     database_module = None
+
+async def run_async_generator(r):
+    """Run async generator.
+    """
+    return await async_next(r)
 
 def run_generator(r):
     """Run generator.
@@ -108,15 +113,39 @@ class Context(object):
         return self._parent
 
     def cleanup(self, func, *args, **kwargs):
+        loop = None
+
+        if asyncio.iscoroutinefunction(func):
+            if is_running_in_event_loop():
+                loop = asyncio.get_event_loop()
+
         def func_wrapper():
-            func(*args, **kwargs)
+            r = func(*args, **kwargs)
+            if asyncio.iscoroutine(r):
+                async def _task(r):
+                    return await r
+                if is_running_in_event_loop() and (asyncio.get_event_loop() is loop or loop is None):
+                    yield from _task(r).__await__()
+                else:
+                    if loop is None:
+                        asyncio.run(_task(r))
+                    else:
+                        asyncio.run_coroutine_threadsafe(_task(r), loop=loop).result()
+
         self._cleanups.append(func_wrapper)
 
     def _cleanup(self):
         exc_type, exc_value, exc_traceback = None, None, None
         for func in reversed(self._cleanups):
             try:
-                func()
+                r = func()
+                # if func returned a generator as it does for
+                # async cleanups then just consume it
+                if inspect.isgenerator(r):
+                    for i in r:
+                        pass
+            except StopAsyncIteration:
+                pass
             except StopIteration:
                 pass
             except (Exception, KeyboardInterrupt) as e:
@@ -340,7 +369,10 @@ class TestBase(object):
 
         if self.setup is not None:
             r = self.setup()
-            if inspect.isgenerator(r):
+            if inspect.isasyncgen(r):
+                res = async_next(r)
+                self.context.cleanup(run_async_generator, r)
+            elif inspect.isgenerator(r):
                 res = next(r)
                 self.context.cleanup(run_generator, r)
 
@@ -978,16 +1010,26 @@ class TestDefinition(object):
 
             if test and isinstance(test, TestDecorator):
                 self.repeatable_func = test
-                with self as _test:
-                    r = test(**self.kwargs["args"])
-                    if asyncio.iscoroutine(r):
-                        def _wrapper(r):
-                            return r
-                        with AsyncPoolExecutor() as executor:
-                            r = executor.submit(_wrapper, args=(r,)).result()
-                    if r is not None:
-                        value("return", value=r)
-                return _test
+
+                def _test_wrapper():
+                    with self as _test:
+                        r = test(**self.kwargs["args"])
+                        if r is not None:
+                            value("return", value=r)
+                    return _test
+
+                async def _async_test_wrapper():
+                    with self as _test:
+                        r = await test(**self.kwargs["args"])
+                        if r is not None:
+                            value("return", value=r)
+                    return _test
+
+                if asyncio.iscoroutinefunction(test.func):
+                    with AsyncPoolExecutor() as executor:
+                        return executor.submit(_async_test_wrapper).result()
+                else:
+                    return _test_wrapper()
             else:
                 with self as _test:
                     pass
@@ -1763,7 +1805,7 @@ class TestDecorator(object):
             raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
 
         if is_running_in_event_loop():
-            if not asyncio.iscoroutinefunction(self.func):
+            if not (asyncio.iscoroutinefunction(self.func) or inspect.isasyncgenfunction(self.func)):
                 with ThreadPoolExecutor() as executor:
                     def _wrapper():
                         return self.__run__(**args)
@@ -1771,16 +1813,16 @@ class TestDecorator(object):
                     current().futures.append(r)
                     return r
 
-        r = self.__run__(**args)
-        if asyncio.iscoroutine(r):
+        if asyncio.iscoroutinefunction(self.func) or inspect.isasyncgenfunction(self.func):
+            async def _runner():
+                return await self.__run__(**args)
+
             if not is_running_in_event_loop():
-                def _wrapper(r):
-                    return r
                 current_test = current()
                 executor = current_test.executor if current_test else None
                 if not isinstance(executor, AsyncPoolExecutor):
-                    with AsyncPoolExecutor() as executor:
-                        r = executor.submit(_wrapper, args=(r,)).result()
+                     with AsyncPoolExecutor() as executor:
+                        return executor.submit(_runner).result()
                 else:
                     executor = settings.global_async_pool or executor
 
@@ -1788,10 +1830,13 @@ class TestDecorator(object):
                         executor.__enter__()
 
                     if executor is settings.global_async_pool:
-                        r = executor.submit(_wrapper, args=(r,), block=False).result()
+                        return executor.submit(_runner, block=False).result()
                     else:
-                        r = executor.submit(_wrapper, args=(r,)).result()
-        return r
+                        return executor.submit(_runner).result()
+            else:
+                return _runner()
+
+        return self.__run__(**args)
 
     def __run__(self, **args):
         _check_parallel_context()
@@ -1799,7 +1844,11 @@ class TestDecorator(object):
         test = current()
 
         def process_func_result(r):
-            if inspect.isgenerator(r):
+            if inspect.isasyncgen(r):
+                res = run_async_generator(r)
+                test.context.cleanup(run_async_generator, r)
+                r = res
+            elif inspect.isgenerator(r):
                 res = run_generator(r)
                 test.context.cleanup(run_generator, r)
                 r = res
