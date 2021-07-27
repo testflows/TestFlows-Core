@@ -102,7 +102,7 @@ def previous(value=None):
         context.previous.set(value)
     return context.previous.get()
 
-def join(*futures, cancel=None, test=None, raise_exception=True, _awaited=True):
+def join(*futures, cancel=None, test=None, raise_exception=True):
     """Wait for parallel tests to complete. Returns a list of
     completed tests. If any of the parallel tests raise an exception then
     the first exception is raised.
@@ -115,12 +115,7 @@ def join(*futures, cancel=None, test=None, raise_exception=True, _awaited=True):
     :param raise_exception: raise first exception, default: True.
     """
     if is_running_in_event_loop():
-        def wrapper():
-            return _async_join(*futures, cancel=cancel, test=test, raise_exception=raise_exception)
-        if not _awaited:
-            # Note: we will not wait for the result
-            return asyncio.run_coroutine_threadsafe(wrapper(), loop=asyncio.get_event_loop())
-        return wrapper()
+        return _async_join(*futures, cancel=cancel, test=test, raise_exception=raise_exception)
 
     if test is None:
         test = current()

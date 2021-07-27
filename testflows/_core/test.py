@@ -128,12 +128,29 @@ class Context(object):
                 loop = asyncio.get_event_loop()
 
         def func_wrapper():
+            """Cleanup function wrapper.
+            """
             r = func(*args, **kwargs)
+
+            async def _task(r):
+                return await r
+
             if asyncio.iscoroutine(r):
-                async def _task(r):
-                    return await r
-                if is_running_in_event_loop() and (asyncio.get_event_loop() is loop or loop is None):
-                    yield from _task(r).__await__()
+                if is_running_in_event_loop():
+                    async def _async_wrapper():
+                        """Process async cleanup function.
+                        """
+                        if asyncio.get_running_loop() is loop or loop is None:
+                            await r
+                        else:
+                            if loop.is_running():
+                                await asyncio.wrap_future(
+                                    asyncio.run_coroutine_threadsafe(_task(r), loop=loop))
+                            else:
+                                with ThreadPoolExecutor() as executor:
+                                     await executor.submit(loop.run_until_complete, args=(_task(r),))
+                    return _async_wrapper()
+
                 else:
                     if loop is None:
                         asyncio.run(_task(r))
@@ -150,6 +167,25 @@ class Context(object):
         for func in reversed(self._cleanups):
             try:
                 r = func()
+                # if func returned a generator as it does for
+                # async cleanups then just consume it
+                if inspect.isgenerator(r):
+                    for i in r:
+                        pass
+            except StopAsyncIteration:
+                pass
+            except StopIteration:
+                pass
+            except (Exception, KeyboardInterrupt) as e:
+                if not exc_value:
+                    exc_type, exc_value, exc_traceback = sys.exc_info()
+        return exc_type, exc_value, exc_traceback
+
+    async def _async_cleanup(self):
+        exc_type, exc_value, exc_traceback = None, None, None
+        for func in reversed(self._cleanups):
+            try:
+                r = await func()
                 # if func returned a generator as it does for
                 # async cleanups then just consume it
                 if inspect.isgenerator(r):
@@ -389,33 +425,50 @@ class TestBase(object):
 
         return self
 
+    def _exit_process_exception(self, exc_type, exc_value, exc_traceback):
+        """Process exception on exit.
+        """
+        if isinstance(exc_value, ResultException):
+            self.result = self.result(exc_value)
+
+        elif isinstance(exc_value, AssertionError):
+            exception(exc_type, exc_value, exc_traceback, test=self)
+            self.result = self.result(Fail(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name))
+
+        else:
+            exception(exc_type, exc_value, exc_traceback, test=self)
+            result = Error(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name)
+            self.result = self.result(result)
+
     def _exit(self, exc_type, exc_value, exc_traceback):
+        """Synchronous test exit.
+        """
         if not self.io:
             return False
 
         if top() is self and not self._init:
             return False
 
-        def process_exception(exc_type, exc_value, exc_traceback):
-            if isinstance(exc_value, ResultException):
-                self.result = self.result(exc_value)
-            elif isinstance(exc_value, AssertionError):
-                exception(exc_type, exc_value, exc_traceback, test=self)
-                self.result = self.result(Fail(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name))
-            else:
-                exception(exc_type, exc_value, exc_traceback, test=self)
-                result = Error(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name)
-                self.result = self.result(result)
-
         try:
             parallel_exception = None
+
             # join any left over parallel tests and save
             try:
-                # maybe we should raise an error if self.futures is not empty to force users
-                # to explicitly join their explicit and implicit parallel tests
-                parallel_join(*self.futures, cancel=(exc_value is not None), test=self, _awaited=False)
+                parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
             except (Exception, KeyboardInterrupt) as exc:
                 parallel_exception = exc
+
+            # context cleanups
+            if self.type >= TestType.Iteration:
+                if self.context._cleanups:
+                    try:
+                        with Finally("I clean up"):
+                            cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
+                            if cleanup_exc_value is not None:
+                                raise cleanup_exc_value.with_traceback(cleanup_exc_traceback)
+                    except Exception:
+                        if not exc_value:
+                            self._exit_process_exception(*sys.exc_info())
 
             # close parallel executor if any
             if self.executor is not None:
@@ -428,52 +481,101 @@ class TestBase(object):
                 if settings.global_async_pool is not None:
                     settings.global_async_pool.__exit__(None, None, None)
 
-            # set parallel exception if exc_value is None
-            if exc_value is None and parallel_exception is not None:
-                exc_type = type(parallel_exception)
-                exc_value = parallel_exception
-                exc_traceback = parallel_exception.__traceback__
-
-            if exc_value is not None:
-                process_exception(exc_type, exc_value, exc_traceback)
-            else:
-                if isinstance(self.result, Null) and self.flags & MANUAL and not self.flags & SKIP:
-                    try:
-                        input(result)
-                    except Exception:
-                        process_exception(*sys.exc_info())
-                elif isinstance(self.result, Null):
-                    self.result = self.result(OK(test=self.name))
+            # set result
+            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
         finally:
-            try:
-                if self.type >= TestType.Iteration:
-                    if self.context._cleanups:
-                        try:
-                            with Finally("I clean up"):
-                                cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()
-                                if cleanup_exc_value is not None:
-                                    raise cleanup_exc_value.with_traceback(cleanup_exc_traceback)
-                        except Exception:
-                            if not exc_value:
-                                process_exception(*sys.exc_info())
-            finally:
-                current(self.caller_test, set_value=True)
-                previous(self)
-                self._apply_eresult_flags()
-                self._apply_xresult_flags()
-                self._apply_xfails()
-                self.io.output.result(self.result)
-
-                if top() is self:
-                    self.io.output.stop()
-                    self.io.close(final=True)
-                else:
-                    self.io.close()
-
-            if self.flags & PAUSE_AFTER and not self.flags & SKIP:
-                pause()
+            self._exit_finally()
 
         return True
+
+    async def _async_exit(self, exc_type, exc_value, exc_traceback):
+        """Asynchronous text exit.
+        """
+        if not self.io:
+            return False
+        if top() is self and not self._init:
+            return False
+
+        try:
+            parallel_exception = None
+
+            # join any left over parallel tests and save
+            try:
+                await parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
+            except (Exception, KeyboardInterrupt) as exc:
+                parallel_exception = exc
+
+            # context cleanups
+            if self.type >= TestType.Iteration:
+                if self.context._cleanups:
+                    try:
+                        async with Finally("I clean up"):
+                            cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = \
+                                await self.context._async_cleanup()
+                            if cleanup_exc_value is not None:
+                                raise cleanup_exc_value.with_traceback(cleanup_exc_traceback)
+                    except Exception:
+                        if not exc_value:
+                            self._exit_process_exception(*sys.exc_info())
+
+            # close parallel executor if any
+            if self.executor is not None:
+                self.executor.__exit__(None, None, None)
+
+            # close global pools if present and opened
+            if top() is self:
+                if settings.global_thread_pool is not None:
+                    settings.global_thread_pool.__exit__(None, None, None)
+                if settings.global_async_pool is not None:
+                    settings.global_async_pool.__exit__(None, None, None)
+
+            # set result
+            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
+        finally:
+            self._exit_finally()
+
+        return True
+
+    def _exit_result(self, exc_type, exc_value, exc_traceback, parallel_exception):
+        """Set test result on exit.
+        """
+        # set parallel exception if exc_value is None
+        if exc_value is None and parallel_exception is not None:
+            exc_type = type(parallel_exception)
+            exc_value = parallel_exception
+            exc_traceback = parallel_exception.__traceback__
+
+        if exc_value is not None:
+            self._exit_process_exception(exc_type, exc_value, exc_traceback)
+        else:
+            if isinstance(self.result, Null) and self.flags & MANUAL and not self.flags & SKIP:
+                try:
+                    input(result)
+                except Exception:
+                    self._exit_process_exception(*sys.exc_info())
+            elif isinstance(self.result, Null):
+                self.result = self.result(OK(test=self.name))
+
+    def _exit_finally(self):
+        """Finalize test exit.
+        """
+        current(self.caller_test, set_value=True)
+        previous(self)
+
+        self._apply_eresult_flags()
+        self._apply_xresult_flags()
+        self._apply_xfails()
+
+        self.io.output.result(self.result)
+
+        if top() is self:
+            self.io.output.stop()
+            self.io.close(final=True)
+        else:
+            self.io.close()
+
+        if self.flags & PAUSE_AFTER and not self.flags & SKIP:
+            pause()
 
     def _apply_eresult_flags(self):
         """Apply eresult flags to self.result.
@@ -1030,7 +1132,7 @@ class TestDefinition(object):
                     return _test
 
                 async def _async_test_wrapper():
-                    with self as _test:
+                    async with self as _test:
                         r = await test(**self.kwargs["args"])
                         if r is not None:
                             value("return", value=r)
@@ -1049,7 +1151,7 @@ class TestDefinition(object):
         async def async_callable():
             if test and isinstance(test, TestDecorator):
                 self.repeatable_func = test
-                with self as _test:
+                async with self as _test:
                     if not asyncio.iscoroutinefunction(test.func):
                         with ThreadPoolExecutor() as executor:
                             def _wrapper(test):
@@ -1061,7 +1163,7 @@ class TestDefinition(object):
                         value("return", value=r)
                 return _test
             else:
-                with self as _test:
+                async with self as _test:
                     pass
                 return _test
 
@@ -1116,7 +1218,17 @@ class TestDefinition(object):
             return future
         return callable()
 
-    def __enter__(self):
+    async def __aenter__(self):
+        """Asynchronous test start.
+        """
+        return self.__enter__(_check_async=False)
+
+    def __enter__(self, _check_async=True):
+        """Test start.
+        """
+        if _check_async and is_running_in_event_loop():
+            raise RuntimeError("Use `async with` for asynchronous tests.")
+
         _check_parallel_context()
 
         def dummy(*args, **kwargs):
@@ -1449,123 +1561,171 @@ class TestDefinition(object):
         sys.settrace(self.trace)
         raise exc_value.with_traceback(exc_tb)
 
-    def __exit__(self, exception_type, exception_value, exception_traceback):
-        frame = inspect.currentframe().f_back
-        co_filename_filter = "testflows/_core"
+    def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/_core"):
+        tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
 
-        def make_complete_traceback(exception_traceback, frame):
-            tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
+        def walk_frame(frame, tb_next=None):
+            if frame is None:
+                return tb_next
+            if not settings.debug and co_filename_filter in frame.f_code.co_filename:
+                tb_next = tb_next
+            else:
+                tb_next = tb(frame, frame.f_lasti, frame.f_lineno, tb_next)
+            return walk_frame(frame.f_back, tb_next)
 
-            def walk_frame(frame, tb_next=None):
-                if frame is None:
-                    return tb_next
-                if not settings.debug and co_filename_filter in frame.f_code.co_filename:
-                    tb_next = tb_next
-                else:
-                    tb_next = tb(frame, frame.f_lasti, frame.f_lineno, tb_next)
-                return walk_frame(frame.f_back, tb_next)
+        def walk_tb(tb_frame):
+            tb_next = None
+            if tb_frame.tb_next:
+                tb_next = walk_tb(tb_frame.tb_next)
 
-            def walk_tb(tb_frame):
-                tb_next = None
-                if tb_frame.tb_next:
-                    tb_next = walk_tb(tb_frame.tb_next)
+            if tb_frame and not settings.debug and co_filename_filter in tb_frame.tb_frame.f_code.co_filename:
+                return tb_next
+            else:
+                return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
 
-                if tb_frame and not settings.debug and co_filename_filter in tb_frame.tb_frame.f_code.co_filename:
-                    return tb_next
-                else:
-                    return tb(tb_frame.tb_frame, tb_frame.tb_lasti, tb_frame.tb_lineno, tb_next)
+        tb_next = walk_tb(exception_traceback)
+        if self._with_block_frame is not None:
+            # if self._with_block_frame is set it means an exception was raised
+            # in __enter__() during test._enter() call. Now we need to fix
+            # traceback so that includes the line where "with" block is defined
+            # as it is lost
+            _frame, _lasti, _lineno = self._with_block_frame
+            if tb_next:
+                tb_next = tb_next.tb_next
+            if tb_next:
+                tb_next = tb_next.tb_next
+            tb_next = tb(_frame, _lasti, _lineno, tb_next)
+        tb_start = walk_frame(frame.f_back, tb_next)
 
-            tb_next = walk_tb(exception_traceback)
-            if self._with_block_frame is not None:
-                # if self._with_block_frame is set it means an exception was raised
-                # in __enter__() during test._enter() call. Now we need to fix
-                # traceback so that includes the line where "with" block is defined
-                # as it is lost
-                _frame, _lasti, _lineno = self._with_block_frame
-                if tb_next:
-                    tb_next = tb_next.tb_next
-                if tb_next:
-                    tb_next = tb_next.tb_next
-                tb_next = tb(_frame, _lasti, _lineno, tb_next)
-            tb_start = walk_frame(frame.f_back, tb_next)
-            return tb_start
+        return tb_start
 
-        if exception_value:
-            exception_traceback = make_complete_traceback(exception_traceback, frame)
+    def __exit_process_test_iteration(self, exc_value):
+        """Process TestIteration exception.
+        """
+        if not isinstance(exc_value, TestIteration):
+            return
 
-        try:
-            if isinstance(exception_value, TestIteration):
-                try:
-                    repeat = exception_value.repeat
+        repeat = exc_value.repeat
 
-                    self.test._enter()
-                    if self.repeatable_func is None:
-                        raise Error("not repeatable")
+        self.test._enter()
 
-                    __kwargs = dict(self.kwargs)
-                    __kwargs.pop("name", None)
-                    __kwargs.pop("parent", None)
-                    __kwargs["type"] = TestType.Iteration
-                    __args = __kwargs.pop("args", {})
+        if self.repeatable_func is None:
+            raise Error("not repeatable")
 
-                    if repeat.until == "fail":
-                        __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
+        __kwargs = dict(self.kwargs)
+        __kwargs.pop("name", None)
+        __kwargs.pop("parent", None)
+        __kwargs["type"] = TestType.Iteration
+        __args = __kwargs.pop("args", {})
+
+        if repeat.until == "fail":
+            __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
+        else:
+            # pass or complete
+            __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+
+        for i in range(repeat.number):
+
+            with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
+                if isinstance(self.repeatable_func, TestOutline):
+                    iteration._run_outline_with_no_arguments = self.no_arguments
+                    iteration._run_outline = True
+                self.repeatable_func(**__args)
+
+            if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+                break
+
+    def __exit_test_rerun_individually(self, exc_value):
+        """Process TestRerunIndividually exception.
+        """
+        if not isinstance(exc_value, TestRerunIndividually):
+            return
+
+        rerun_tests = exc_value.tests
+
+        self.test._enter()
+
+        if self.repeatable_func is None:
+            raise Error("not repeatable")
+
+        for i, rerun_test in enumerate(rerun_tests):
+            __kwargs = dict(self.kwargs)
+            __kwargs.pop("name", None)
+            __kwargs.pop("parent", None)
+            __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+            __kwargs["type"] = TestType.Iteration
+            __args = __kwargs.pop("args", {})
+
+            rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
+
+            self._apply_start(rerun_name, self.parent, __kwargs)
+            self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
+            self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
+            self._apply_skip(rerun_name, __kwargs)
+            self._apply_end(rerun_name, self.parent, __kwargs)
+            self._apply_only(rerun_name, __kwargs)
+
+            __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
+
+            with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
+                if isinstance(self.repeatable_func, TestOutline):
+                    iteration._run_outline_with_no_arguments = self.no_arguments
+                    iteration._run_outline = True
+                self.repeatable_func(**__args)
+
+    def __exit_common(self, exc_value, exc_type, exc_traceback, test__exit__):
+        """Common async/sync test exit.
+        """
+        if not self.parent:
+            if not test__exit__:
+                sys.stderr.write(warning(get_exception(exc_type, exc_value, exc_traceback), eol='\n'))
+                sys.stderr.write(danger("error: " + str(exc_value).strip()))
+                sys.exit(1)
+            sys.exit(0 if self.test.result else 1)
+
+        if isinstance(exc_value, KeyboardInterrupt):
+            raise KeyboardInterrupt
+
+        # if test did not handle the exception in _exit then re-raise it
+        if exc_value and not test__exit__:
+            raise exc_value
+
+        if not self.test.result:
+            if isinstance(self.test.result, Fail):
+                result = Fail(test=self.parent.name, message=self.test.result.message)
+            else:
+                # convert Null into an Error
+                result = Error(test=self.parent.name, message=self.test.result.message)
+
+            if TE not in self.test.flags:
+                raise result
+            else:
+                with self.parent.lock:
+                    if isinstance(self.parent.result, Error):
+                        pass
+                    elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
+                    elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
+                    elif isinstance(self.parent.result, Fail):
+                        pass
+                    elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
+                        self.parent.result = result
                     else:
-                        # pass or complete
-                        __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+                        pass
+        return True
 
-                    for i in range(repeat.number):
-                        with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
-                            if isinstance(self.repeatable_func, TestOutline):
-                                iteration._run_outline_with_no_arguments = self.no_arguments
-                                iteration._run_outline = True
-                            self.repeatable_func(**__args)
-                        if repeat.until == "pass" and isinstance(iteration.result, PassResults):
-                            break
-                except:
-                    try:
-                        test__exit__ = self.test._exit(*sys.exc_info())
-                    except(KeyboardInterrupt, Exception):
-                        raise
-                else:
-                    try:
-                        test__exit__ = self.test._exit(None, None, None)
-                    except(KeyboardInterrupt, Exception):
-                        raise
-
-            elif isinstance(exception_value, TestRerunIndividually):
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        """Synchronous text exit.
+        """
+        frame = inspect.currentframe().f_back
+        if exc_value:
+            exc_traceback = self._make_complete_traceback(exc_traceback, frame)
+        try:
+            if isinstance(exc_value, (TestIteration, TestRerunIndividually)):
                 try:
-                    rerun_tests = exception_value.tests
-
-                    self.test._enter()
-
-                    if self.repeatable_func is None:
-                        raise Error("not repeatable")
-
-                    for i, rerun_test in enumerate(rerun_tests):
-                        __kwargs = dict(self.kwargs)
-                        __kwargs.pop("name", None)
-                        __kwargs.pop("parent", None)
-                        __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
-                        __kwargs["type"] = TestType.Iteration
-                        __args = __kwargs.pop("args", {})
-
-                        rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
-
-                        self._apply_start(rerun_name, self.parent, __kwargs)
-                        self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
-                        self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
-                        self._apply_skip(rerun_name, __kwargs)
-                        self._apply_end(rerun_name, self.parent, __kwargs)
-                        self._apply_only(rerun_name, __kwargs)
-
-                        __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
-
-                        with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
-                            if isinstance(self.repeatable_func, TestOutline):
-                                iteration._run_outline_with_no_arguments = self.no_arguments
-                                iteration._run_outline = True
-                            self.repeatable_func(**__args)
+                    self.__exit_process_test_iteration(exc_value)
+                    self.__exit_process_test_rerun_individually(exc_value)
                 except:
                     try:
                         test__exit__ = self.test._exit(*sys.exc_info())
@@ -1578,48 +1738,49 @@ class TestDefinition(object):
                         raise
             else:
                 try:
-                    test__exit__ = self.test._exit(exception_type, exception_value, exception_traceback)
+                    test__exit__ = self.test._exit(exc_type, exc_value, exc_traceback)
                 except (KeyboardInterrupt, Exception):
                     raise
 
-            if not self.parent:
-                if not test__exit__:
-                    sys.stderr.write(warning(get_exception(exception_type, exception_value, exception_traceback), eol='\n'))
-                    sys.stderr.write(danger("error: " + str(exception_value).strip()))
-                    sys.exit(1)
-                sys.exit(0 if self.test.result else 1)
+            return self.__exit_common(exc_type, exc_value, exc_traceback, test__exit__)
 
-            if isinstance(exception_value, KeyboardInterrupt):
-                raise KeyboardInterrupt
+        except (Exception, KeyboardInterrupt) as exc:
+            if self.parent:
+                with self.parent.lock:
+                    self.parent.terminating = exc
+            else:
+                self.terminating = exc
+            raise
 
-            # if test did not handle the exception in _exit then re-raise it
-            if exception_value and not test__exit__:
-                raise exception_value
-
-            if not self.test.result:
-                if isinstance(self.test.result, Fail):
-                    result = Fail(test=self.parent.name, message=self.test.result.message)
+    async def __aexit__(self, exc_type, exc_value, exc_traceback):
+        """Asynchronous test exit.
+        """
+        frame = inspect.currentframe().f_back
+        if exc_value:
+            exc_traceback = self._make_complete_traceback(exc_traceback, frame)
+        try:
+            if isinstance(exc_value, (TestIteration, TestRerunIndividually)):
+                try:
+                    self.__exit_process_test_iteration(exc_value)
+                    self.__exit_process_test_rerun_individually(exc_value)
+                except:
+                    try:
+                        test__exit__ = await self.test._async_exit(*sys.exc_info())
+                    except(KeyboardInterrupt, Exception):
+                        raise
                 else:
-                    # convert Null into an Error
-                    result = Error(test=self.parent.name, message=self.test.result.message)
+                    try:
+                        test__exit__ = await self.test._async_exit(None, None, None)
+                    except(KeyboardInterrupt, Exception):
+                        raise
+            else:
+                try:
+                    test__exit__ = await self.test._async_exit(exc_type, exc_value, exc_traceback)
+                except (KeyboardInterrupt, Exception):
+                    raise
 
-                if TE not in self.test.flags:
-                    raise result
-                else:
-                    with self.parent.lock:
-                        if isinstance(self.parent.result, Error):
-                            pass
-                        elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        elif isinstance(self.parent.result, Fail):
-                            pass
-                        elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        else:
-                            pass
-            return True
+            return self.__exit_common(exc_type, exc_value, exc_traceback, test__exit__)
+
         except (Exception, KeyboardInterrupt) as exc:
             if self.parent:
                 with self.parent.lock:
