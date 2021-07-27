@@ -125,13 +125,14 @@ class AsyncPoolExecutor(_base._base.Executor):
         return bool(self._open)
 
     def __enter__(self):
-        if not self._open:
-            self._async_loop_thread = threading.Thread(target=_async_loop_thread,
-                kwargs={"loop": self._loop, "stop_event": self._loop_stop_event},
-                daemon=True)
-            self._async_loop_thread.start()
-            self._open = True
-        return self
+        with self._shutdown_lock:
+            if not self._open:
+                self._async_loop_thread = threading.Thread(target=_async_loop_thread,
+                    kwargs={"loop": self._loop, "stop_event": self._loop_stop_event},
+                    daemon=True)
+                self._async_loop_thread.start()
+                self._open = True
+            return self
 
     def submit(self, fn, args=None, kwargs=None, block=True):
         if args is None:
@@ -155,9 +156,13 @@ class AsyncPoolExecutor(_base._base.Executor):
             idle_workers = self._adjust_task_count()
 
             if (idle_workers or block) and self._max_workers > 0:
+                if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
+                    raise RuntimeError("deadlock detected")
                 asyncio.run_coroutine_threadsafe(self._work_queue.put(work_item), loop=self._loop).result()
 
         if (not block and not idle_workers) or self._max_workers < 1:
+            if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
+                raise RuntimeError("deadlock detected")
             asyncio.run_coroutine_threadsafe(work_item.run(), loop=self._loop).result()
 
         if is_running_in_event_loop():
@@ -226,3 +231,6 @@ class GlobalAsyncPoolExecutor(AsyncPoolExecutor):
             raise ValueError("max_workers must be positive or 0")
         super(GlobalAsyncPoolExecutor, self).__init__(
             max_workers=max_workers-1, task_name_prefix=task_name_prefix, _check_max_workers=False)
+
+    def submit(self, fn, args=None, kwargs=None, block=False):
+        return super(GlobalAsyncPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)

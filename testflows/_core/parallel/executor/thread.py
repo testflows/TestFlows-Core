@@ -148,3 +148,6 @@ class GlobalThreadPoolExecutor(ThreadPoolExecutor):
             raise ValueError("max_workers must be positive or 0")
         super(GlobalThreadPoolExecutor, self).__init__(
             max_workers=max_workers-1, thread_name_prefix=thread_name_prefix, _check_max_workers=False)
+
+    def submit(self, fn, args=None, kwargs=None, block=False):
+        return super(GlobalThreadPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)

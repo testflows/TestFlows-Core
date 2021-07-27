@@ -68,15 +68,23 @@ try:
 except:
     database_module = None
 
-async def run_async_generator(r):
+async def run_async_generator(generator, consume=False):
     """Run async generator.
     """
-    return await async_next(r)
+    if consume:
+        async for item in generator:
+            pass
+        return
+    return await async_next(generator)
 
-def run_generator(r):
+def run_generator(generator, consume=False):
     """Run generator.
     """
-    return next(r)
+    if consume:
+        for item in generator:
+            pass
+        return
+    return next(generator)
 
 class DummyTest(object):
     """Base class for dummy tests.
@@ -1069,11 +1077,9 @@ class TestDefinition(object):
                 self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | PARALLEL
                 executor = self.executor
                 if is_async:
-                    if settings.global_async_pool is not None:
-                        executor = settings.global_async_pool
+                    executor = settings.global_async_pool or executor
                 else:
-                    if settings.global_thread_pool is not None:
-                        executor = settings.global_thread_pool
+                    executor = settings.global_thread_pool or executor
 
                 if executor is None:
                     if is_async:
@@ -1087,15 +1093,9 @@ class TestDefinition(object):
                     executor.__enter__()
 
                 if isinstance(executor, AsyncPoolExecutor):
-                    if executor is settings.global_async_pool:
-                        future = executor.submit(async_callable, block=False)
-                    else:
-                        future = executor.submit(async_callable)
+                    future = executor.submit(async_callable)
                 else:
-                    if executor is settings.global_thread_pool:
-                        future = executor.submit(callable, block=False)
-                    else:
-                        future = executor.submit(callable)
+                    future = executor.submit(callable)
 
                 current_test.futures.append(future)
                 return future
@@ -1108,6 +1108,7 @@ class TestDefinition(object):
                 return future
             else:
                 return async_callable()
+
         if is_parallel:
             future = convert_result_to_concurrent_future(callable)
             if current_test:
@@ -1832,10 +1833,7 @@ class TestDecorator(object):
                     if not executor.open:
                         executor.__enter__()
 
-                    if executor is settings.global_async_pool:
-                        return executor.submit(_runner, block=False).result()
-                    else:
-                        return executor.submit(_runner).result()
+                    return executor.submit(_runner).result()
             else:
                 return _runner()
 
