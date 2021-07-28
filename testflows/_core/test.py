@@ -1105,6 +1105,7 @@ class TestDefinition(object):
         self.rerun_individually = None
         self.repeatable_func = None
         self._with_block_frame = None
+        self._trace_count = 0
         return self
 
     def __call__(self, *pargs, **args):
@@ -1414,16 +1415,14 @@ class TestDefinition(object):
 
             if self.rerun_individually is not None:
                 self.trace = sys.gettrace()
-                sys.settrace(dummy)
-                sys._getframe(1).f_trace = functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None)
+                sys.settrace(functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None))
                 return
 
             if self.repeat is not None:
                 repeat = self._apply_repeat(name, self.repeat)
                 if repeat is not None:
                     self.trace = sys.gettrace()
-                    sys.settrace(dummy)
-                    sys._getframe(1).f_trace = functools.partial(self.__repeat__, repeat, None, None, None)
+                    sys.settrace(functools.partial(self.__repeat__, repeat, None, None, None))
                     return
 
         except (KeyboardInterrupt, Exception):
@@ -1438,8 +1437,7 @@ class TestDefinition(object):
             frame = inspect.currentframe().f_back
             self._with_block_frame = (frame, frame.f_lasti, frame.f_lineno)
             self.trace = sys.gettrace()
-            sys.settrace(dummy)
-            sys._getframe(1).f_trace = functools.partial(self.__nop__, *sys.exc_info())
+            sys.settrace(functools.partial(self.__nop__, *sys.exc_info()))
 
     def _apply_end(self, name, parent, kwargs):
         end = kwargs.get("end")
@@ -1550,16 +1548,22 @@ class TestDefinition(object):
         kwargs["type"] = type
 
     def __repeat__(self, repeat=None, *args):
-        sys.settrace(self.trace)
-        raise TestIteration(repeat)
+        self._trace_count += 1
+        if self._trace_count > 1:
+            sys.settrace(self.trace)
+            raise TestIteration(repeat)
 
     def __rerun_individually__(self, patterns, *args):
-        sys.settrace(self.trace)
-        raise TestRerunIndividually(patterns)
+        self._trace_count += 1
+        if self._trace_count > 1:
+            sys.settrace(self.trace)
+            raise TestRerunIndividually(patterns)
 
     def __nop__(self, exc_type, exc_value, exc_tb, *args):
-        sys.settrace(self.trace)
-        raise exc_value.with_traceback(exc_tb)
+        self._trace_count += 1
+        if self._trace_count > 1:
+            sys.settrace(self.trace)
+            raise exc_value.with_traceback(exc_tb)
 
     def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/_core"):
         tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
@@ -1599,12 +1603,9 @@ class TestDefinition(object):
 
         return tb_start
 
-    def __exit_process_test_iteration(self, exc_value):
-        """Process TestIteration exception.
+    def __exit_process_test_iteration_setup(self, exc_value):
+        """Test iteration setup.
         """
-        if not isinstance(exc_value, TestIteration):
-            return
-
         repeat = exc_value.repeat
 
         self.test._enter()
@@ -1624,18 +1625,68 @@ class TestDefinition(object):
             # pass or complete
             __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
 
-        for i in range(repeat.number):
+        return repeat, __args, __kwargs
 
-            with Iteration(name=f"{i}", tags=self.tags, **__kwargs, parent_type=self.test.type) as iteration:
+    def __exit_process_test_iteration(self, exc_value):
+        """Process TestIteration exception.
+        """
+        if not isinstance(exc_value, TestIteration):
+            return
+
+        repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
+
+        for i in range(repeat.number):
+            with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
-                self.repeatable_func(**__args)
+                self.repeatable_func(**args)
 
             if repeat.until == "pass" and isinstance(iteration.result, PassResults):
                 break
 
-    def __exit_test_rerun_individually(self, exc_value):
+    async def __exit_async_process_test_iteration(self, exc_value):
+        """Process TestIteration exception in asyncronous test.
+        """
+        if not isinstance(exc_value, TestIteration):
+            return
+
+        repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
+
+        for i in range(repeat.number):
+            async with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
+                if isinstance(self.repeatable_func, TestOutline):
+                    iteration._run_outline_with_no_arguments = self.no_arguments
+                    iteration._run_outline = True
+                await self.repeatable_func(**args)
+
+            if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+                break
+
+    def __exit_process_test_rerun_individually_iteration_setup(self, rerun_test):
+        """Setup for an iteration of running test individually.
+        """
+        __kwargs = dict(self.kwargs)
+        __kwargs.pop("name", None)
+        __kwargs.pop("parent", None)
+        __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+        __kwargs["type"] = TestType.Iteration
+        __args = __kwargs.pop("args", {})
+
+        rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
+
+        self._apply_start(rerun_name, self.parent, __kwargs)
+        self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
+        self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
+        self._apply_skip(rerun_name, __kwargs)
+        self._apply_end(rerun_name, self.parent, __kwargs)
+        self._apply_only(rerun_name, __kwargs)
+
+        __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
+
+        return rerun_name, __only, __args, __kwargs
+
+    def __exit_process_test_rerun_individually(self, exc_value):
         """Process TestRerunIndividually exception.
         """
         if not isinstance(exc_value, TestRerunIndividually):
@@ -1649,31 +1700,37 @@ class TestDefinition(object):
             raise Error("not repeatable")
 
         for i, rerun_test in enumerate(rerun_tests):
-            __kwargs = dict(self.kwargs)
-            __kwargs.pop("name", None)
-            __kwargs.pop("parent", None)
-            __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
-            __kwargs["type"] = TestType.Iteration
-            __args = __kwargs.pop("args", {})
+            name, only, args, kwargs = self.__exit_process_test_rerun_individually_iteration_setup(rerun_test)
 
-            rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
-
-            self._apply_start(rerun_name, self.parent, __kwargs)
-            self._apply_only_tags(rerun_test.type, rerun_test.tags, __kwargs)
-            self._apply_skip_tags(rerun_test.type, rerun_test.tags, __kwargs)
-            self._apply_skip(rerun_name, __kwargs)
-            self._apply_end(rerun_name, self.parent, __kwargs)
-            self._apply_only(rerun_name, __kwargs)
-
-            __only = [rerun_test.name] + (__kwargs.pop("only", []) or [])
-
-            with Module(name=f"{i}", only=__only, tags=self.tags, **__kwargs) as iteration:
+            with Module(name=f"{i}", only=only, tags=self.tags, **kwargs) as iteration:
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
-                self.repeatable_func(**__args)
+                self.repeatable_func(**args)
 
-    def __exit_common(self, exc_value, exc_type, exc_traceback, test__exit__):
+    async def __exit_async_process_test_rerun_individually(self, exc_value):
+        """Process TestRerunIndividually exception for asynchronous test.
+        """
+        if not isinstance(exc_value, TestRerunIndividually):
+            return
+
+        rerun_tests = exc_value.tests
+
+        self.test._enter()
+
+        if self.repeatable_func is None:
+            raise Error("not repeatable")
+
+        for i, rerun_test in enumerate(rerun_tests):
+            name, only, args, kwargs = self.__exit_process_test_rerun_individually_iteration_setup(rerun_test)
+
+            async with Module(name=f"{i}", only=only, tags=self.tags, **kwargs) as iteration:
+                if isinstance(self.repeatable_func, TestOutline):
+                    iteration._run_outline_with_no_arguments = self.no_arguments
+                    iteration._run_outline = True
+                await self.repeatable_func(**args)
+
+    def __exit_common(self, exc_type, exc_value, exc_traceback, test__exit__):
         """Common async/sync test exit.
         """
         if not self.parent:
@@ -1758,11 +1815,12 @@ class TestDefinition(object):
         frame = inspect.currentframe().f_back
         if exc_value:
             exc_traceback = self._make_complete_traceback(exc_traceback, frame)
+
         try:
             if isinstance(exc_value, (TestIteration, TestRerunIndividually)):
                 try:
-                    self.__exit_process_test_iteration(exc_value)
-                    self.__exit_process_test_rerun_individually(exc_value)
+                    await self.__exit_async_process_test_iteration(exc_value)
+                    await self.__exit_async_process_test_rerun_individually(exc_value)
                 except:
                     try:
                         test__exit__ = await self.test._async_exit(*sys.exc_info())

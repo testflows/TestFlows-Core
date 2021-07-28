@@ -15,6 +15,7 @@
 import os
 import sys
 import glob
+import atexit
 import threading
 
 import testflows.settings as settings
@@ -31,26 +32,26 @@ from .transform.log.pipeline import FailsLogPipeline
 from .transform.log.pipeline import ManualLogPipeline
 from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
 
+_handlers = []
+
+def _at_exit():
+    for handler in _handlers:
+        handler.join()
+
+atexit.register(_at_exit)
+
 def cleanup():
     """Clean up old temporary log files.
     """
     def pid_exists(pid):
-        """Check if pid is alive on UNIX.
-
-        :param pid: pid
-        """
-        # NOTE: pid == 0 returns True
         if pid < 0: return False
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
-            # errno.ESRCH - no such process
             return False
         except PermissionError:
-            # errno.EPERM - operation not permitted (i.e., process exists)
             return True
         else:
-            #  no error, we can send a signal to the process
             return True
 
     for file in glob.glob(os.path.join(templog_dirname(), templog_glob)):
@@ -169,6 +170,7 @@ def start_output_handler():
     handler = threading.Thread(target=output_handler_map[settings.output_format])
     handler.name = "tfs-output"
     handler.start()
+    _handlers.append(handler)
 
 def start_database_handler():
     if not settings.database:
@@ -179,6 +181,7 @@ def start_database_handler():
     handler = threading.Thread(target=database_handler)
     handler.name = 'tfs-database'
     handler.start()
+    _handlers.appen(handler)
 
 def init():
     """Initialization before we run the first test.
