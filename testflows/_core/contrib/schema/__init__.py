@@ -395,7 +395,7 @@ class Schema(object):
                                 except SchemaError as x:
                                     k = "Key '%s' error:" % nkey
                                     message = self._prepend_schema_name(k)
-                                    raise SchemaError([message] + x.autos, [e] + x.errors)
+                                    raise SchemaError([message] + x.autos, [e] + x.errors) from None
                                 else:
                                     new[nkey] = nvalue
                                     coverage.add(skey)
