@@ -30,5 +30,7 @@ def transform():
             except (IndexError, Exception):
                 yield None
                 continue
+        else:
+            parsed_msg = None
 
         msg = yield parsed_msg
