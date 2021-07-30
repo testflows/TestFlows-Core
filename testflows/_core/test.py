@@ -1480,14 +1480,14 @@ class TestDefinition(object):
             if self.rerun_individually is not None:
                 self.trace = sys.gettrace()
                 sys.settrace(functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None))
-                return
+                return self.test
 
             if self.repeat is not None:
                 repeat = self._apply_repeat(name, self.repeat)
                 if repeat is not None:
                     self.trace = sys.gettrace()
                     sys.settrace(functools.partial(self.__repeat__, repeat, None, None, None))
-                    return
+                    return self.test
 
         except (KeyboardInterrupt, Exception):
             raise
@@ -1502,6 +1502,7 @@ class TestDefinition(object):
             self._with_block_frame = (frame, frame.f_lasti, frame.f_lineno)
             self.trace = sys.gettrace()
             sys.settrace(functools.partial(self.__nop__, *sys.exc_info()))
+            return self.test
 
     def _apply_end(self, name, parent, kwargs):
         end = kwargs.get("end")
