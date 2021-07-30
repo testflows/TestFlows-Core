@@ -11,8 +11,10 @@ def argparser(parser):
         assert args["build"] == "hello", error()
         args["build"] = "hello there"
 
-    parser.add_argument("--build", type=mytype, default="")
+    parser.add_argument("--build", type=mytype, default=None)
     parser.set_defaults(func=func)
+
+    return config.Schema({config.Optional("build"): str})
 
 @TestModule
 @Name("user defined argument parser function")

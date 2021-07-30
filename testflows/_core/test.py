@@ -28,6 +28,7 @@ from collections import namedtuple
 
 import testflows.settings as settings
 import testflows._core.contrib.yaml as yaml
+import testflows._core.contrib.schema as schema
 
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
@@ -51,7 +52,7 @@ from .cli.arg.exit import ExitWithError, ExitException
 from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
 from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
 from .cli.arg.type import file as file_type
-from .cli.arg.type import onoff as onoff_type, count as count_type
+from .cli.arg.type import onoff as onoff_type, NoneValue, count as count_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import The, TheTags
@@ -67,6 +68,12 @@ try:
     import testflows.database as database_module
 except:
     database_module = None
+
+output_formats = ["new-fails", "fails", "classic", "slick", "nice",
+    "brisk", "quiet", "short", "manual", "dots", "raw"]
+
+rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
+    "xok", "xfail", "xerror", "xnull", "skip"]
 
 async def run_async_generator(generator, consume=False):
     """Run async generator.
@@ -86,6 +93,9 @@ def run_generator(generator, consume=False):
         return
     return next(generator)
 
+def dummy(*args, **kwargs):
+    pass
+
 class DummyTest(object):
     """Base class for dummy tests.
     """
@@ -97,8 +107,7 @@ class DummyTest(object):
             pass
 
         self.trace = sys.gettrace()
-        sys.settrace(dummy)
-        sys._getframe(1).f_trace = self.__skip__
+        sys.settrace(self.__skip__)
 
     def __skip__(self, *args):
         sys.settrace(self.trace)
@@ -695,9 +704,10 @@ def cli_argparser(kwargs, argparser=None):
         description_prog="Test - Framework",
         epilog=epilog
     )
+    test_args_schema = None
 
     if argparser:
-        argparser(main_parser.add_argument_group('test arguments'))
+        test_args_schema = argparser(main_parser.add_argument_group('test arguments'))
 
     parser = main_parser.add_argument_group("common arguments")
 
@@ -733,12 +743,12 @@ def cli_argparser(kwargs, argparser=None):
                         help="randomize order of auto loaded tests", required=False, default=None)
     parser.add_argument("--debug", dest="_debug", action="store_true",
                         help="enable debugging mode", default=None)
-    parser.add_argument("--no-colors", dest="_no_colors", action="store_true",
-                        help="disable terminal color highlighting", default=None)
+    parser.add_argument("--no-colors", dest="_no_colors", choices=["yes", "no", "on", "off", 0, 1],
+                        help="disable terminal color highlighting", nargs='?', type=onoff_type, default=NoneValue)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
     parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
-                        choices=["new-fails", "fails", "classic", "slick", "nice", "brisk", "quiet", "short", "manual", "dots", "raw"],
-                        help="""stdout output format, choices are: ['new-fails','fails','classic','slick','nice','brisk','short','manual','dots','quiet','raw'],
+                        choices=output_formats,
+                        help=f"""stdout output format, choices are: {output_formats},
                             default: 'nice'""")
     parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
                         help="path to the log file where test output will be stored, default: uses temporary log file")
@@ -753,12 +763,10 @@ def cli_argparser(kwargs, argparser=None):
     parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
                         help="reference log file")
 
-    choices = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
-               "xok", "xfail", "xerror", "xnull", "skip"]
     parser.add_argument("--rerun", dest="_rerun", metavar="result", type=str,
-                        choices=choices, nargs="+",
+                        choices=rerun_results, nargs="+",
                         help=("rerun tests in the --reference log file.\n"
-                              f"Where `result` is either {choices}"))
+                              f"Where `result` is either {rerun_results}"))
     parser.add_argument("--individually", dest="_individually", action="store_true", default=None,
                         help="if --rerun is specified then rerun tests in the --reference log file individually.")
 
@@ -780,15 +788,59 @@ def cli_argparser(kwargs, argparser=None):
     if database_module:
         database_module.argparser(parser)
 
-    return main_parser
+    return main_parser, test_args_schema
 
-def parse_cli_args(kwargs, parser):
+def parse_cli_args(kwargs, parser_schema):
     """Parse command line arguments.
 
     :parser: argument parser
     :return: parsed known arguments
     """
     debug_processed = False
+
+    parser, test_args_schema = parser_schema
+
+    # config file validation schema
+    class Deprecated(schema.Hook):
+        def __init__(self, *args, **kwargs):
+            kwargs["handler"] = self._handler
+            super(Deprecated, self).__init__(*args, **kwargs)
+
+        def _handler(self, key, *args):
+            raise schema.SchemaError(f"key '{key}' is deprecated; " + (self._error or ""))
+
+    common_args_schema = schema.Schema({
+        schema.Optional("name"): str,
+        Deprecated("tag", "use 'tags' instead"): object,
+        schema.Optional("attrs"): [schema.Use(key_value_type)],
+        schema.Optional("tags"): [str],
+        schema.Optional("only"): [str],
+        schema.Optional("skip"): [str],
+        schema.Optional("start"): str,
+        schema.Optional("end"): str,
+        schema.Optional("only-tags"): [schema.Use(tags_filter_type)],
+        schema.Optional("skip-tags"): [schema.Use(tags_filter_type)],
+        schema.Optional("pause-before"): [str],
+        schema.Optional("pause-after"): [str],
+        schema.Optional("random"): bool,
+        schema.Optional("debug"): bool,
+        schema.Optional("no-colors"): bool,
+        schema.Optional("colors"): bool,
+        schema.Optional("id"): str,
+        schema.Optional("output"): schema.Or(*output_formats, error="key 'output' value is not a valid format"),
+        schema.Optional("log"): str,
+        schema.Optional("show-skipped"): bool,
+        schema.Optional("repeat"): [schema.Use(repeat_type)],
+        schema.Optional("reference"): str,
+        schema.Optional("rerun"): schema.Or(*rerun_results, error="key 'rerun' values is not a value result"),
+        schema.Optional("individually"): bool,
+        schema.Optional("parallel"): bool,
+        schema.Optional("parallel-pool"): schema.Use(count_type),
+        schema.Optional("private-key"): schema.Use(rsa_private_key_pem_file_type),
+        schema.Optional("first-fail"): bool,
+        schema.Optional("test-to-end"): bool,
+        schema.Optional("database"): [schema.Use(key_value_type)]
+    }, ignore_extra_keys=True)
 
     try:
         args, unknown = parser.parse_known_args()
@@ -803,11 +855,25 @@ def parse_cli_args(kwargs, parser):
         if args.get("_config"):
             configs += args.pop("_config")
 
+        if args["_no_colors"] is None:
+            args["_no_colors"] = True
+        elif args["_no_colors"] == NoneValue:
+            args["_no_colors"] = None
+
         try:
             configs.reverse()
             for config in configs:
                 obj = yaml.safe_load(config) or {}
-                _args = { f"_{k.replace('-','_')}" : v for k,v in obj.pop("test run", {}).items()}
+                test_run_args = obj.pop("test run", {})
+                try:
+                    if test_args_schema:
+                        if not isinstance(test_args_schema, schema.Schema):
+                            raise TypeError("argument parser returned invalid config schema")
+                        obj = test_args_schema.validate(obj)
+                    test_run_args = common_args_schema.validate(test_run_args)
+                except schema.SchemaError as e:
+                    raise schema.SchemaError("in config " + str(e)) from None
+                _args = { f"_{k.replace('-','_')}" : v for k,v in test_run_args.items()}
                 _args.update(obj)
                 _args.update({k:v for k,v in args.items() if v is not None})
                 args = _args
@@ -1105,7 +1171,7 @@ class TestDefinition(object):
         self.rerun_individually = None
         self.repeatable_func = None
         self._with_block_frame = None
-        self._trace_count = 0
+        self._enter_exc_info = None 
         return self
 
     def __call__(self, *pargs, **args):
@@ -1232,8 +1298,6 @@ class TestDefinition(object):
 
         _check_parallel_context()
 
-        def dummy(*args, **kwargs):
-            pass
         try:
             kwargs = self.kwargs
             kwargs["args"] = dict(kwargs.get("args") or {})
@@ -1548,22 +1612,18 @@ class TestDefinition(object):
         kwargs["type"] = type
 
     def __repeat__(self, repeat=None, *args):
-        self._trace_count += 1
-        if self._trace_count > 1:
-            sys.settrace(self.trace)
-            raise TestIteration(repeat)
+        sys.settrace(self.trace)
+        raise TestIteration(repeat)
 
     def __rerun_individually__(self, patterns, *args):
-        self._trace_count += 1
-        if self._trace_count > 1:
-            sys.settrace(self.trace)
-            raise TestRerunIndividually(patterns)
+        sys.settrace(self.trace)
+        raise TestRerunIndividually(patterns)
 
-    def __nop__(self, exc_type, exc_value, exc_tb, *args):
-        self._trace_count += 1
-        if self._trace_count > 1:
-            sys.settrace(self.trace)
+    def __nop__(self, exc_type, exc_value, exc_tb, frame, event, arg):
+        sys.settrace(self.trace)
+        if not str(frame.f_code.co_name) in ("__aexit__", "__exit__"):
             raise exc_value.with_traceback(exc_tb)
+        self._enter_exc_info = (exc_type, exc_value, exc_tb)
 
     def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/_core"):
         tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
@@ -1776,6 +1836,8 @@ class TestDefinition(object):
         """Synchronous text exit.
         """
         frame = inspect.currentframe().f_back
+        if self._enter_exc_info:
+            exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
             exc_traceback = self._make_complete_traceback(exc_traceback, frame)
         try:
@@ -1813,6 +1875,8 @@ class TestDefinition(object):
         """Asynchronous test exit.
         """
         frame = inspect.currentframe().f_back
+        if self._enter_exc_info:
+            exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
             exc_traceback = self._make_complete_traceback(exc_traceback, frame)
 

@@ -27,6 +27,7 @@ from testflows._core.objects import RepeatTest
 import testflows._core.contrib.rsa as rsa
 
 KeyValue = namedtuple("KeyValue", "key value")
+NoneValue = "__none__"
 
 class FileType(object):
     def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
@@ -171,4 +172,6 @@ def onoff(value):
         return True
     elif value in ["no", "0", "off"]:
         return False
+    elif value == NoneValue:
+        return NoneValue
     raise ArgumentTypeError(f"'{value}' is invalid")
