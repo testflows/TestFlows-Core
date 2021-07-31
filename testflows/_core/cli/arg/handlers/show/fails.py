@@ -30,8 +30,9 @@ class Handler(HandlerBase):
                 nargs="?", help="input log, default: stdin", default="-")
         parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
                 nargs="?", help='output file, default: stdout', default="-")
+        parser.add_argument("-n", "--new", action="store_true", help="show only new fails", default=False)
 
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        FailsReportLogPipeline(args.input, args.output).run()
+        FailsReportLogPipeline(args.input, args.output, only_new=args.new).run()

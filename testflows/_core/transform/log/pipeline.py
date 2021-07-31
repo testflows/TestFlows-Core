@@ -364,7 +364,7 @@ class TotalsReportLogPipeline(Pipeline):
         super(TotalsReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class FailsReportLogPipeline(Pipeline):
-    def __init__(self, input, output):
+    def __init__(self, input, output, only_new=False):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
@@ -375,7 +375,7 @@ class FailsReportLogPipeline(Pipeline):
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(),
             fanout(
-                fails_report_transform(stop_event, divider=""),
+                fails_report_transform(stop_event, divider="", only_new=only_new),
             ),
             fanin(
                 "".join
