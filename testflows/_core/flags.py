@@ -122,11 +122,20 @@ class Flags(object):
     def __and__(self, o):
         return Flags(self.flags & int(Flags(o)))
 
+    def __rand__(self, o):
+        return self.__and__(o)
+
     def __or__(self, o):
         return Flags(self.flags | int(Flags(o)))
 
+    def __ror__(self, o):
+        return self.__or__(o)
+
     def __xor__(self, o):
         return Flags(self.flags ^ int(Flags(o)))
+
+    def __rxor__(self, o):
+        return self.__xor__(o)
 
     def __invert__(self):
         return Flags(~self.flags)
