@@ -887,7 +887,7 @@ def parse_cli_args(kwargs, parser_schema):
         debug_processed = True
 
         if exc is not None:
-            raise exc
+            raise exc from None
 
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
@@ -1802,11 +1802,11 @@ class TestDefinition(object):
             sys.exit(0 if self.test.result else 1)
 
         if isinstance(exc_value, KeyboardInterrupt):
-            raise KeyboardInterrupt
+            raise KeyboardInterrupt from None
 
         # if test did not handle the exception in _exit then re-raise it
         if exc_value and not test__exit__:
-            raise exc_value
+            raise exc_value from None
 
         if not self.test.result:
             if isinstance(self.test.result, Fail):
