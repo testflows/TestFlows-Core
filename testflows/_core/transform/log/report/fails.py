@@ -76,7 +76,7 @@ def generate(results, divider, only_new=False):
             xfails += "\n"
 
         if xfails:
-            xfails = color("\nKnown\n\n", "white", attrs=["bold"]) + xfails
+            xfails = color(f"{divider}Known\n\n", "white", attrs=["bold"]) + xfails
 
     for entry in results:
         msg, result = results[entry]
@@ -89,6 +89,8 @@ def generate(results, divider, only_new=False):
         fails += "\n"
 
     if fails:
+        if not divider and xfails:
+            divider = "\n"
         fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
 
     report = f"{xfails}{fails}"

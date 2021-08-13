@@ -584,23 +584,33 @@ class Repeat(NamedList):
     name = "repeat"
 
     def __init__(self, *repeat):
-        super(Repeat, self).__init__(*[RepeatTest(*r) for r in repeat])
+        super(Repeat, self).__init__(*[Repetition(**r) for r in repeat])
 
-class RepeatTest(namedtuple_with_defaults("repeat", "pattern number until", defaults=("fail",))):
-    """repeat container."""
+class Repetition(namedtuple_with_defaults("Repetition", "count pattern until", defaults=("", "complete",))):
+    """Repeat container.
+    """
+    def __new__(cls, count, pattern="", until="complete"):
+        count = int(count)
+        pattern = str(pattern)
+        until = str(until)
 
-    def __new__(cls, *args):
-        args = list(args)
-        l = len(args)
-        if l > 0:
-            if not isinstance(args[0], The):
-                args[0] = The(args[0])
-        if l > 1:
-            args[1] = int(args[1])
-            assert args[1] > 0
-        if l > 2:
-            assert args[2] in ("fail", "pass", "complete")
-        return super(RepeatTest, cls).__new__(cls, *args)
+        if not isinstance(pattern, The):
+            pattern = The(pattern)
+        if count < 1:
+            raise ValueError("count must be > 0")
+        if until not in ("fail", "pass", "complete"):
+            raise ValueError("invalid until value")
+
+        return super(Repetition, cls).__new__(cls, *(count, pattern, until))
+
+    def keys(self):
+        return self._fields
+
+    def __getitem__(self, i):
+        if type(i) in (str,):
+            return dict(zip(self._fields, self))[i]
+        else:
+            return super(Repetition, self).__getitem__(i)
 
 class Args(dict):
     def __init__(self, **args):

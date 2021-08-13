@@ -23,7 +23,7 @@ from testflows._core.has import has
 from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
 from testflows._core.objects import Name, Description, Uid, Tags, Args, Setup, Parallel, Executor
-from testflows._core.objects import XFails, XSkips, XFlags, Repeat, RepeatTest
+from testflows._core.objects import XFails, XSkips, XFlags, Repeat, Repetition
 from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
 from testflows._core.objects import Secret
@@ -41,7 +41,7 @@ from testflows._core.flags import TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP
 from testflows._core.flags import XOK, XFAIL, XERROR, XNULL
 from testflows._core.flags import FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED
 from testflows._core.flags import PAUSE, PAUSE_BEFORE, PAUSE_AFTER, REPORT, DOCUMENT, MANUAL, AUTO
-from testflows._core.flags import MANDATORY, CLEAR
+from testflows._core.flags import MANDATORY, CLEAR, NOT_REPEATABLE
 from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core.flags import PARALLEL, NO_PARALLEL
 from testflows._core import __author__, __version__, __license__

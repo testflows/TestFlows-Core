@@ -64,6 +64,10 @@ NO_PARALLEL = 1 << 30
 CLEAR = 1 << 31
 # async test
 ASYNC = 1 << 32
+# repeated test flag
+REPEATED = 1 << 33
+# not repeatable test
+NOT_REPEATABLE = 1 << 34
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -74,7 +78,7 @@ XRESULT = XOK | XFAIL | XERROR | XNULL
 NOT_COUNTED = FAIL_NOT_COUNTED
 NOT_COUNTED_ANY = FAIL_NOT_COUNTED | ERROR_NOT_COUNTED | NULL_NOT_COUNTED
 # cumulative flags
-CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL
+CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL | NOT_REPEATABLE
 
 class Flags(object):
     """Test flags."""
@@ -84,7 +88,7 @@ class Flags(object):
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
             REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
-            ASYNC
+            ASYNC, REPEATED, NOT_REPEATABLE
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
@@ -92,7 +96,7 @@ class Flags(object):
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
             "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
-            "ASYNC"
+            "ASYNC", "REPEATED", "NOT_REPEATABLE"
         ]
 
     def __init__(self, flags=0):

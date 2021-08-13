@@ -33,13 +33,13 @@ import testflows._core.contrib.schema as schema
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
-from .flags import PARALLEL, NO_PARALLEL, ASYNC
+from .flags import PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
-from .objects import RepeatTest, ExamplesTable, Specification
+from .objects import Repetition, ExamplesTable, Specification
 from .objects import Secret
 from .constants import name_sep
 from .io import TestIO
@@ -755,11 +755,11 @@ def cli_argparser(kwargs, argparser=None):
     parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
                         help="show skipped tests, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
-                        help=("number of times to repeat a test until it either fails or passes.\n"
+                        help=("repeat a test until it either fails, passes or all iterations are completed.\n"
                               "Where `pattern` is a test name pattern, "
-                              "`number` is a number times to repeat the test, "
+                              "`count` is a number times to repeat the test, "
                               "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
-                        type=repeat_type, metavar="pattern,number[,until]]", nargs="+", required=False)
+                        type=repeat_type, metavar="pattern,count[,until]]", nargs="+", required=False)
     parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
                         help="reference log file")
 
@@ -1388,7 +1388,7 @@ class TestDefinition(object):
                 kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") else None
             else:
                 kwargs["skip_tags"] = kwargs.get("skip_tags")
-            kwargs["repeat"] = [RepeatTest(*r) for r in kwargs.get("repeat", [])] or None
+            kwargs["repeat"] = [Repetition(**r) for r in kwargs.get("repeat", [])] or None
             if kwargs["repeat"]:
                 [r.pattern.at(name if name else name_sep) for r in kwargs["repeat"]]
 
@@ -1485,6 +1485,8 @@ class TestDefinition(object):
             if self.repeat is not None:
                 repeat = self._apply_repeat(name, self.repeat)
                 if repeat is not None:
+                    if not self.test.flags & NOT_REPEATABLE:
+                        self.test.flags |= REPEATED
                     self.trace = sys.gettrace()
                     sys.settrace(functools.partial(self.__repeat__, repeat, None, None, None))
                     return self.test
@@ -1671,7 +1673,7 @@ class TestDefinition(object):
 
         self.test._enter()
 
-        if self.repeatable_func is None:
+        if self.repeatable_func is None or self.test.flags & NOT_REPEATABLE:
             raise Error("not repeatable")
 
         __kwargs = dict(self.kwargs)
@@ -1696,7 +1698,7 @@ class TestDefinition(object):
 
         repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        for i in range(repeat.number):
+        for i in range(repeat.count):
             with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
@@ -1714,7 +1716,7 @@ class TestDefinition(object):
 
         repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        for i in range(repeat.number):
+        for i in range(repeat.count):
             async with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments

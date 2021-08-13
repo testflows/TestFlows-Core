@@ -33,6 +33,7 @@ from .manual import transform as manual_transform
 from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
+from .report.unstable import transform as unstable_report_transform
 from .report.totals import transform as totals_report_transform
 from .report.version import transform as version_report_transform
 from .report.coverage import transform as coverage_report_transform
@@ -127,6 +128,7 @@ class ShortLogPipeline(Pipeline):
                 short_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -150,6 +152,7 @@ class NiceLogPipeline(Pipeline):
                 nice_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -173,6 +176,7 @@ class BriskLogPipeline(Pipeline):
                 brisk_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -196,6 +200,7 @@ class SlickLogPipeline(Pipeline):
                 slick_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -219,6 +224,7 @@ class ManualLogPipeline(Pipeline):
                 manual_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -242,6 +248,7 @@ class ClassicLogPipeline(Pipeline):
                 classic_transform(show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -287,6 +294,7 @@ class DotsLogPipeline(Pipeline):
                 dots_transform(stop_event, show_input=show_input),
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
@@ -329,6 +337,7 @@ class ResultsReportLogPipeline(Pipeline):
             fanout(
                 passing_report_transform(stop_event),
                 fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event)
@@ -405,6 +414,27 @@ class PassingReportLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(PassingReportLogPipeline, self).__init__(steps, stop=stop_event)
+
+class UnstableReportLogPipeline(Pipeline):
+    def __init__(self, input, output):
+        stop_event = threading.Event()
+
+        message_types = [Message.RESULT.name, Message.STOP.name]
+        grep = "grep -E '^{\"message_keyword\":\""
+        command = f"{grep}({'|'.join(message_types)})\"'"
+        steps = [
+            read_and_filter_transform(input, command=command, stop=stop_event),
+            parse_transform(),
+            fanout(
+                unstable_report_transform(stop_event, divider=""),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(UnstableReportLogPipeline, self).__init__(steps, stop=stop_event)
 
 class CoverageReportLogPipeline(Pipeline):
     def __init__(self, input, output):
