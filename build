@@ -23,12 +23,6 @@ import subprocess
 from urllib.parse import urlparse
 from datetime import datetime
 
-try:
-    import git
-except ImportError:
-    print("error: please install gitpython with 'pip3 install gitpython' command", file=sys.stderr)
-    sys.exit(1)
-
 parser = argparse.ArgumentParser(description="TestFlows - Core build script")
 parser.add_argument("--debug", help="enable debugging", action="store_true", default=False)
 
@@ -44,10 +38,12 @@ def clean_url(url, rchop=None):
         cleaned_url[:-len(rchop)]
     return cleaned_url
 
-repo = git.Repo(current_dir)
-repo_name = clean_url(repo.remotes.origin.url)
-repo_commit = repo.head.commit.hexsha
-repo_branch = repo.active_branch.name
+def call(*command):
+    return subprocess.run(command,  check=True, capture_output=True, encoding="utf-8")
+
+repo_name = clean_url(call("git", "remote", "get-url", "origin").stdout.strip())
+repo_commit = call("git", "rev-parse", "HEAD").stdout.strip()
+repo_branch = call("git", "branch").stdout.lstrip("*").strip()
 
 def get_base_version():
     """Return package base version.

@@ -88,7 +88,6 @@ setup(
     ],
     extras_require={
         "dev": [
-            "gitpython",
         ]
     }
 )
