@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2019-2021 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,8 +14,11 @@
 # limitations under the License.
 __author__ = "Vitaliy Zakaznikov"
 __version__ = "1.7.__VERSION__"
+__repository__ = "__REPOSITORY__"
+__commit__ = "__COMMIT__"
+__branch__ = "__BRANCH__"
 __license__ = f"""
-Copyright 2019 Katteli Inc.
+Copyright 2019-2021 Katteli Inc.
 TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 
 Licensed under the Apache License, Version 2.0 (the "License");

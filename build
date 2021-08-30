@@ -15,11 +15,19 @@
 # limitations under the License.
 import os
 import re
+import sys
 import shutil
 import argparse
 import subprocess
 
+from urllib.parse import urlparse
 from datetime import datetime
+
+try:
+    import git
+except ImportError:
+    print("error: please install gitpython with 'pip3 install gitpython' command", file=sys.stderr)
+    sys.exit(1)
 
 parser = argparse.ArgumentParser(description="TestFlows - Core build script")
 parser.add_argument("--debug", help="enable debugging", action="store_true", default=False)
@@ -28,6 +36,18 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 package = os.path.join("testflows", "_core")
 init_path = os.path.join(current_dir, package, "__init__.py")
 setup_path = os.path.join(current_dir, "setup.py")
+
+def clean_url(url, rchop=None):
+    parsed = urlparse(url)
+    cleaned_url = parsed._replace(netloc="{}".format(parsed.hostname)).geturl()
+    if rchop and cleaned_url.endswith(rchop):
+        cleaned_url[:-len(rchop)]
+    return cleaned_url
+
+repo = git.Repo(current_dir)
+repo_name = clean_url(repo.remotes.origin.url)
+repo_commit = repo.head.commit.hexsha
+repo_branch = repo.active_branch.name
 
 def get_base_version():
     """Return package base version.
@@ -53,8 +73,8 @@ def get_revision():
     minor_revision = now.strftime("%H%M%S")
     return major_revision + ".1" + minor_revision
 
-def set_version(path, version):
-    """Set version in the file.
+def set_attributes(path, **attrs):
+    """Set attributes in the file.
 
     :param path: path
     :param version: version
@@ -64,11 +84,14 @@ def set_version(path, version):
         content = fd.read()
         fd.seek(0)
         fd.truncate()
-        fd.write(content.replace("__VERSION__", version))
+        new_content = content
+        for key, value in attrs.items():
+            new_content = new_content.replace(key, value)
+        fd.write(new_content)
     return content
 
-def unset_version(path, content):
-    """Unset version in the file.
+def unset_attributes(path, content):
+    """Unset attributes in the file.
 
     :param path: path
     :param content: original file content
@@ -105,16 +128,17 @@ def build(args, options=None):
     revision = get_revision()
     version = ".".join([base_version, revision])
     init_content, setup_content = None, None
+    attrs = {"__REPOSITORY__": repo_name, "__COMMIT__": repo_commit, "__BRANCH__": repo_branch}
 
     try:
-        init_content = set_version(init_path, revision)
-        setup_content = set_version(setup_path, version)
+        init_content = set_attributes(init_path, **{"__VERSION__": revision}, **attrs)
+        setup_content = set_attributes(setup_path, **{"__VERSION__": version})
         build_package(args, options)
     finally:
         if init_content:
-            unset_version(init_path, init_content)
+            unset_attributes(init_path, init_content)
         if setup_content:
-            unset_version(setup_path, setup_content)
+            unset_attributes(setup_path, setup_content)
 
 if __name__ == "__main__":
     args = parser.parse_args()

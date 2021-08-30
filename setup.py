@@ -88,7 +88,7 @@ setup(
     ],
     extras_require={
         "dev": [
-            "sphinx",
+            "gitpython",
         ]
     }
 )
