@@ -320,7 +320,7 @@ class TestBase(object):
         self.result = Null(test=self.name)
         if flags is not None:
             self.flags = Flags(flags)
-        self.cflags = Flags(cflags) | (self.flags & CFLAGS)
+        self.cflags = Flags(cflags)
         self.uid = get(uid, self.uid)
         if self.uid is not None:
             self.uid = str(self.uid)
@@ -1323,6 +1323,7 @@ class TestDefinition(object):
 
             name = test.make_name(kwargs.pop("name", None), parent.name if parent else None, kwargs["args"], format=format_name)
             kwargs["flags"] = Flags(kwargs.get("flags"))
+            kwargs["cflags"] = Flags(kwargs.get("cflags"))
 
             if parent:
                 kwargs["parent"] = parent
@@ -1437,6 +1438,8 @@ class TestDefinition(object):
                 kwargs["flags"] &= ~PAUSE_BEFORE
                 kwargs["flags"] &= ~PAUSE_AFTER
 
+            kwargs["cflags"] |= kwargs["flags"] & CFLAGS
+
             self.repeat = kwargs.pop("repeat", None)
             self.rerun_individually = kwargs.pop("rerun_individually", None)
 
@@ -1461,7 +1464,7 @@ class TestDefinition(object):
                 for r in self.repeat or []:
                     r.pattern.set(transform_pattern(str(r.pattern)))
 
-            if not kwargs["flags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
+            if not kwargs["cflags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
                 if (parent and parent.terminating is not None):
                     raise parent.terminating
                 if (top_test and top_test.terminating is not None):
