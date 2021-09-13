@@ -23,7 +23,7 @@ from testflows._core.has import has
 from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
 from testflows._core.objects import Name, Description, Uid, Tags, Args, Setup, Parallel, Executor
-from testflows._core.objects import XFails, XSkips, XFlags, Repeat, Repetition
+from testflows._core.objects import XFails, XFlags, FFails, Repeat, Repetition
 from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
 from testflows._core.objects import Secret
@@ -46,8 +46,8 @@ from testflows._core.flags import EANY, ERESULT, XRESULT
 from testflows._core.flags import PARALLEL, NO_PARALLEL
 from testflows._core import __author__, __version__, __license__
 from testflows._core.parallel import join, top, current, previous
-from testflows._core.parallel.executor.thread import ThreadPoolExecutor as Pool, ThreadPoolExecutor as ThreadPool
-from testflows._core.parallel.executor.asyncio import AsyncPoolExecutor as AsyncPool
+from testflows._core.parallel.executor.thread import ThreadPoolExecutor as Pool, ThreadPoolExecutor as ThreadPool, SharedThreadPoolExecutor as SharedThreadPool
+from testflows._core.parallel.executor.asyncio import AsyncPoolExecutor as AsyncPool, SharedAsyncPoolExecutor as SharedAsyncPool
 
 import testflows.core.parallel as parallel
 import testflows.core.objects as objects

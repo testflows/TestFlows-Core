@@ -279,7 +279,7 @@ class TestBase(object):
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None, specifications=None,
                  examples=None, description=None, parent=None,
-                 xfails=None, xskips=None, xflags=None, only=None, skip=None,
+                 xfails=None, xflags=None, ffails=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
                  repeat=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
@@ -325,8 +325,8 @@ class TestBase(object):
         if self.uid is not None:
             self.uid = str(self.uid)
         self.xfails = get(xfails, None)
-        self.xskips = get(xskips, None)
         self.xflags = get(xflags, None)
+        self.ffails = get(ffails, None)
         self.only = get(only, None)
         self.skip = get(skip, None)
         self.start = get(start, None)
@@ -419,18 +419,19 @@ class TestBase(object):
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
 
-        for pattern, reason in (self.xskips or {}).items():
+        for pattern, force_fail in (self.ffails or {}).items():
+            force_result, force_reason = force_fail
             if match(self.name, pattern):
-                raise Skip(reason=reason, test=self.name)
+                raise force_result(reason=force_reason, test=self.name)
 
         if self.setup is not None:
             r = self.setup()
             if inspect.isasyncgen(r):
                 res = async_next(r)
-                self.context.cleanup(run_async_generator, r)
+                self.context.cleanup(run_async_generator, r, consume=True)
             elif inspect.isgenerator(r):
                 res = next(r)
-                self.context.cleanup(run_generator, r)
+                self.context.cleanup(run_generator, r, consume=True)
 
         return self
 
@@ -1171,7 +1172,7 @@ class TestDefinition(object):
         self.rerun_individually = None
         self.repeatable_func = None
         self._with_block_frame = None
-        self._enter_exc_info = None 
+        self._enter_exc_info = None
         return self
 
     def __call__(self, *pargs, **args):
@@ -1334,16 +1335,16 @@ class TestDefinition(object):
                 # propagate manual flag if automatic test flag is not set
                 if not kwargs["flags"] & AUTO:
                     kwargs["flags"] |= parent.flags & MANUAL
-                # propagate xfails, xskips, xflags that prefix match the name of the test
+                # propagate xfails, xflags, ffails that prefix match the name of the test
                 kwargs["xfails"] = {
                     k: v for k, v in parent.xfails.items() if match(name, k, prefix=True)
                 } if parent.xfails else None or kwargs.get("xfails")
-                kwargs["xskips"] = {
-                    k: v for k, v in parent.xskips.items() if match(name, k, prefix=True)
-                } if parent.xskips else None or kwargs.get("xskips")
                 kwargs["xflags"] = {
                     k: v for k, v in parent.xflags.items() if match(name, k, prefix=True)
                 } if parent.xflags else None or kwargs.get("xflags")
+                kwargs["ffails"] = {
+                    k: v for k, v in parent.ffails.items() if match(name, k, prefix=True)
+                } if parent.ffails else None or kwargs.get("ffails")
                 # propagate only, skip, start, and end
                 kwargs["only"] = parent.only or kwargs.get("only")
                 kwargs["skip"] = parent.skip or kwargs.get("skip")
@@ -1371,11 +1372,11 @@ class TestDefinition(object):
             kwargs["xfails"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xfails") or {}).items()
             } or None
-            kwargs["xskips"] = {
-                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xskips") or {}).items()
-            } or None
             kwargs["xflags"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("xflags") or {}).items()
+            } or None
+            kwargs["ffails"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("ffails") or {}).items()
             } or None
             kwargs["only"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("only") or []] or None
             kwargs["skip"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
@@ -1422,6 +1423,10 @@ class TestDefinition(object):
             if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given, TestSubType.Finally]:
                 kwargs["flags"] |= MANDATORY
 
+            # auto set TE flag for Finally steps
+            if kwargs.get("subtype") in [TestSubType.Finally]:
+                kwargs["flags"] |= TE
+
             # should not skip mandatory steps
             if kwargs["flags"] & MANDATORY:
                 kwargs["flags"] &= ~SKIP
@@ -1453,10 +1458,10 @@ class TestDefinition(object):
                 # need to fix all anchored patterns
                 kwargs["xfails"] = {transform_pattern(k): v for k, v in
                     (kwargs.pop("xfails", {}) or {}).items()} or None
-                kwargs["xskips"] = {transform_pattern(k): v for k, v in
-                    (kwargs.pop("xskips", {}) or {}).items()} or None
                 kwargs["xflags"] = {transform_pattern(k): v for k, v in
                     (kwargs.pop("xflags", {}) or {}).items()} or None
+                kwargs["ffails"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("ffails", {}) or {}).items()} or None
                 kwargs["only"] = [The(transform_pattern(str(f))) for f in kwargs.get("only") or []] or None
                 kwargs["skip"] = [The(transform_pattern(str(f))) for f in kwargs.get("skip") or []] or None
                 kwargs["start"] = The(transform_pattern(str(kwargs.get("start")))) if kwargs.get("start") else None
@@ -2016,7 +2021,10 @@ class BackgroundTest(TestBase):
 
     def _enter(self):
         self.stack = ExitStack().__enter__()
-        self.context.cleanup(self.stack.__exit__, None, None, None)
+        def _cleanup():
+            with Finally("clean up background"):
+                return self.stack.__exit__(None, None, None)
+        self.context.cleanup(_cleanup)
         return super(BackgroundTest, self)._enter()
 
     def append(self, ctx_manager):
@@ -2136,11 +2144,11 @@ class TestDecorator(object):
         def process_func_result(r):
             if inspect.isasyncgen(r):
                 res = run_async_generator(r)
-                test.context.cleanup(run_async_generator, r)
+                test.context.cleanup(run_async_generator, r, consume=True)
                 r = res
             elif inspect.isgenerator(r):
                 res = run_generator(r)
-                test.context.cleanup(run_generator, r)
+                test.context.cleanup(run_generator, r, consume=True)
                 r = res
 
             return r

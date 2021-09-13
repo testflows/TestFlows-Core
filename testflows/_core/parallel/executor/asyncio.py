@@ -223,14 +223,17 @@ class AsyncPoolExecutor(_base._base.Executor):
                     self._async_loop_thread.join()
 
 
-class GlobalAsyncPoolExecutor(AsyncPoolExecutor):
-    """Global async pool executor.
+class SharedAsyncPoolExecutor(AsyncPoolExecutor):
+    """Shared async pool executor.
     """
     def __init__(self, max_workers, task_name_prefix=""):
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
-        super(GlobalAsyncPoolExecutor, self).__init__(
+        super(SharedAsyncPoolExecutor, self).__init__(
             max_workers=max_workers-1, task_name_prefix=task_name_prefix, _check_max_workers=False)
 
     def submit(self, fn, args=None, kwargs=None, block=False):
-        return super(GlobalAsyncPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+        return super(SharedAsyncPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+
+
+GlobalAsyncPoolExecutor = SharedAsyncPoolExecutor

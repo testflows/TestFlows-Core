@@ -140,14 +140,17 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
                 thread.join()
 
 
-class GlobalThreadPoolExecutor(ThreadPoolExecutor):
-    """Global thread pool executor.
+class SharedThreadPoolExecutor(ThreadPoolExecutor):
+    """Shared thread pool executor.
     """
     def __init__(self, max_workers, thread_name_prefix=""):
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
-        super(GlobalThreadPoolExecutor, self).__init__(
+        super(SharedThreadPoolExecutor, self).__init__(
             max_workers=max_workers-1, thread_name_prefix=thread_name_prefix, _check_max_workers=False)
 
     def submit(self, fn, args=None, kwargs=None, block=False):
-        return super(GlobalThreadPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+        return super(SharedThreadPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+
+
+GlobalThreadPoolExecutor = SharedThreadPoolExecutor
