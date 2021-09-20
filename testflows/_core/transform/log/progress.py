@@ -19,6 +19,7 @@ from testflows._core.cli.colors import color
 from testflows._core.message import Message
 from testflows._core.testtype import TestType
 from .report.totals import Counts
+from .short import format_result as format_failing_result
 
 progress = [
     color("Executing", "white", attrs=["dim"]),
@@ -48,6 +49,7 @@ def format_input(msg, *_):
 
 def format_result(msg, counter, counts):
     flags = Flags(msg["test_flags"])
+    result = msg["result_type"]
 
     if flags & SKIP and settings.show_skipped is False:
         return
@@ -58,7 +60,10 @@ def format_result(msg, counter, counts):
     _result = msg["result_type"].lower()
 
     setattr(counts, _result, getattr(counts, _result) + 1)
-    return f"\r{progress[counter[0] % (len(progress) - 1)]} {counts}".rstrip() + "  \b"
+    out = f"\r{progress[counter[0] % (len(progress) - 1)]} {counts}".rstrip() + "  \b"
+    if result in ("Fail", "Error", "Null"):
+        out += "\n" + format_failing_result(msg, use_full_testname=True, use_indent=" "*2)
+    return out
 
 def format_test(msg, counter, counts):
     flags = Flags(msg["test_flags"])

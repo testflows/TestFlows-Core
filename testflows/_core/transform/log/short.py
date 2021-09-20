@@ -41,8 +41,11 @@ def color_keyword(keyword, no_colors=False):
 def color_secondary_keyword(keyword, no_colors=False):
     return color(split(keyword)[-1], "white", attrs=["bold", "dim"], no_colors=no_colors)
 
-def color_test_name(name, no_colors=False):
-    return color(split(name)[-1], "white", attrs=[], no_colors=no_colors)
+def color_test_name(name, no_colors=False, use_full_testname=False):
+    if use_full_testname:
+        return color(name, "white", attrs=[], no_colors=no_colors)
+    else:
+        return color(split(name)[-1], "white", attrs=[], no_colors=no_colors)
 
 def color_result(result, attrs=None, no_colors=False, retry=False):
     if attrs is None:
@@ -255,14 +258,22 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
         out += format_test_description(msg, _indent, no_colors=no_colors)
     return out
 
-def format_result(msg, no_colors=False):
+def format_result(msg, no_colors=False, use_indent=False, use_full_testname=False):
     result = msg["result_type"]
     _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(msg["test_flags"])
     _color = color_result(result, no_colors=no_colors, retry=_retry)
     _result = _color(result, no_colors=no_colors)
-    _test = color_test_name(basename(msg["result_test"]), no_colors=no_colors)
+    if use_full_testname:
+        _test = color_test_name(msg["result_test"],
+                    no_colors=no_colors, use_full_testname=use_full_testname)
+    else:
+        _test = color_test_name(basename(msg["result_test"]), no_colors=no_colors)
 
-    _indent = indent * (msg["test_id"].count('/') - 1)
+    if use_indent is False:
+        _indent = indent * (msg["test_id"].count('/') - 1)
+    else:
+        _indent = use_indent
+
     out = f"{_indent}{_result}"
 
     if result in ("Fail", "Error", "Null"):
