@@ -567,7 +567,7 @@ class FFails(NamedValue):
 
     def __init__(self, value):
         _value = dict(value)
-        for k, v in _value:
+        for k, v in _value.items():
             FFail.check_value(k, *v)
         super(FFails, self).__init__(_value)
 
