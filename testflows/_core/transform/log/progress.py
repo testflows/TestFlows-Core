@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2021 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,28 +18,14 @@ from testflows._core.flags import Flags, SKIP
 from testflows._core.cli.colors import color
 from testflows._core.message import Message
 from testflows._core.testtype import TestType
+from .report.totals import Counts
 
-width = 70
-count = 0
+progress = [
+    color("Executing", "white", attrs=["dim"]),
+    color("Executed", "white", attrs=["dim"])
+]
 
-def color_result(result):
-    if result.startswith("X"):
-        return color(".", "blue", attrs=["bold"])
-    elif result == "OK":
-        return color(".", "green", attrs=["bold"])
-    elif result == "Skip":
-        return color("-", "white", attrs=["dim"])
-    # Error, Fail, Null
-    elif result == "Error":
-        return color("E", "yellow", attrs=["bold"])
-    elif result == "Fail":
-         return color("F", "red", attrs=["bold"])
-    elif result == "Null":
-        return color("N", "magenta", attrs=["bold"])
-    else:
-        raise ValueError(f"unknown result {result}")
-
-def format_prompt(msg):
+def format_prompt(msg, *_):
     global count
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -54,40 +40,55 @@ def format_prompt(msg):
     count = 0
     return out
 
-def format_input(msg):
+def format_input(msg, *_):
     global count
     out = color(msg['message'], "white") + "\n"
     count = 0
     return out
 
-def format_result(msg):
-    global count
+def format_result(msg, counter, counts):
     flags = Flags(msg["test_flags"])
+
     if flags & SKIP and settings.show_skipped is False:
         return
-
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
 
-    count += 1
-    _result = f"{color_result(msg['result_type'])}"
-    # wrap if we hit max width
-    if count >= width:
-        count = 0
-        _result += "\n"
+    counter[0] += 1
+    _result = msg["result_type"].lower()
 
-    return _result
+    setattr(counts, _result, getattr(counts, _result) + 1)
+    return f"\r{progress[counter[0] % (len(progress) - 1)]} {counts}".rstrip() + "  \b"
+
+def format_test(msg, counter, counts):
+    flags = Flags(msg["test_flags"])
+
+    if flags & SKIP and settings.show_skipped is False:
+        return
+    if getattr(TestType, msg["test_type"]) >= TestType.Iteration:
+        counts.units += 1
+    counter[0] += 1
+
+    return f"\r{progress[counter[0] % (len(progress)-1)]} {counts}".rstrip() + "  \b"
+
+def format_stop(msg, counter, counts):
+    return f"\r{progress[-1]} {counts}".rstrip() + "      \b"
 
 formatters = {
     Message.INPUT.name: (format_input,),
     Message.PROMPT.name: (format_prompt,),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
+    Message.TEST.name: (format_test,),
+    Message.STOP.name: (format_stop,)
 }
 
 def transform(stop_event, show_input=True):
-    """Transform parsed log line into a short format.
+    """Transform parsed log line into a progress format.
     """
     line = None
+    counter = [-1]
+    counts = Counts("tests", *([0] * 10))
+
     while True:
         if line is not None:
             formatter = formatters.get(line["message_keyword"], None)
@@ -95,7 +96,7 @@ def transform(stop_event, show_input=True):
                 if formatter[0] is format_input and show_input is False:
                     line = None
                 else:
-                    line = formatter[0](line, *formatter[1:])
+                    line = formatter[0](line, counter, counts, *formatter[1:])
                     n = 0
             else:
                 line = None

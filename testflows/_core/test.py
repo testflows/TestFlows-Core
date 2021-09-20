@@ -33,13 +33,14 @@ import testflows._core.contrib.schema as schema
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
-from .flags import PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE
+from .flags import PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, PassResults, Argument, Attribute, Requirement, ArgumentParser
-from .objects import Repetition, ExamplesTable, Specification
+from .objects import get, Null, OK, Fail, Skip, Error, PassResults, NonFailResults
+from .objects import Argument, Attribute, Requirement, ArgumentParser
+from .objects import ExamplesTable, Specification
 from .objects import Secret
 from .constants import name_sep
 from .io import TestIO
@@ -70,7 +71,7 @@ except:
     database_module = None
 
 output_formats = ["new-fails", "fails", "classic", "slick", "nice",
-    "brisk", "quiet", "short", "manual", "dots", "raw"]
+    "brisk", "quiet", "short", "manual", "dots", "progress", "raw"]
 
 rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
     "xok", "xfail", "xerror", "xnull", "skip"]
@@ -282,7 +283,7 @@ class TestBase(object):
                  xfails=None, xflags=None, ffails=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeat=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
+                 repeats=None, retries=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
 
         self.lock = threading.Lock()
 
@@ -333,7 +334,8 @@ class TestBase(object):
         self.end = get(end, None)
         self.only_tags = get(only_tags, None)
         self.skip_tags = get(skip_tags, None)
-        self.repeat = get(repeat, None)
+        self.repeats = get(repeats, None)
+        self.retries = get(retries, None)
         self.private_key = get(private_key, None)
         self.caller_test = None
         self.setup = get(setup, None)
@@ -416,13 +418,16 @@ class TestBase(object):
         self.caller_test = current()
         current(self)
 
+        for pattern, force_fail in (self.ffails or {}).items():
+            force_result, force_reason, force_when = force_fail[0], force_fail[1], force_fail[2:]
+            force_when = force_when[0] if force_when and force_when[0] is not None else lambda test: True
+            if not self.flags & SKIP or (self.flags & SKIP and force_result is Skip):
+                if match(self.name, pattern):
+                    if force_when(self):
+                        raise force_result(reason=force_reason, test=self.name)
+
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
-
-        for pattern, force_fail in (self.ffails or {}).items():
-            force_result, force_reason = force_fail
-            if match(self.name, pattern):
-                raise force_result(reason=force_reason, test=self.name)
 
         if self.setup is not None:
             r = self.setup()
@@ -684,7 +689,7 @@ pattern
   for a literal match, wrap the meta-characters in brackets where '[?]' matches the character '?'
 
 type
-  test type either 'test','suite','module','scenario', or 'feature'
+  test type either 'test','suite','module','scenario', 'feature', or 'any'
 
 """ + common_epilog()
 
@@ -755,6 +760,8 @@ def cli_argparser(kwargs, argparser=None):
                         help="path to the log file where test output will be stored, default: uses temporary log file")
     parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
                         help="show skipped tests, default: False", default=None)
+    parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
+                        help="show test retries, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
                         help=("repeat a test until it either fails, passes or all iterations are completed.\n"
                               "Where `pattern` is a test name pattern, "
@@ -831,6 +838,7 @@ def parse_cli_args(kwargs, parser_schema):
         schema.Optional("output"): schema.Or(*output_formats, error="key 'output' value is not a valid format"),
         schema.Optional("log"): str,
         schema.Optional("show-skipped"): bool,
+        schema.Optional("show-retries"): bool,
         schema.Optional("repeat"): [schema.Use(repeat_type)],
         schema.Optional("reference"): str,
         schema.Optional("rerun"): schema.Or(*rerun_results, error="key 'rerun' values is not a value result"),
@@ -919,6 +927,7 @@ def parse_cli_args(kwargs, parser_schema):
             settings.database = args.pop("_database")
 
         settings.show_skipped = args.pop("_show_skipped", None) or False
+        settings.show_retries = args.pop("_show_retries", None) or False
         settings.random_order = args.pop("_random", None) or False
 
         if args.get("_pause_before"):
@@ -1002,7 +1011,7 @@ def parse_cli_args(kwargs, parser_schema):
             repeat = []
             for item in args.pop("_repeat"):
                 repeat.append(item)
-            kwargs["repeat"] = repeat
+            kwargs["repeats"] = {r.pattern: (r.count, r.until) for r in repeat}
 
         if args.get("_rerun"):
             rerun_individually = args.pop("_individually", None) or False
@@ -1168,7 +1177,8 @@ class TestDefinition(object):
         self.executor = kwargs.pop("executor", None)
         self.kwargs = kwargs
         self.tags = None
-        self.repeat = None
+        self.repeats = None
+        self.retries = None
         self.rerun_individually = None
         self.repeatable_func = None
         self._with_block_frame = None
@@ -1352,9 +1362,16 @@ class TestDefinition(object):
                 kwargs["end"] = parent.end or kwargs.get("end")
                 kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
                 kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
-                # propagate repeat
-                if parent.repeat and parent.type > TestType.Outline and self.type >= TestType.Outline:
-                    kwargs["repeat"] = parent.repeat
+                # propagate repeats
+                if parent.repeats and parent.type > TestType.Outline and self.type >= TestType.Outline:
+                    kwargs["repeats"] = {
+                        k: v for k, v in parent.repeats.items() if match(name, k, prefix=True)
+                    } if parent.repeats else None or kwargs.get("repeats")
+                # propagate retries
+                if parent.retries and parent.type > TestType.Outline and self.type >= TestType.Outline:
+                    kwargs["retries"] = {
+                        k: v for k, v in parent.retries.items() if match(name, k, prefix=True)
+                    } if parent.retries else None or kwargs.get("retries")
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
@@ -1378,6 +1395,12 @@ class TestDefinition(object):
             kwargs["ffails"] = {
                 absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("ffails") or {}).items()
             } or None
+            kwargs["repeats"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("repeats") or {}).items()
+            } or None
+            kwargs["retries"] = {
+                absname(k, name if name else name_sep): v for k, v in dict(kwargs.get("retries") or {}).items()
+            } or None
             kwargs["only"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("only") or []] or None
             kwargs["skip"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
             kwargs["start"] = The(str(kwargs.get("start"))).at(name if name else name_sep) if kwargs.get("start") else None
@@ -1390,14 +1413,12 @@ class TestDefinition(object):
                 kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") else None
             else:
                 kwargs["skip_tags"] = kwargs.get("skip_tags")
-            kwargs["repeat"] = [Repetition(**r) for r in kwargs.get("repeat", [])] or None
-            if kwargs["repeat"]:
-                [r.pattern.at(name if name else name_sep) for r in kwargs["repeat"]]
 
             self._apply_xflags(name, kwargs)
             self._apply_start(name, parent, kwargs)
-            self._apply_only_tags(self.type, self.tags, kwargs)
-            self._apply_skip_tags(self.type, self.tags, kwargs)
+            if top_test:
+                self._apply_only_tags(self.type, self.tags, kwargs)
+                self._apply_skip_tags(self.type, self.tags, kwargs)
             self._apply_skip(name, kwargs)
             self._apply_end(name, parent, kwargs)
             self._apply_only(name, kwargs)
@@ -1445,7 +1466,8 @@ class TestDefinition(object):
 
             kwargs["cflags"] |= kwargs["flags"] & CFLAGS
 
-            self.repeat = kwargs.pop("repeat", None)
+            self.repeats = kwargs.pop("repeats", None)
+            self.retries = kwargs.pop("retries", None)
             self.rerun_individually = kwargs.pop("rerun_individually", None)
 
             if self.rerun_individually:
@@ -1462,12 +1484,14 @@ class TestDefinition(object):
                     (kwargs.pop("xflags", {}) or {}).items()} or None
                 kwargs["ffails"] = {transform_pattern(k): v for k, v in
                     (kwargs.pop("ffails", {}) or {}).items()} or None
+                kwargs["repeats"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("repeats", {}) or {}).items()} or None
+                kwargs["retries"] = {transform_pattern(k): v for k, v in
+                    (kwargs.pop("retries", {}) or {}).items()} or None
                 kwargs["only"] = [The(transform_pattern(str(f))) for f in kwargs.get("only") or []] or None
                 kwargs["skip"] = [The(transform_pattern(str(f))) for f in kwargs.get("skip") or []] or None
                 kwargs["start"] = The(transform_pattern(str(kwargs.get("start")))) if kwargs.get("start") else None
                 kwargs["end"] = The(transform_pattern(str(kwargs.get("end")))) if kwargs.get("end") else None
-                for r in self.repeat or []:
-                    r.pattern.set(transform_pattern(str(r.pattern)))
 
             if not kwargs["cflags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
                 if (parent and parent.terminating is not None):
@@ -1475,7 +1499,9 @@ class TestDefinition(object):
                 if (top_test and top_test.terminating is not None):
                     raise Skip("top test is terminating")
 
-            self.test = test(name, tags=self.tags, description=self.description, repeat=self.repeat, **kwargs)
+            self.test = test(name, tags=self.tags, description=self.description,
+                repeats=self.repeats, retries=self.retries, **kwargs)
+
             if getattr(self, "parent_type", None):
                 self.test.parent_type = self.parent_type
 
@@ -1490,14 +1516,26 @@ class TestDefinition(object):
                 sys.settrace(functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None))
                 return self.test
 
-            if self.repeat is not None:
-                repeat = self._apply_repeat(name, self.repeat)
-                if repeat is not None:
-                    if not self.test.flags & NOT_REPEATABLE:
-                        self.test.flags |= REPEATED
-                    self.trace = sys.gettrace()
-                    sys.settrace(functools.partial(self.__repeat__, repeat, None, None, None))
-                    return self.test
+            retry = None
+            repeat = None
+
+            if self.repeats is not None:
+                repeat = self._apply_repeats(name, self.repeats)
+
+            if self.retries is not None:
+                retry = self._apply_repeats(name, self.retries)
+
+            if repeat is not None:
+                if not self.test.flags & NOT_REPEATABLE:
+                    self.test.flags |= REPEATED
+            if retry is not None:
+                if not self.test.flags & NOT_REPEATABLE:
+                    self.test.flags |= RETRIED
+
+            if repeat is not None or retry is not None:
+                self.trace = sys.gettrace()
+                sys.settrace(functools.partial(self.__repeat__, repeat, retry, None, None, None))
+                return self.test
 
         except (KeyboardInterrupt, Exception):
             raise
@@ -1538,31 +1576,33 @@ class TestDefinition(object):
                 with parent.lock:
                     parent.start = None
 
-    def _apply_repeat(self, name, repeat):
-        if not repeat:
+    def _apply_repeats(self, name, repeats):
+        if not repeats:
             return
 
-        for item in repeat:
-            if item.pattern.match(name, prefix=False):
-                return item
+        for k, v in repeats.items():
+            if match(name, k, prefix=False):
+                return v
 
     def _apply_only_tags(self, type, tags, kwargs):
         only_tags = (kwargs.get("only_tags", {}) or {}).get(type)
         if not only_tags:
             return
 
-        found = len({tag for tag in only_tags if tag in tags}) > 0
-        if not found:
+        found = {tag for tag in only_tags if tag in tags}
+        if not len(found) > 0:
             kwargs["flags"] |= SKIP
+            kwargs["ffails"] = {"*": (Skip, f"only tags {', '.join(only_tags)}")}
 
     def _apply_skip_tags(self, type, tags, kwargs):
         skip_tags = (kwargs.get("skip_tags", {}) or {}).get(type)
         if not skip_tags:
             return
 
-        found = len({tag for tag in skip_tags if tag in tags}) > 0
-        if found:
+        found = {tag for tag in skip_tags if tag in tags}
+        if len(found) > 0:
             kwargs["flags"] |= SKIP
+            kwargs["ffails"] = {"*": (Skip, f"skip tags {', '.join(found)}")}
 
     def _apply_only(self, name, kwargs):
         only = kwargs.get("only")
@@ -1622,9 +1662,9 @@ class TestDefinition(object):
         kwargs["subtype"] = subtype
         kwargs["type"] = type
 
-    def __repeat__(self, repeat=None, *args):
+    def __repeat__(self, repeat=None, retry=None, *args):
         sys.settrace(self.trace)
-        raise TestIteration(repeat)
+        raise TestIteration(repeat, retry)
 
     def __rerun_individually__(self, patterns, *args):
         sys.settrace(self.trace)
@@ -1678,25 +1718,36 @@ class TestDefinition(object):
         """Test iteration setup.
         """
         repeat = exc_value.repeat
+        retry = exc_value.retry
 
         self.test._enter()
 
         if self.repeatable_func is None or self.test.flags & NOT_REPEATABLE:
             raise Error("not repeatable")
 
-        __kwargs = dict(self.kwargs)
-        __kwargs.pop("name", None)
-        __kwargs.pop("parent", None)
-        __kwargs["type"] = TestType.Iteration
-        __args = __kwargs.pop("args", {})
+        kwargs = dict(self.kwargs)
+        args = kwargs.pop("args", {})
 
-        if repeat.until == "fail":
-            __kwargs["flags"] = Flags(__kwargs.get("flags")) & ~TE
-        else:
-            # pass or complete
-            __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
+        repeat_kwargs = dict(kwargs)
+        retry_kwargs = dict(kwargs)
 
-        return repeat, __args, __kwargs
+        repeat_kwargs.pop("name", None)
+        repeat_kwargs.pop("parent", None)
+        repeat_kwargs["type"] = TestType.Iteration
+
+        retry_kwargs.pop("name", None)
+        retry_kwargs.pop("parent", None)
+        retry_kwargs["type"] = TestType.RetryIteration
+
+        if repeat is not None:
+            _, until = repeat
+            if until == "fail":
+                repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) & ~TE
+            else:
+                # pass or complete
+                repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) | TE
+
+        return repeat, retry, args, repeat_kwargs, retry_kwargs
 
     def __exit_process_test_iteration(self, exc_value):
         """Process TestIteration exception.
@@ -1704,16 +1755,30 @@ class TestDefinition(object):
         if not isinstance(exc_value, TestIteration):
             return
 
-        repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
+        repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        for i in range(repeat.count):
-            with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
-                if isinstance(self.repeatable_func, TestOutline):
-                    iteration._run_outline_with_no_arguments = self.no_arguments
-                    iteration._run_outline = True
-                self.repeatable_func(**args)
+        repeat_count, repeat_until = repeat if repeat is not None else (1, None)
+        retry_count = retry if retry is not None else 1
+        retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-            if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+        for i in range(repeat_count):
+            with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs, parent_type=self.test.type) if repeat is not None else NullStep() as iteration:
+                for r in range(retry_count):
+                    retry_flags = retry_kwargs_flags
+                    if r + 1 == retry_count:
+                        retry_flags |= LAST_RETRY
+                    with RetryIteration(name=f"try {r}", flags=retry_flags, tags=self.tags, **retry_kwargs, parent_type=self.test.type) if retry is not None else NullStep() as retry_iteration:
+                        if retry_iteration is None:
+                            retry_iteration = iteration
+                        if isinstance(self.repeatable_func, TestOutline):
+                            retry_iteration._run_outline_with_no_arguments = self.no_arguments
+                            retry_iteration._run_outline = True
+                        self.repeatable_func(**args)
+
+                    if isinstance(retry_iteration.result, NonFailResults):
+                        break
+
+            if repeat_until and repeat_until == "pass" and isinstance(iteration.result, PassResults):
                 break
 
     async def __exit_async_process_test_iteration(self, exc_value):
@@ -1722,16 +1787,30 @@ class TestDefinition(object):
         if not isinstance(exc_value, TestIteration):
             return
 
-        repeat, args, kwargs = self.__exit_process_test_iteration_setup(exc_value)
+        repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        for i in range(repeat.count):
-            async with Iteration(name=f"{i}", tags=self.tags, **kwargs, parent_type=self.test.type) as iteration:
-                if isinstance(self.repeatable_func, TestOutline):
-                    iteration._run_outline_with_no_arguments = self.no_arguments
-                    iteration._run_outline = True
-                await self.repeatable_func(**args)
+        repeat_count, repeat_until = repeat if repeat is not None else (1, None)
+        retry_count = retry if retry is not None else 1
+        retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-            if repeat.until == "pass" and isinstance(iteration.result, PassResults):
+        for i in range(repeat_count):
+            async with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs, parent_type=self.test.type) if repeat is not None else AsyncNullStep() as iteration:
+                for r in range(retry_count):
+                    retry_flags = retry_kwargs_flags
+                    if r + 1 == retry_count:
+                        retry_flags |= LAST_RETRY
+                    with RetryIteration(name=f"try {r}", flags=retry_flags, tags=self.tags, **retry_kwargs, parent_type=self.test.type) if retry is not None else AsyncNullStep() as retry_iteration:
+                        if retry_iteration is None:
+                            retry_iteration = iteration
+                        if isinstance(self.repeatable_func, TestOutline):
+                            retry_iteration._run_outline_with_no_arguments = self.no_arguments
+                            retry_iteration._run_outline = True
+                        await self.repeatable_func(**args)
+
+                    if isinstance(retry_iteration.result, NonFailResults):
+                        break
+
+            if repeat_until and repeat_until == "pass" and isinstance(iteration.result, PassResults):
                 break
 
     def __exit_process_test_rerun_individually_iteration_setup(self, rerun_test):
@@ -1825,22 +1904,27 @@ class TestDefinition(object):
                 # convert Null into an Error
                 result = Error(test=self.parent.name, message=self.test.result.message)
 
-            if TE not in self.test.flags:
-                raise result
+            if self.test.type == TestType.RetryIteration and LAST_RETRY not in self.test.flags:
+                # don't raise or propagate to a parent a failing result of retry
+                # if it is not the last try
+                pass
             else:
-                with self.parent.lock:
-                    if isinstance(self.parent.result, Error):
-                        pass
-                    elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
-                    elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
-                    elif isinstance(self.parent.result, Fail):
-                        pass
-                    elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
-                        self.parent.result = result
-                    else:
-                        pass
+                if TE not in self.test.flags:
+                    raise result
+                else:
+                    with self.parent.lock:
+                        if isinstance(self.parent.result, Error):
+                            pass
+                        elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        elif isinstance(self.parent.result, Fail):
+                            pass
+                        elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
+                            self.parent.result = result
+                        else:
+                            pass
         return True
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -1965,6 +2049,17 @@ class Iteration(TestDefinition):
         self.parent_type = parent_type
         return self
 
+class RetryIteration(TestDefinition):
+    """Test retry iteration definition."""
+    type = TestType.RetryIteration
+
+    def __new__(cls, name=None, **kwargs):
+        kwargs["type"] = TestType.RetryIteration
+        parent_type = kwargs.pop("parent_type", TestType.Test)
+        self = super(RetryIteration, cls).__new__(cls, name, **kwargs)
+        self.parent_type = parent_type
+        return self
+
 class Example(TestDefinition):
     """Example definition."""
     def __new__(cls, name=None, **kwargs):
@@ -2068,6 +2163,13 @@ class NullStep():
         return None
 
     def __exit__(self, *args, **kwargs):
+        return False
+
+class AsyncNullStep():
+    async def __aenter__(self):
+        return None
+
+    async def __aexit__(self, *args, **kwargs):
         return False
 
 # decorators

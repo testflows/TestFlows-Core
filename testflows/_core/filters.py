@@ -45,8 +45,13 @@ class The(TestObject):
 class TheTags(dict):
     """Tags filter object.
     """
-    def __init__(self, test=None, suite=None, module=None):
+    def __init__(self, test=None, suite=None, module=None, any=None):
         test = set(test) if test is not None else set()
         suite = set(suite) if suite is not None else set()
         module = set(module) if module is not None else set()
+        any = set(any) if any is not None else set()
+        if any:
+            test = test.union(any)
+            suite = suite.union(any)
+            module = module.union(any)
         super(TheTags, self).__init__({TestType.Test: test, TestType.Suite: suite, TestType.Module: module})

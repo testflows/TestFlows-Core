@@ -25,6 +25,7 @@ from .transform.log.pipeline import RawLogPipeline
 from .transform.log.pipeline import NiceLogPipeline
 from .transform.log.pipeline import BriskLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
+from .transform.log.pipeline import ProgressLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
 from .transform.log.pipeline import SlickLogPipeline
 from .transform.log.pipeline import ClassicLogPipeline
@@ -147,6 +148,14 @@ def stdout_dots_handler():
         log.seek(0)
         DotsLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+def stdout_progress_handler():
+    """Handler to output messages to sys.stdout
+    using "progress" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        ProgressLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 def stdout_silent_handler():
     """Handler that prints no output to sys.stdout.
     """
@@ -165,6 +174,7 @@ def start_output_handler():
         "quiet": stdout_silent_handler,
         "short": stdout_short_handler,
         "dots": stdout_dots_handler,
+        "progress": stdout_progress_handler,
     }
 
     handler = threading.Thread(target=output_handler_map[settings.output_format])

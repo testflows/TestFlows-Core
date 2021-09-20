@@ -15,10 +15,9 @@
 import functools
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, LAST_RETRY
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
-from testflows._core.name import split
 from testflows._core.cli.colors import color
 
 indent = " " * 2
@@ -43,9 +42,10 @@ def color_result(result, attrs=None):
 
 def add_result(msg, results):
     result = msg["result_type"]
-    if getattr(TestType, msg["test_type"]) < TestType.Iteration:
+    if getattr(TestType, msg["test_type"]) < TestType.RetryIteration:
         if not result.startswith("X"):
             return
+
     flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return
@@ -61,39 +61,44 @@ def generate(results, divider, only_new=False):
     if not results:
         return
 
+    retries = ""
     xfails = ""
     fails = ""
-
-    if not only_new:
-        for entry in results:
-            msg, result = results[entry]
-            _color = color_result(result)
-            if not result.startswith("X"):
-                continue
-            xfails += _color('\u2718') + f" [ { _color(result) } ] {msg['result_test']}"
-            if msg["result_reason"]:
-                xfails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
-            xfails += "\n"
-
-        if xfails:
-            xfails = color(f"{divider}Known\n\n", "white", attrs=["bold"]) + xfails
 
     for entry in results:
         msg, result = results[entry]
         _color = color_result(result)
-        if result.startswith("X"):
-            continue
-        fails += _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}"
+
+        out = _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}"
         if msg["result_reason"]:
-            fails += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
-        fails += "\n"
+            out += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
+        out += "\n"
+
+        if (getattr(TestType, msg["test_type"]) == TestType.RetryIteration
+                and not Flags(msg["test_flags"]) & LAST_RETRY):
+            if settings.show_retries:
+                retries += out
+        else:
+            if result.startswith("X"):
+                if not only_new:
+                    xfails += out
+            else:
+                fails += out
+
+    if retries:
+        retries = color(f"{divider}Retries\n\n", "white", attrs=["bold"]) + retries
+
+    if xfails:
+        if not divider and retries:
+            divider = "\n"
+        xfails = color(f"{divider}Known\n\n", "white", attrs=["bold"]) + xfails
 
     if fails:
-        if not divider and xfails:
+        if not divider and (xfails or retries):
             divider = "\n"
         fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
 
-    report = f"{xfails}{fails}"
+    report = f"{retries}{xfails}{fails}"
 
     return report or None
 

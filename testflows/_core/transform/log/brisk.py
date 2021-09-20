@@ -18,7 +18,7 @@ import functools
 
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, LAST_RETRY
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.message import Message
 from testflows._core.objects import ExamplesTable
@@ -47,7 +47,7 @@ def color_secondary_keyword(keyword):
 def color_other(other):
     return color(other, "white", attrs=["dim"])
 
-def color_result(result, attrs=None):
+def color_result(result, attrs=None, retry=False):
     if attrs is None:
         attrs = ["bold"]
     if result.startswith("X"):
@@ -55,6 +55,8 @@ def color_result(result, attrs=None):
     elif result == "OK":
         return functools.partial(color, color="green", attrs=attrs)
     elif result == "Skip":
+        return functools.partial(color, color="cyan", attrs=attrs)
+    elif retry:
         return functools.partial(color, color="cyan", attrs=attrs)
     elif result == "Error":
         return functools.partial(color, color="yellow", attrs=attrs)
@@ -250,6 +252,8 @@ def format_test(msg, keyword):
             keyword += "Suite"
     elif test_type == TestType.Iteration:
         keyword += "Iteration"
+    elif test_type == TestType.RetryIteration:
+        keyword += "Retry"
     elif test_type == TestType.Step:
         if test_subtype == TestSubType.And:
             keyword += "And"
@@ -303,7 +307,8 @@ def format_result(msg, prefix):
     if test_type_parent_by_name[test_id] != test_id:
         return ''
     result = msg["result_type"]
-    _color = color_result(result)
+    _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(msg["test_flags"])
+    _color = color_result(result, retry=_retry)
     _result = _color(prefix + result)
     _test = color_other(basename(msg["result_test"]))
     _indent = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"

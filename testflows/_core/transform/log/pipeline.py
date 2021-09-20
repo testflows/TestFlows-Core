@@ -22,6 +22,7 @@ from .parse import transform as parse_transform
 from .nice import transform as nice_transform
 from .brisk import transform as brisk_transform
 from .dots import transform as dots_transform
+from .progress import transform as progress_transform
 from .write import transform as write_transform
 from .stop import transform as stop_transform
 from .raw import transform as raw_transform
@@ -306,6 +307,30 @@ class DotsLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(DotsLogPipeline, self).__init__(steps, stop=stop_event)
+
+class ProgressLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, show_input=True):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(),
+            fanout(
+                progress_transform(stop_event, show_input=show_input),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
+                coverage_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(ProgressLogPipeline, self).__init__(steps, stop=stop_event)
 
 class MetricsLogPipeline(Pipeline):
     def __init__(self, input, metrics):

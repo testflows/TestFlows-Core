@@ -17,7 +17,7 @@ import functools
 
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, LAST_RETRY
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.message import Message
 from testflows._core.objects import ExamplesTable
@@ -36,6 +36,9 @@ separators = {
     TestType.Module: color("\u2501" * 80, "cyan", attrs=["bold"]) + "\n",
     TestType.Suite: color("\u2501" * 80, "white", attrs=["dim"]) + "\n",
     TestType.Test: color("\u2500" * 80, "cyan", attrs=["dim"]) + "\n",
+    TestType.Outline: color("\u2500" * 80, "cyan", attrs=["dim"]) + "\n",
+    TestType.Iteration: color("\u2500" * 80, "yellow", attrs=["dim"]) + "\n",
+    TestType.RetryIteration: color("\u2500" * 80, "white", attrs=["dim"]) + "\n",
     TestType.Step: "\u2500" * 80 + "\n"
 }
 
@@ -51,7 +54,7 @@ def color_secondary_keyword(keyword, no_colors=False):
 def color_test_name(name, no_colors=False):
     return color(split(name)[-1], "white", attrs=[], no_colors=no_colors)
 
-def color_result(result, attrs=None, no_colors=False):
+def color_result(result, attrs=None, no_colors=False, retry=False):
     if attrs is None:
         attrs = ["bold"]
     if result.startswith("X"):
@@ -59,6 +62,8 @@ def color_result(result, attrs=None, no_colors=False):
     elif result == "OK":
         return functools.partial(color, color="green", attrs=attrs, no_colors=no_colors)
     elif result == "Skip":
+        return functools.partial(color, color="cyan", attrs=attrs, no_colors=no_colors)
+    elif retry:
         return functools.partial(color, color="cyan", attrs=attrs, no_colors=no_colors)
     elif result == "Error":
         return functools.partial(color, color="yellow", attrs=attrs, no_colors=no_colors)
@@ -213,6 +218,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
             keyword += "SUITE"
     elif test_type == TestType.Iteration:
         keyword += "Iteration"
+    elif test_type == TestType.RetryIteration:
+        keyword += "Retry"
     elif test_type == TestType.Step:
         if test_subtype == TestSubType.And:
             keyword += "\u25a1 And"
@@ -273,8 +280,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
 def format_result(msg, no_colors=False):
     result = msg["result_type"]
     test_type = get_type(msg)
-
-    _color = color_result(result, no_colors=no_colors)
+    _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(msg["test_flags"])
+    _color = color_result(result, no_colors=no_colors, retry=_retry)
     _result = _color(f"\u25b6  " + result, no_colors=no_colors)
     _test = color_test_name(basename(msg["result_test"]), no_colors=no_colors)
     _indent = ""

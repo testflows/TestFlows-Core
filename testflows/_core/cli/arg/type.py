@@ -22,7 +22,7 @@ from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
-from testflows._core.objects import Repetition
+from testflows._core.objects import Repeat
 
 import testflows._core.contrib.rsa as rsa
 
@@ -153,7 +153,7 @@ def repeat(value):
             pattern, count, until = fields
         else:
             pattern, count = fields
-        option = Repetition(count=count, pattern=pattern, until=until)
+        option = Repeat(count=count, pattern=pattern, until=until)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
@@ -161,7 +161,7 @@ def repeat(value):
 def tags_filter(value):
     try:
         type, cvstags = value.split(":", 1)
-        assert type in ["test", "suite", "module", "feature", "scenario"]
+        assert type in ["test", "suite", "module", "feature", "scenario", "any"]
         tags = list(csv.reader([cvstags], "unix"))[-1]
         if type == "scenario":
             type = "test"

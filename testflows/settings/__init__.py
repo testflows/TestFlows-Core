@@ -36,6 +36,8 @@ read_logfile = None
 database = None
 #: show skipped tests
 show_skipped = False
+#: show retries
+show_retries = False
 #: randomize order of loaded tests
 random_order = False
 #: global thread pool

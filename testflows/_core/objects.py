@@ -14,16 +14,11 @@
 # limitations under the License.
 import base64
 import hashlib
-
 from collections import namedtuple
-
 from .utils.enum import IntEnum
 from .exceptions import SpecificationError, RequirementError, ResultException
 from .baseobject import TestObject, Table
 from .baseobject import get, hash
-from .baseobject import namedtuple_with_defaults
-from .filters import The
-
 import testflows._core.contrib.rsa as rsa
 
 class Result(TestObject, ResultException):
@@ -144,6 +139,7 @@ class XNull(XResult):
 XoutResults = (XOK, XFail, XError, XNull)
 FailResults = (Fail, Error, Null)
 PassResults = (OK,) + XoutResults
+NonFailResults = (Skip,) + PassResults
 
 class Node(TestObject):
     _fields = ("name", "module", "uid", "nexts", "ins", "outs")
@@ -500,6 +496,36 @@ class NamedList(list):
         setattr(func, self.name, list(self))
         return func
 
+class Onlys(NamedList):
+    """only container.
+
+    ```python
+    @Only(
+        pattern,
+        ...
+    )
+    ```
+    """
+    name = "only"
+
+    def __init__(self, *items):
+        super(Onlys, self).__init__(*items)
+
+class Skips(NamedList):
+    """skip container.
+
+    ```python
+    @Skips(
+        pattern,
+        ...
+    )
+    ```
+    """
+    name = "skip"
+
+    def __init__(self, *items):
+        super(Skips, self).__init__(*items)
+
 class Setup(NamedValue):
     name = "setup"
 
@@ -533,27 +559,86 @@ class FFails(NamedValue):
     """ffails (forced fails) container.
 
     ffails = {
-        "pattern": (result, "reason"),
+        "pattern": (result, "reason"[, when]),
         ...
         }
     """
     name = "ffails"
 
     def __init__(self, value):
-        super(FFails, self).__init__(dict(value))
+        _value = dict(value)
+        for k, v in _value:
+            FFail.check_value(k, *v)
+        super(FFails, self).__init__(_value)
 
     def items(self):
         return self.value.items()
 
-    def add(self, pattern, reason, result=Fail):
+    def add(self, pattern, reason, result=Fail, when=None):
         """Add an entry to the ffails (force fails).
 
         :param pattern: test name pattern to match
         :param reason: reason
         :param result: forced result, default: Fails
+        :param when: when filter
         """
-        self.value[pattern] = (result, reason)
+        if when is not None and not callable(when):
+            raise TypeError(f"invalid when type '{type(when)}'; must be callable")
+        self.value[pattern] = (result, reason, when)
         return self
+
+class FFail(NamedValue):
+    """ffails (forced fails) container with single result.
+    """
+    result = None
+    name = "ffails"
+
+    def __init__(self, reason, pattern="", when=None, result=None):
+        if result is not None:
+            self.result = result
+        self.check_value(pattern, self.result, reason, when)
+        super(FFail, self).__init__({pattern: (self.result, reason, when)})
+
+    @classmethod
+    def check_value(cls, pattern, result, reason, when=None):
+        if not issubclass(result, Result):
+            raise TypeError(f"invalid result '{result}' type")
+        if not type(reason) in (str,):
+            raise TypeError(f"reason '{type(reason)}' must be str")
+        if not type(pattern) in (str,):
+            raise TypeError(f"pattern '{type(pattern)}' must be str")
+        if when is not None and not callable(when):
+            raise TypeError(f"when '{type(when)}' must be callable")
+
+class Skipped(FFail):
+    """ffails (forced fails) container with single Skip result.
+    """
+    result = Skip
+
+class Failed(FFail):
+    """ffails (forced fails) container with single Fail result.
+    """
+    result = Fail
+
+class XFailed(FFail):
+    """ffails (forced fails) container with single XFail result.
+    """
+    result = XFail
+
+class XErrored(FFail):
+    """ffails (forced fails) container with single XError result.
+    """
+    result = XError
+
+class Okayed(FFail):
+    """ffails (forced fails) container with single OK result.
+    """
+    result = OK
+
+class XOkayed(FFail):
+    """ffails (forced fails) container with single XOK result.
+    """
+    result = XOK
 
 class XFlags(NamedValue):
     """xflags container.
@@ -581,37 +666,62 @@ class XFlags(NamedValue):
         self.value[pattern] = [Flags(set_flags), Flags(clear_flags)]
         return self
 
-class Repeat(NamedList):
-    name = "repeat"
+class Repeats(NamedValue):
+    """repeats containers.
 
-    def __init__(self, *repeat):
-        super(Repeat, self).__init__(*[Repetition(**r) for r in repeat])
-
-class Repetition(namedtuple_with_defaults("Repetition", "count pattern until", defaults=("", "complete",))):
-    """Repeat container.
+    repeats={
+        "pattern": (count, until),
+        ...
+    }
     """
-    def __new__(cls, count, pattern="", until="complete"):
-        count = int(count)
-        pattern = str(pattern)
-        until = str(until)
+    name = "repeats"
 
-        if not isinstance(pattern, The):
-            pattern = The(pattern)
+    def __init__(self, value):
+        super(Repeats, self).__init__(dict(value))
+
+class Repeat(NamedValue):
+    """single repetition container.
+    """
+    name = "repeats"
+
+    def __init__(self, count, pattern="", until="complete"):
+        self.count = int(count)
+        self.pattern = str(pattern)
+        self.until = str(until)
+
         if count < 1:
             raise ValueError("count must be > 0")
         if until not in ("fail", "pass", "complete"):
             raise ValueError("invalid until value")
 
-        return super(Repetition, cls).__new__(cls, *(count, pattern, until))
+        return super(Repeat, self).__init__({self.pattern: (self.count, self.until)})
 
-    def keys(self):
-        return self._fields
+class Retries(NamedValue):
+    """retries containers.
 
-    def __getitem__(self, i):
-        if type(i) in (str,):
-            return dict(zip(self._fields, self))[i]
-        else:
-            return super(Repetition, self).__getitem__(i)
+    retries={
+        "pattern": count,
+        ...
+    }
+    """
+    name = "retries"
+
+    def __init__(self, value):
+        super(Retries, self).__init__(dict(value))
+
+class Retry(NamedValue):
+    """single retry container.
+    """
+    name = "retries"
+
+    def __init__(self, count, pattern=""):
+        self.count = int(count)
+        self.pattern = str(pattern)
+
+        if count < 1:
+            raise ValueError("count must be > 0")
+
+        return super(Retry, self).__init__({self.pattern: self.count})
 
 class Args(dict):
     def __init__(self, **args):

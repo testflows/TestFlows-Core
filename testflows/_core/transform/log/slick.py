@@ -57,13 +57,13 @@ def color_result(result):
     elif result == "OK":
         return color(icon, "green", attrs=["bold"])
     elif result == "Skip":
-        return color(icon, "white", attrs=["dim"])
+        return color(icon, "cyan", attrs=["bold"])
     elif result == "Error":
         return color(icon, "yellow", attrs=["bold"])
     elif result == "Fail":
         return color(icon, "red", attrs=["bold"])
     # Null
-    return color(icon, "cyan", attrs=["bold"])
+    return color(icon, "magenta", attrs=["bold"])
 
 def format_prompt(msg, last_test_id, keyword):
     lines = (msg["message"] or "").splitlines()

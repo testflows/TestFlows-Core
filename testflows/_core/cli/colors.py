@@ -22,9 +22,9 @@
 
 """ANSII Color formatting for output in terminal."""
 
-import os
-
 import testflows.settings as settings
+
+from testflows._core.contrib.x256 import x256
 
 __ALL__ = [ 'colored', 'cprint' ]
 
@@ -124,7 +124,12 @@ def color(text, color=None, on_color=None, attrs=None, no_colors=False):
     else:
         fmt_str = '\033[%dm%s'
         if color is not None:
-            text = fmt_str % (COLORS[color], text)
+            if type(color) in (tuple, list):
+                # convert RGB to closest x256
+                color_256 = x256.from_rgb(*color)
+                text = '\x1b[38;5;%dm%s' % (color_256, text)
+            else:
+                text = fmt_str % (COLORS[color], text)
 
         if on_color is not None:
             text = fmt_str % (HIGHLIGHTS[on_color], text)
@@ -135,4 +140,3 @@ def color(text, color=None, on_color=None, attrs=None, no_colors=False):
 
         text += reset()
     return text
-

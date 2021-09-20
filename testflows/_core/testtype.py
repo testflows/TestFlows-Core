@@ -21,6 +21,7 @@ class TestType(IntEnum):
     Test = 20
     Outline = 17
     Iteration = 15
+    RetryIteration = 14
     Step = 10
 
 class TestSubType(IntEnum):

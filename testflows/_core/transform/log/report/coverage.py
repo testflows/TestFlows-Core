@@ -173,8 +173,8 @@ def format_requirement(msg, coverages, results):
             coverage.requirements[requirement_name].append(results[test_id])
 
 def format_result(msg, coverages, results):
-    flags =  Flags(msg["test_flags"])
-    if flags  & SKIP and settings.show_skipped is False:
+    flags = Flags(msg["test_flags"])
+    if flags & SKIP and settings.show_skipped is False:
         return
     test_id = msg["test_id"]
 

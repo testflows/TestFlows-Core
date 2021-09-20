@@ -84,7 +84,7 @@ class Counts(object):
         return data
 
     def __str__(self):
-        s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s')} ("
+        s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s')}"
         s = color(s, "white", attrs=["bold"])
         r = []
         if self.ok > 0:
@@ -105,8 +105,11 @@ class Counts(object):
             r.append(color_result("XError", f"{self.xerror} xerror"))
         if self.xnull > 0:
             r.append(color_result("XNull", f"{self.xnull} xnull"))
-        s += color(", ", "white", attrs=["bold"]).join(r)
-        s += color(")\n", "white", attrs=["bold"])
+        if r:
+            s += color(" (", "white", attrs=["bold"])
+            s += color(", ", "white", attrs=["bold"]).join(r)
+            s += color(")", "white", attrs=["bold"])
+        s += "\n"
         return s
 
 def format_test(msg, counts):
@@ -127,6 +130,8 @@ def format_test(msg, counts):
         counts["outline"].units += 1
     elif test_type == TestType.Iteration:
         counts["iteration"].units += 1
+    elif test_type == TestType.RetryIteration:
+        counts["retry"].units += 1
     elif test_type == TestType.Step:
         counts["step"].units += 1
     else:
@@ -165,6 +170,8 @@ def format_result(msg, counts):
         setattr(counts["outline"], _name, getattr(counts["outline"], _name) + 1)
     elif test_type == TestType.Iteration:
         setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
+    elif test_type == TestType.RetryIteration:
+        setattr(counts["retry"], _name, getattr(counts["retry"], _name) + 1)
     elif test_type == TestType.Step:
         setattr(counts["step"], _name, getattr(counts["step"], _name) + 1)
     else:
@@ -197,6 +204,7 @@ def all_counts():
         "test": Counts("tests", *([0] * 10)),
         "outline": Counts("outlines", *([0] * 10)),
         "iteration": Counts("iterations", *([0] * 10)),
+        "retry": Counts("retries", *([0] * 10)),
         "step": Counts("steps", *([0] * 10)),
         "feature": Counts("features", *([0] * 10)),
         "scenario": Counts("scenarios", *([0] * 10)),
@@ -253,6 +261,8 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["outline"])
             if counts["iteration"]:
                 line += line_icon + str(counts["iteration"])
+            if counts["retry"]:
+                line += line_icon + str(counts["retry"])
             if counts["step"]:
                 line += line_icon + str(counts["step"])
             line += color_line(f"\nTotal time {strftimedelta(msg['message_rtime'])}\n")
