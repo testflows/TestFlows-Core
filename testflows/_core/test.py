@@ -50,7 +50,8 @@ from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
-from .cli.arg.type import key_value as key_value_type, repeat as repeat_type, tags_filter as tags_filter_type
+from .cli.arg.type import key_value as key_value_type, repeat as repeat_type
+from .cli.arg.type import tags_filter as tags_filter_type, retry as retry_type
 from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
 from .cli.arg.type import file as file_type
 from .cli.arg.type import onoff as onoff_type, NoneValue, count as count_type
@@ -768,6 +769,12 @@ def cli_argparser(kwargs, argparser=None):
                               "`count` is a number times to repeat the test, "
                               "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
                         type=repeat_type, metavar="pattern,count[,until]]", nargs="+", required=False)
+    parser.add_argument("--retry", dest="_retry",
+                        help=("retry a test until it passes or all retries are completed.\n"
+                              "Failed retry attempts except the last one are ignored. "
+                              "Where `pattern` is a test name pattern and "
+                              "`count` is a number times to retry the test"),
+                        type=retry_type, metavar="pattern,count", nargs="+", required=False)
     parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
                         help="reference log file")
 
@@ -840,6 +847,7 @@ def parse_cli_args(kwargs, parser_schema):
         schema.Optional("show-skipped"): bool,
         schema.Optional("show-retries"): bool,
         schema.Optional("repeat"): [schema.Use(repeat_type)],
+        schema.Optional("retry"): [schema.Use(retry_type)],
         schema.Optional("reference"): str,
         schema.Optional("rerun"): schema.Or(*rerun_results, error="key 'rerun' values is not a value result"),
         schema.Optional("individually"): bool,
@@ -1008,10 +1016,16 @@ def parse_cli_args(kwargs, parser_schema):
             settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=pool_size)
 
         if args.get("_repeat"):
-            repeat = []
+            repeats = []
             for item in args.pop("_repeat"):
-                repeat.append(item)
-            kwargs["repeats"] = {r.pattern: (r.count, r.until) for r in repeat}
+                repeats.append(item)
+            kwargs["repeats"] = {r.pattern: (r.count, r.until) for r in repeats}
+
+        if args.get("_retry"):
+            retries = []
+            for item in args.pop("_retry"):
+                retries.append(item)
+            kwargs["retries"] = {r.pattern: r.count for r in retries}
 
         if args.get("_rerun"):
             rerun_individually = args.pop("_individually", None) or False

@@ -22,7 +22,7 @@ from argparse import ArgumentTypeError
 from collections import namedtuple
 from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
-from testflows._core.objects import Repeat
+from testflows._core.objects import Repeat, Retry
 
 import testflows._core.contrib.rsa as rsa
 
@@ -154,6 +154,15 @@ def repeat(value):
         else:
             pattern, count = fields
         option = Repeat(count=count, pattern=pattern, until=until)
+    except Exception as e:
+        raise ArgumentTypeError(f"'{value}' is invalid")
+    return option
+
+def retry(value):
+    try:
+        fields = list(csv.reader([value], "unix"))[-1]
+        pattern, count = fields
+        option = Retry(count=count, pattern=pattern)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option

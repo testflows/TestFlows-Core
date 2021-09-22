@@ -689,9 +689,9 @@ class Repeat(NamedValue):
         self.pattern = str(pattern)
         self.until = str(until)
 
-        if count < 1:
+        if self.count < 1:
             raise ValueError("count must be > 0")
-        if until not in ("fail", "pass", "complete"):
+        if self.until not in ("fail", "pass", "complete"):
             raise ValueError("invalid until value")
 
         return super(Repeat, self).__init__({self.pattern: (self.count, self.until)})
@@ -718,7 +718,7 @@ class Retry(NamedValue):
         self.count = int(count)
         self.pattern = str(pattern)
 
-        if count < 1:
+        if self.count < 1:
             raise ValueError("count must be > 0")
 
         return super(Retry, self).__init__({self.pattern: self.count})
