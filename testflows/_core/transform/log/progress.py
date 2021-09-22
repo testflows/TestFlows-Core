@@ -26,6 +26,15 @@ progress = [
     color("Executed", "white", attrs=["dim"])
 ]
 
+def clear_line():
+    return "\r\033[K\r"
+
+def short_test_name(msg, max=80, tail=30):
+    test_name = msg["test_name"]
+    if len(test_name) > max:
+        test_name = test_name[:max-tail] + "..." + test_name[-tail:]
+    return color(test_name, "white", attrs=["dim"])
+
 def format_prompt(msg, *_):
     global count
     lines = (msg["message"] or "").splitlines()
@@ -60,7 +69,7 @@ def format_result(msg, counter, counts):
     _result = msg["result_type"].lower()
 
     setattr(counts, _result, getattr(counts, _result) + 1)
-    out = f"\r{progress[counter[0] % (len(progress) - 1)]} {counts}".rstrip() + "  \b"
+    out = f"{clear_line()}{progress[counter[0] % (len(progress) - 1)]} {str(counts).rstrip()} {short_test_name(msg)}"
     if result in ("Fail", "Error", "Null"):
         out += "\n" + format_failing_result(msg, use_full_testname=True, use_indent=" "*2)
     return out
@@ -74,10 +83,10 @@ def format_test(msg, counter, counts):
         counts.units += 1
     counter[0] += 1
 
-    return f"\r{progress[counter[0] % (len(progress)-1)]} {counts}".rstrip() + "  \b"
+    return f"{clear_line()}{progress[counter[0] % (len(progress)-1)]} {str(counts).rstrip()} {short_test_name(msg)}"
 
 def format_stop(msg, counter, counts):
-    return f"\r{progress[-1]} {counts}".rstrip() + "      \b"
+    return f"{clear_line()}{progress[-1]} {counts}".rstrip()
 
 formatters = {
     Message.INPUT.name: (format_input,),
