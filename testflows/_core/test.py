@@ -1350,6 +1350,9 @@ class TestDefinition(object):
             kwargs["flags"] = Flags(kwargs.get("flags"))
             kwargs["cflags"] = Flags(kwargs.get("cflags"))
 
+            if (kwargs["flags"] & PARALLEL or self.parallel) and not self.repeatable_func:
+                raise RuntimeError("inline test can't be executed in parallel")
+
             if parent:
                 kwargs["parent"] = parent
                 with parent.lock:
@@ -1527,7 +1530,9 @@ class TestDefinition(object):
 
             if self.rerun_individually is not None:
                 self.trace = sys.gettrace()
-                sys.settrace(functools.partial(self.__rerun_individually__, self.rerun_individually, None, None, None))
+                sys.settrace(lambda *args, **kwargs: None)
+                inspect.currentframe().f_back.f_trace = functools.partial(
+                    self.__rerun_individually__, self.rerun_individually)
                 return self.test
 
             retry = None
@@ -1548,7 +1553,9 @@ class TestDefinition(object):
 
             if repeat is not None or retry is not None:
                 self.trace = sys.gettrace()
-                sys.settrace(functools.partial(self.__repeat__, repeat, retry, None, None, None))
+                sys.settrace(lambda *args, **kwargs: None)
+                inspect.currentframe().f_back.f_trace = functools.partial(
+                    self.__repeat__, repeat, retry)
                 return self.test
 
         except (KeyboardInterrupt, Exception):
@@ -1653,7 +1660,8 @@ class TestDefinition(object):
                 kwargs["flags"] = (kwargs["flags"] & ~Flags(clear_flags)) | Flags(set_flags)
 
     def _parent_type_propagation(self, parent, kwargs):
-        """Propagate parent test type if lower.
+        """Propagate parent test type if lower
+        and not Iteration or RetryIteration.
 
         :param parent: parent
         :param kwargs: test's kwargs
@@ -1663,10 +1671,13 @@ class TestDefinition(object):
 
         parent_type = parent.type
 
-        if parent_type == TestType.Iteration:
+        if parent_type in (TestType.Iteration, TestType.RetryIteration):
             parent_type = parent.parent_type
 
-        if int(parent_type) < int(type):
+        if type in (TestType.Iteration, TestType.RetryIteration):
+            pass
+
+        elif int(parent_type) < int(type):
             type = parent.type
             subtype = parent.subtype
 

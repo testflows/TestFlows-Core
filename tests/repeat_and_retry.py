@@ -42,6 +42,11 @@ def test5(self):
 def test6(self):
     raise RuntimeError("shoult not run")
 
+@TestScenario
+def test7(self):
+    with Step("could fail", repeats={"":(10, "complete")}, flags=EERROR):
+        assert random.random() < 0.3 # 70% fail rate
+
 @TestModule
 @FFails({
     "test4": (Skip, "not supported on 21.8", version("21.8")), # FFails overrides Skipped of test4 so we must specify force result again

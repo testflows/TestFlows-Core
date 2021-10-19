@@ -20,6 +20,7 @@ import itertools
 import threading
 import concurrent.futures.thread as _base
 
+from .future import Future 
 from .. import _get_parallel_context
 from ..asyncio import is_running_in_event_loop
 
@@ -148,7 +149,7 @@ class AsyncPoolExecutor(_base._base.Executor):
             if _shutdown:
                 raise RuntimeError("cannot schedule new futures after interpreter shutdown")
 
-            future = _base._base.Future()
+            future = Future()
             ctx = _get_parallel_context()
             args = fn, *args
             work_item = _AsyncWorkItem(future, ctx.run, args, kwargs)
