@@ -84,7 +84,7 @@ class Counts(object):
         return data
 
     def __str__(self):
-        s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s')}"
+        s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s') if self.name != 'retries' else 'retry'}"
         s = color(s, "white", attrs=["bold"])
         r = []
         if self.ok > 0:

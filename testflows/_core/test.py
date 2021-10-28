@@ -773,8 +773,11 @@ def cli_argparser(kwargs, argparser=None):
                         help=("retry a test until it passes or all retries are completed.\n"
                               "Failed retry attempts except the last one are ignored. "
                               "Where `pattern` is a test name pattern and "
-                              "`count` is a number times to retry the test"),
-                        type=retry_type, metavar="pattern,count", nargs="+", required=False)
+                              "`count` is a number times to retry the test,"
+                              "`timeout` (optional) maximum number of seconds to retry (default: None),"
+                              "`delay` (optional) delay in seconds between retries (default: 0),"
+                              "`backoff` (optional) backoff factor (default: 1)"),
+                        type=retry_type, metavar="pattern,count[,timeout[,delay[,backoff]]]", nargs="+", required=False)
     parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
                         help="reference log file")
 
@@ -1025,7 +1028,7 @@ def parse_cli_args(kwargs, parser_schema):
             retries = []
             for item in args.pop("_retry"):
                 retries.append(item)
-            kwargs["retries"] = {r.pattern: r.count for r in retries}
+            kwargs["retries"] = {r.pattern: (r.count, r.timeout, r.delay, r.backoff, r.jitter) for r in retries}
 
         if args.get("_rerun"):
             rerun_individually = args.pop("_individually", None) or False
@@ -1783,16 +1786,16 @@ class TestDefinition(object):
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
         repeat_count, repeat_until = repeat if repeat is not None else (1, None)
-        retry_count = retry if retry is not None else 1
+        _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
         for i in range(repeat_count):
             with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs, parent_type=self.test.type) if repeat is not None else NullStep() as iteration:
-                for r in range(retry_count):
-                    retry_flags = retry_kwargs_flags
-                    if r + 1 == retry_count:
-                        retry_flags |= LAST_RETRY
-                    with RetryIteration(name=f"try {r}", flags=retry_flags, tags=self.tags, **retry_kwargs, parent_type=self.test.type) if retry is not None else NullStep() as retry_iteration:
+                _retries = retries(*_retry)
+                while True:
+                    r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
+                        parent_type=self.test.type, **retry_kwargs)
+                    with r if retry is not None else NullStep() as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
                         if isinstance(self.repeatable_func, TestOutline):
@@ -1815,16 +1818,16 @@ class TestDefinition(object):
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
         repeat_count, repeat_until = repeat if repeat is not None else (1, None)
-        retry_count = retry if retry is not None else 1
+        _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
         for i in range(repeat_count):
             async with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs, parent_type=self.test.type) if repeat is not None else AsyncNullStep() as iteration:
-                for r in range(retry_count):
-                    retry_flags = retry_kwargs_flags
-                    if r + 1 == retry_count:
-                        retry_flags |= LAST_RETRY
-                    with RetryIteration(name=f"try {r}", flags=retry_flags, tags=self.tags, **retry_kwargs, parent_type=self.test.type) if retry is not None else AsyncNullStep() as retry_iteration:
+                _retries = retries(*_retry)
+                while True:
+                    r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
+                        parent_type=self.test.type, **retry_kwargs)
+                    with r if retry is not None else AsyncNullStep() as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
                         if isinstance(self.repeatable_func, TestOutline):
@@ -2478,3 +2481,100 @@ def loads(name, *types, package=None, frame=None, filter=None):
         return builtins.filter(filter, tests)
 
     return tests
+
+class retries(object):
+    """Retries object to retry some piece of inline code until it succeeds
+    and no exception is raised.
+
+    ```python
+    for retry in retries(timeout=30, delay=0):
+        with retry:
+            my_code()
+    ```
+
+    :param count: number of retries, default: None
+    :param timeout: timeout in sec, default: None
+    :param delay: delay in sec between retries, default: 0 sec
+    :param backoff: backoff multiplier that is applied to the delay, default: 1
+    :param jitter: jitter added to delay between retries specified as
+                   a tuple(min, max), default: (0,0)
+    """
+    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None):
+        self.count = int(count) if count is not None else None
+        self.timeout = float(timeout) if timeout is not None else None
+        self.delay = float(delay)
+        self.backoff = backoff
+        self.jitter = tuple(jitter) if jitter else tuple([0, 0])
+        self.delay_with_backoff = self.delay
+        self.started = None
+        self.number = -1
+        self.retry = None
+
+    def __iter__(self):
+        # re-initialize state
+        self.delay_with_backoff = self.delay
+        self.number = -1
+        self.started = None
+        return self
+
+    def __next__(self, **kwargs):
+        flags = kwargs.pop("flags", Flags())
+        parent_type = kwargs.pop("parent_type", current().type)
+
+        if self.retry is not None:
+            if self.retry.test is not None:
+                if isinstance(self.retry.test.result, NonFailResults):
+                    raise StopIteration
+
+        if self.started and self.delay_with_backoff:
+            if self.backoff:
+                self.delay_with_backoff *= self.backoff
+
+            delay = self.delay_with_backoff
+            if self.jitter:
+                delay += random.uniform(*self.jitter)
+
+            if self.timeout is not None:
+                delay = min(delay, max(0, self.timeout - (time.time() - self.started)))
+
+            time.sleep(delay)
+
+        if self.started and self.timeout is not None and time.time() - self.started >= self.timeout:
+            flags |= LAST_RETRY
+
+        if not self.started:
+            self.started = time.time()
+
+        self.number += 1
+
+        if self.count is not None and self.count <= self.number + 1:
+            flags |= LAST_RETRY
+
+        self.retry = RetryIteration(f"try #{self.number}", flags=flags, parent_type=parent_type, **kwargs)
+
+        return self.retry
+
+def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None):
+    """Retry function.
+
+    For example,
+
+    ```python
+    retry(my_func, count=5, timeout=30)(*my_args, **kwargs)
+    ```
+
+    :param func: function to retry
+    :param count: number of retries, default: None
+    :param timeout: timeout in sec, default: None
+    :param delay: delay in sec between retries, default: 0 sec
+    :param backoff: backoff multiplier that is applied to the delay, default: 1
+    :param jitter: jitter added to delay between retries specified as
+                   a tuple(min, max), default: (0,0)
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter):
+            with _retry:
+                return func(*args, **kwargs)
+
+    return wrapper

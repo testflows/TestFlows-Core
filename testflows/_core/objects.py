@@ -566,10 +566,9 @@ class FFails(NamedValue):
     name = "ffails"
 
     def __init__(self, value):
-        _value = dict(value)
-        for k, v in _value.items():
-            FFail.check_value(k, *v)
-        super(FFails, self).__init__(_value)
+        value = dict(value)
+        value = {p: FFail(*v).value for p, v in value.items()}
+        super(FFails, self).__init__(value)
 
     def items(self):
         return self.value.items()
@@ -596,19 +595,15 @@ class FFail(NamedValue):
     def __init__(self, reason, pattern="", when=None, result=None):
         if result is not None:
             self.result = result
-        self.check_value(pattern, self.result, reason, when)
-        super(FFail, self).__init__({pattern: (self.result, reason, when)})
-
-    @classmethod
-    def check_value(cls, pattern, result, reason, when=None):
+        
         if not issubclass(result, Result):
             raise TypeError(f"invalid result '{result}' type")
         if not type(reason) in (str,):
             raise TypeError(f"reason '{type(reason)}' must be str")
-        if not type(pattern) in (str,):
-            raise TypeError(f"pattern '{type(pattern)}' must be str")
         if when is not None and not callable(when):
             raise TypeError(f"when '{type(when)}' must be callable")
+        
+        super(FFail, self).__init__({pattern: (self.result, reason, when)})
 
 class Skipped(FFail):
     """ffails (forced fails) container with single Skip result.
@@ -700,28 +695,46 @@ class Retries(NamedValue):
     """retries containers.
 
     retries={
-        "pattern": count,
+        "pattern": count[,timeout[,delay[,backoff[,jitter]]]] ,
         ...
     }
     """
     name = "retries"
 
     def __init__(self, value):
-        super(Retries, self).__init__(dict(value))
+        value = dict(value)
+        value = {p: Retry(*r).value for p, r in value.items()}
+        super(Retries, self).__init__(value)
 
 class Retry(NamedValue):
     """single retry container.
     """
     name = "retries"
 
-    def __init__(self, count, pattern=""):
-        self.count = int(count)
+    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None, pattern=""):
+        """
+        :param count: number of retries, default: None
+        :param timeout: timeout in sec, default: None
+        :param delay: delay in sec between retries, default: 0 sec
+        :param backoff: backoff multiplier that is applied to the delay, default: 1
+        :param jitter: jitter added to delay between retries specified as
+                   a tuple(min, max), default: (0,0)
+        """
+        self.count = int(count) if count is not None else None
+        self.timeout = float(timeout) if timeout is not None else None
+        self.delay = float(delay)
+        self.backoff = backoff
+        self.jitter = tuple(jitter) if jitter else tuple([0, 0])
+        
         self.pattern = str(pattern)
 
-        if self.count < 1:
+        if self.count is not None and self.count < 1:
             raise ValueError("count must be > 0")
 
-        return super(Retry, self).__init__({self.pattern: self.count})
+        if self.timeout is not None and self.timeout < 0:
+            raise ValueError("timeout must be >= 0")
+
+        return super(Retry, self).__init__({self.pattern: (self.count, self.timeout, self.delay, self.backoff, self.jitter)})
 
 class Args(dict):
     def __init__(self, **args):

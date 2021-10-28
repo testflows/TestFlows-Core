@@ -161,8 +161,11 @@ def repeat(value):
 def retry(value):
     try:
         fields = list(csv.reader([value], "unix"))[-1]
-        pattern, count = fields
-        option = Retry(count=count, pattern=pattern)
+        jitter = None # can't be specified
+        if len(fields) < 2:
+            raise ValueError("needs at least 2 values")
+        pattern, count, timeout, delay, backoff = [*fields, *["", None, None, 0, 1][len(fields):]]
+        option = Retry(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, pattern=pattern)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
