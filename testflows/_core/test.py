@@ -1801,7 +1801,7 @@ class TestDefinition(object):
                         if isinstance(self.repeatable_func, TestOutline):
                             retry_iteration._run_outline_with_no_arguments = self.no_arguments
                             retry_iteration._run_outline = True
-                        self.repeatable_func(**args)
+                        self.repeatable_func(**args, __run_as_func__=True)
 
                     if isinstance(retry_iteration.result, NonFailResults):
                         break
@@ -1833,7 +1833,7 @@ class TestDefinition(object):
                         if isinstance(self.repeatable_func, TestOutline):
                             retry_iteration._run_outline_with_no_arguments = self.no_arguments
                             retry_iteration._run_outline = True
-                        await self.repeatable_func(**args)
+                        await self.repeatable_func(**args, __run_as_func__=True)
 
                     if isinstance(retry_iteration.result, NonFailResults):
                         break
@@ -2267,6 +2267,8 @@ class TestDecorator(object):
         return self.__run__(**args)
 
     def __run__(self, **args):
+        _run_as_func = args.pop("__run_as_func__", False)
+        
         _check_parallel_context()
 
         test = current()
@@ -2290,7 +2292,7 @@ class TestDecorator(object):
 
         if (test is None
                 or (test and test.type > self.type.type and self.type.type != TestType.Outline)
-                or (test and test_running_outline)):
+                or (test and test_running_outline)) and not (test and _run_as_func):
             kwargs = dict(self.func.kwargs)
 
             if isinstance(self, TestOutline):
