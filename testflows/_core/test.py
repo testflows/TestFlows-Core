@@ -41,6 +41,7 @@ from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, NonFailResults
 from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
+from .objects import NamedValue
 from .objects import Secret
 from .constants import name_sep
 from .io import TestIO
@@ -1139,6 +1140,7 @@ class TestDefinition(object):
     type = TestType.Test
 
     def __new__(cls, name=None, **kwargs):
+        kwargs = {k: v.value if isinstance(v, NamedValue) else v for k,v in kwargs.items()}
         run = kwargs.pop("run", None)
         test = kwargs.pop("test", None)
         no_arguments = None
