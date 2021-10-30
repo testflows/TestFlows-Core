@@ -72,6 +72,10 @@ NOT_REPEATABLE = 1 << 34
 RETRIED = 1 << 35
 # last retry flag
 LAST_RETRY = 1 << 36
+# pause on passing result
+PAUSE_ON_PASS = 1 << 37
+# pause on failing result
+PAUSE_ON_FAIL = 1 << 38
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -92,7 +96,8 @@ class Flags(object):
             FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
             REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
-            ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
+            ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY,
+            PAUSE_ON_PASS, PAUSE_ON_FAIL
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
@@ -100,7 +105,8 @@ class Flags(object):
             "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
             "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
-            "ASYNC", "REPEATED", "NOT_REPEATABLE", "RETRIED", "LAST_RETRY"
+            "ASYNC", "REPEATED", "NOT_REPEATABLE", "RETRIED", "LAST_RETRY",
+            "PAUSE_ON_PASS", "PAUSE_ON_FAIL"
         ]
 
     def __init__(self, flags=0):

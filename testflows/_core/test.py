@@ -36,9 +36,9 @@ from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NO
 from .flags import PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
-from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER
+from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER, PAUSE_ON_PASS, PAUSE_ON_FAIL
 from .testtype import TestType, TestSubType
-from .objects import get, Null, OK, Fail, Skip, Error, PassResults, NonFailResults
+from .objects import get, Null, OK, Fail, Skip, Error, PassResults, FailResults, NonFailResults
 from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
 from .objects import NamedValue
@@ -591,8 +591,13 @@ class TestBase(object):
         else:
             self.io.close()
 
-        if self.flags & PAUSE_AFTER and not self.flags & SKIP:
-            pause()
+        if not self.flags & SKIP:
+            if self.flags & PAUSE_AFTER:
+                pause()
+            elif self.flags & PAUSE_ON_FAIL and isinstance(self.result, FailResults):
+                pause()
+            elif self.flags & PAUSE_ON_PASS and isinstance(self.result, PassResults):
+                pause()
 
     def _apply_eresult_flags(self):
         """Apply eresult flags to self.result.
@@ -719,8 +724,10 @@ def cli_argparser(kwargs, argparser=None):
 
     parser = main_parser.add_argument_group("common arguments")
 
-    parser.add_argument("--config", "-c", dest ="_config", metavar="yml ...", action="append", default=[],
-                        help=("test run YAML configuration file. Can be specified more than once "
+    parser.add_argument("--config", "-c", dest ="_config", metavar="yml ...",
+                        action="append", default=[],
+                        help=("test run YAML configuration file. "
+                              "Can be specified more than once "
                               "to apply multiple configuration files that are "
                               "applied left to right"), type=file_type("r"))
     parser.add_argument("--name", dest="_name", metavar="name",
@@ -739,70 +746,103 @@ def cli_argparser(kwargs, argparser=None):
                         help="end at the selected test", type=str, required=False)
     parser.add_argument("--only-tags", dest="_only_tags",
                         help="run only tests with selected tags",
-                        type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
+                        type=tags_filter_type, metavar="type:tag,...",
+                        nargs="+", required=False)
     parser.add_argument("--skip-tags", dest="_skip_tags",
                         help="skip tests with selected tags",
-                        type=tags_filter_type, metavar="type:tag,...", nargs="+", required=False)
-    parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern", nargs="+",
-                        help="pause before executing selected tests", type=str, required=False)
-    parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern", nargs="+",
-                        help="pause after executing selected tests", type=str, required=False)
+                        type=tags_filter_type, metavar="type:tag,...",
+                        nargs="+", required=False)
+    parser.add_argument("--pause-before", dest="_pause_before", metavar="pattern",
+                        nargs="+", help="pause before executing selected tests",
+                        type=str, required=False)
+    parser.add_argument("--pause-after", dest="_pause_after", metavar="pattern",
+                        nargs="+", help="pause after executing selected tests",
+                        type=str, required=False)
+    parser.add_argument("--pause-on-fail", dest="_pause_on_fail", metavar="pattern",
+                        nargs="+", help="pause after selected tests on failing result",
+                        type=str, required=False)
+    parser.add_argument("--pause-on-pass", dest="_pause_on_pass", metavar="pattern",
+                        nargs="+", help="pause after selected tests on passing result",
+                        type=str, required=False)
     parser.add_argument("--random", dest="_random", action="store_true",
-                        help="randomize order of auto loaded tests", required=False, default=None)
+                        help="randomize order of auto loaded tests",
+                        required=False, default=None)
     parser.add_argument("--debug", dest="_debug", action="store_true",
                         help="enable debugging mode", default=None)
-    parser.add_argument("--no-colors", dest="_no_colors", choices=["yes", "no", "on", "off", 0, 1],
-                        help="disable terminal color highlighting", nargs='?', type=onoff_type, default=NoneValue)
+    parser.add_argument("--no-colors", dest="_no_colors",
+                        choices=["yes", "no", "on", "off", 0, 1],
+                        help="disable terminal color highlighting", nargs='?',
+                        type=onoff_type, default=NoneValue)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
     parser.add_argument("-o", "--output", dest="_output", metavar="format", type=str,
                         choices=output_formats,
                         help=f"""stdout output format, choices are: {output_formats},
                             default: 'nice'""")
     parser.add_argument("-l", "--log", dest="_log", metavar="file", type=str,
-                        help="path to the log file where test output will be stored, default: uses temporary log file")
+                        help=("path to the log file where test output will be stored, "
+                              "default: uses temporary log file"))
     parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
                         help="show skipped tests, default: False", default=None)
     parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
                         help="show test retries, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
-                        help=("repeat a test until it either fails, passes or all iterations are completed.\n"
+                        help=("repeat a test until it either fails, "
+                              "passes or all iterations are completed.\n"
                               "Where `pattern` is a test name pattern, "
                               "`count` is a number times to repeat the test, "
-                              "`until` is either {'pass', 'fail', 'complete'} (default: 'fail')"),
-                        type=repeat_type, metavar="pattern,count[,until]]", nargs="+", required=False)
+                              "`until` is either {'pass', 'fail', 'complete'} "
+                              "(default: 'fail')"),
+                        type=repeat_type, metavar="pattern,count[,until]]",
+                        nargs="+", required=False)
     parser.add_argument("--retry", dest="_retry",
-                        help=("retry a test until it passes or all retries are completed.\n"
-                              "Failed retry attempts except the last one are ignored. "
+                        help=("retry a test until it passes or all retries are completed."
+                              "\nFailed retry attempts except the last one are ignored. "
                               "Where `pattern` is a test name pattern and "
                               "`count` is a number times to retry the test,"
-                              "`timeout` (optional) maximum number of seconds to retry (default: None),"
-                              "`delay` (optional) delay in seconds between retries (default: 0),"
+                              "`timeout` (optional) maximum number of seconds "
+                              "to retry (default: None),"
+                              "`delay` (optional) delay in seconds between "
+                              "retries (default: 0),"
                               "`backoff` (optional) backoff factor (default: 1)"),
-                        type=retry_type, metavar="pattern,count[,timeout[,delay[,backoff]]]", nargs="+", required=False)
-    parser.add_argument("-r", "--reference", dest="_reference", metavar="log", type=logfile_type("r", encoding="utf-8"),
+                        type=retry_type,
+                        metavar="pattern,count[,timeout[,delay[,backoff]]]",
+                        nargs="+", required=False)
+    parser.add_argument("-r", "--reference", dest="_reference", metavar="log",
+                        type=logfile_type("r", encoding="utf-8"),
                         help="reference log file")
 
     parser.add_argument("--rerun", dest="_rerun", metavar="result", type=str,
                         choices=rerun_results, nargs="+",
                         help=("rerun tests in the --reference log file.\n"
                               f"Where `result` is either {rerun_results}"))
-    parser.add_argument("--individually", dest="_individually", action="store_true", default=None,
-                        help="if --rerun is specified then rerun tests in the --reference log file individually.")
+    parser.add_argument("--individually", dest="_individually",
+                        action="store_true", default=None,
+                        help=("if --rerun is specified then rerun tests in the "
+                              "--reference log file individually."))
 
     parser.add_argument("--parallel", dest="_parallel", type=onoff_type,
-        choices=["yes", "no", "on", "off", 0, 1],
-        help="enable or disable parallelism for tests that support it, default: on")
-    parser.add_argument("--parallel-pool", dest="_parallel_pool", metavar="size", type=count_type,
-        help="for parallel tests force to use global parallel pool of the specified size")
+                        choices=["yes", "no", "on", "off", 0, 1],
+                        help=("enable or disable parallelism for tests "
+                              "that support it, default: on"))
+    parser.add_argument("--parallel-pool", dest="_parallel_pool",
+                        metavar="size", type=count_type,
+                        help=("for parallel tests force to use global parallel "
+                              "pool of the specified size"))
 
-    parser.add_argument("--private-key", dest="_private_key", metavar="file", type=rsa_private_key_pem_file_type,
-        help="RSA private key PEM file that can be used to encrypt secrets.")
+    parser.add_argument("--private-key", dest="_private_key",
+                        metavar="file", type=rsa_private_key_pem_file_type,
+                        help=("RSA private key PEM file that can be "
+                              "used to encrypt secrets."))
 
     exit_group = parser.add_mutually_exclusive_group()
-    exit_group.add_argument('--first-fail', dest="_first_fail", action='store_true', default=None,
-        help="force all tests to be first fail and abort the run on the first failing test")
-    exit_group.add_argument('--test-to-end', dest="_test_to_end", action='store_true', default=None,
-        help="force all tests to be test to end and continue the run even if one of the tests fails")
+    exit_group.add_argument('--first-fail', dest="_first_fail",
+                            action='store_true', default=None,
+                            help=("force all tests to be first fail and abort "
+                                  "the run on the first failing test"))
+    exit_group.add_argument('--test-to-end', dest="_test_to_end",
+                            action='store_true', default=None,
+                            help=("force all tests to be test to end and continue "
+                                  "the run even if one of the tests fails"))
 
     if database_module:
         database_module.argparser(parser)
@@ -957,6 +997,22 @@ def parse_cli_args(kwargs, parser_schema):
                 xflags[pattern][0] |= PAUSE_AFTER
             kwargs["xflags"] = xflags
             args.pop("_pause_after")
+
+        if args.get("_pause_on_pass"):
+            xflags = kwargs.get("xflags", {})
+            for pattern in args.get("_pause_on_pass"):
+                xflags[pattern] = xflags.get(pattern, [0, 0])
+                xflags[pattern][0] |= PAUSE_ON_PASS
+            kwargs["xflags"] = xflags
+            args.pop("_pause_on_pass")
+
+        if args.get("_pause_on_fail"):
+            xflags = kwargs.get("xflags", {})
+            for pattern in args.get("_pause_on_fail"):
+                xflags[pattern] = xflags.get(pattern, [0, 0])
+                xflags[pattern][0] |= PAUSE_ON_FAIL
+            kwargs["xflags"] = xflags
+            args.pop("_pause_on_fail")
 
         if args.get("_only"):
             only = []
@@ -1485,6 +1541,8 @@ class TestDefinition(object):
                 kwargs["flags"] &= ~SKIP
                 kwargs["flags"] &= ~PAUSE_BEFORE
                 kwargs["flags"] &= ~PAUSE_AFTER
+                kwargs["flags"] &= ~PAUSE_ON_PASS
+                kwargs["flags"] &= ~PAUSE_ON_FAIL
 
             kwargs["cflags"] |= kwargs["flags"] & CFLAGS
 
@@ -2270,7 +2328,7 @@ class TestDecorator(object):
 
     def __run__(self, **args):
         _run_as_func = args.pop("__run_as_func__", False)
-        
+
         _check_parallel_context()
 
         test = current()
