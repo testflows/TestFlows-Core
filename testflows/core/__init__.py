@@ -24,12 +24,13 @@ from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
 from testflows._core.objects import Name, Description, Uid, Tags, Args, Setup, Parallel, Executor
 from testflows._core.objects import XFails, XFlags, Repeats, Repeat, Retries, Retry, Onlys, Skips
+from testflows._core.objects import OnlyTags, SkipTags
 from testflows._core.objects import FFails, Skipped, Failed, XFailed, XErrored, Okayed, XOkayed
 from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
 from testflows._core.objects import Secret
 from testflows._core.baseobject import Table
-from testflows._core.filters import The, TheTags
+from testflows._core.filters import The
 from testflows._core.funcs import load, append_path
 from testflows._core.funcs import main, args, private_key
 from testflows._core.funcs import metric, ticket, value, note, debug, trace

@@ -179,7 +179,7 @@ def tags_filter(value):
             type = "test"
         elif type == "feature":
             type = "suite"
-        option = {type: set(tags)}
+        option = (type, tuple(tags))
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option

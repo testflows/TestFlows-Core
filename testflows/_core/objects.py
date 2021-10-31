@@ -19,6 +19,7 @@ from .utils.enum import IntEnum
 from .exceptions import SpecificationError, RequirementError, ResultException
 from .baseobject import TestObject, Table
 from .baseobject import get, hash
+from .testtype import TestType
 import testflows._core.contrib.rsa as rsa
 
 class Result(TestObject, ResultException):
@@ -525,6 +526,48 @@ class Skips(NamedList):
 
     def __init__(self, *items):
         super(Skips, self).__init__(*items)
+
+class _FilterTags(NamedValue):
+    """filter tags object.
+    """
+    def __init__(self, test=None, suite=None, module=None, any=None):
+        test = set(test) if test is not None else set()
+        suite = set(suite) if suite is not None else set()
+        module = set(module) if module is not None else set()
+        any = set(any) if any is not None else set()
+        if any:
+            test = test.union(any)
+            suite = suite.union(any)
+            module = module.union(any)
+        super(_FilterTags, self).__init__({TestType.Test: test, TestType.Suite: suite, TestType.Module: module})
+
+class OnlyTags(_FilterTags):
+    """only_tags filter object.
+
+    ```python
+    @OnlyTags(
+       test=[tagA,(tagA,tagB),...],
+       suite=[...],
+       module=[...],
+       any=[...]
+    )
+    ```
+    """
+    name = "only_tags"
+
+class SkipTags(_FilterTags):
+    """skip_tags filter object.
+
+    ```python
+    @SkipTags(
+       test=[tagA,(tagA,tagB),...],
+       suite=[...],
+       module=[...],
+       any=[...]
+    )
+    ```
+    """
+    name = "skip_tags"
 
 class Setup(NamedValue):
     name = "setup"

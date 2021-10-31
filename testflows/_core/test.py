@@ -41,7 +41,7 @@ from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, FailResults, NonFailResults
 from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
-from .objects import NamedValue
+from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import Secret
 from .constants import name_sep
 from .io import TestIO
@@ -58,7 +58,7 @@ from .cli.arg.type import file as file_type
 from .cli.arg.type import onoff as onoff_type, NoneValue, count as count_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
-from .filters import The, TheTags
+from .filters import The
 from .utils.sort import human as human_sort
 from .transform.log.pipeline import ResultsLogPipeline
 from .parallel import current, top, previous, _check_parallel_context, join as parallel_join
@@ -1037,14 +1037,20 @@ def parse_cli_args(kwargs, parser_schema):
         if args.get("_only_tags"):
             _only_tags = {}
             for item in args.pop("_only_tags"):
-                _only_tags.update(item)
-            kwargs["only_tags"] = TheTags(**_only_tags)
+                test_type, tags = item
+                if test_type not in _only_tags:
+                    _only_tags[test_type] = []
+                _only_tags[test_type].append(tags)
+            kwargs["only_tags"] = OnlyTags(**_only_tags).value
 
         if args.get("_skip_tags"):
             _skip_tags = {}
             for item in args.pop("_skip_tags"):
-                _skip_tags.update(item)
-            kwargs["skip_tags"] = TheTags(**_skip_tags)
+                test_type, tags = item
+                if test_type not in _skip_tags:
+                    _skip_tags[test_type] = []
+                _skip_tags[test_type].append(tags)
+            kwargs["skip_tags"] = SkipTags(**_skip_tags).value
 
         if args.get("_tags"):
             kwargs["tags"] = {value for value in args.pop("_tags")}
@@ -1483,14 +1489,8 @@ class TestDefinition(object):
             kwargs["skip"] = [The(str(f)).at(name if name else name_sep) for f in kwargs.get("skip") or []] or None
             kwargs["start"] = The(str(kwargs.get("start"))).at(name if name else name_sep) if kwargs.get("start") else None
             kwargs["end"] = The(str(kwargs.get("end"))).at(name if name else name_sep) if kwargs.get("end") else None
-            if not isinstance(kwargs.get("only_tags"), TheTags):
-                kwargs["only_tags"] = TheTags(**dict(kwargs["only_tags"])) if kwargs.get("only_tags") else None
-            else:
-                kwargs["only_tags"] = kwargs.get("only_tags")
-            if not isinstance(kwargs.get("skip_tags"), TheTags):
-                kwargs["skip_tags"] = TheTags(**dict(kwargs["skip_tags"])) if kwargs.get("skip_tags") else None
-            else:
-                kwargs["skip_tags"] = kwargs.get("skip_tags")
+            kwargs["only_tags"] = kwargs.get("only_tags") or None
+            kwargs["skip_tags"] = kwargs.get("skip_tags") or None
 
             self._apply_xflags(name, kwargs)
             self._apply_start(name, parent, kwargs)
@@ -1673,20 +1673,20 @@ class TestDefinition(object):
         if not only_tags:
             return
 
-        found = {tag for tag in only_tags if tag in tags}
+        found = {tag for tag in only_tags if tags >= set(tag)}
         if not len(found) > 0:
             kwargs["flags"] |= SKIP
-            kwargs["ffails"] = {"*": (Skip, f"only tags {', '.join(only_tags)}")}
+            kwargs["ffails"] = {"*": (Skip, f"only tags {only_tags}")}
 
     def _apply_skip_tags(self, type, tags, kwargs):
         skip_tags = (kwargs.get("skip_tags", {}) or {}).get(type)
         if not skip_tags:
             return
 
-        found = {tag for tag in skip_tags if tag in tags}
+        found = {tag for tag in skip_tags if tags >= set(tag)}
         if len(found) > 0:
             kwargs["flags"] |= SKIP
-            kwargs["ffails"] = {"*": (Skip, f"skip tags {', '.join(found)}")}
+            kwargs["ffails"] = {"*": (Skip, f"skip tags {found}")}
 
     def _apply_only(self, name, kwargs):
         only = kwargs.get("only")
