@@ -636,8 +636,8 @@ class FFail(NamedValue):
     name = "ffails"
 
     def __init__(self, reason, pattern="", when=None, result=None):
-        if result is not None:
-            self.result = result
+        if result is None:
+            result = self.result
         
         if not issubclass(result, Result):
             raise TypeError(f"invalid result '{result}' type")
