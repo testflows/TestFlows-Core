@@ -1863,6 +1863,8 @@ class TestDefinition(object):
                             retry_iteration._run_outline = True
                         self.repeatable_func(**args, __run_as_func__=True)
 
+                    if retry is None:
+                        break
                     if isinstance(retry_iteration.result, NonFailResults):
                         break
 
@@ -1895,6 +1897,8 @@ class TestDefinition(object):
                             retry_iteration._run_outline = True
                         await self.repeatable_func(**args, __run_as_func__=True)
 
+                    if retry is None:
+                        break
                     if isinstance(retry_iteration.result, NonFailResults):
                         break
 

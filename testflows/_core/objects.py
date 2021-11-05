@@ -610,7 +610,7 @@ class FFails(NamedValue):
 
     def __init__(self, value):
         value = dict(value)
-        value = {p: FFail(*v).value for p, v in value.items()}
+        value = {p: list(FFail(*v).value.values())[0] for p, v in value.items()}
         super(FFails, self).__init__(value)
 
     def items(self):
@@ -632,13 +632,9 @@ class FFails(NamedValue):
 class FFail(NamedValue):
     """ffails (forced fails) container with single result.
     """
-    result = None
     name = "ffails"
 
-    def __init__(self, reason, pattern="", when=None, result=None):
-        if result is None:
-            result = self.result
-        
+    def __init__(self, result, reason, when=None, pattern=""):
         if not issubclass(result, Result):
             raise TypeError(f"invalid result '{result}' type")
         if not type(reason) in (str,):
@@ -646,37 +642,43 @@ class FFail(NamedValue):
         if when is not None and not callable(when):
             raise TypeError(f"when '{type(when)}' must be callable")
         
-        super(FFail, self).__init__({pattern: (self.result, reason, when)})
+        super(FFail, self).__init__({pattern: (result, reason, when)})
 
 class Skipped(FFail):
     """ffails (forced fails) container with single Skip result.
     """
-    result = Skip
+    def __init__(self, reason, when=None, pattern=""):
+        super(Skipped, self).__init__(reason=reason, when=when, pattern=pattern, result=Skip)
 
 class Failed(FFail):
     """ffails (forced fails) container with single Fail result.
     """
-    result = Fail
+    def __init__(self, reason, when=None, pattern=""):
+        super(Failed, self).__init__(reason=reason, when=when, pattern=pattern, result=Fail)
 
 class XFailed(FFail):
     """ffails (forced fails) container with single XFail result.
     """
-    result = XFail
+    def __init__(self, reason, when=None, pattern=""):
+        super(XFailed, self).__init__(reason=reason, when=when, pattern=pattern, result=XFail)
 
 class XErrored(FFail):
     """ffails (forced fails) container with single XError result.
     """
-    result = XError
+    def __init__(self, reason, when=None, pattern=""):
+        super(XErrored, self).__init__(reason=reason, when=when, pattern=pattern, result=XError)
 
 class Okayed(FFail):
     """ffails (forced fails) container with single OK result.
     """
-    result = OK
+    def __init__(self, reason, when=None, pattern=""):
+        super(Okayed, self).__init__(reason=reason, when=when, pattern=pattern, result=OK)
 
 class XOkayed(FFail):
     """ffails (forced fails) container with single XOK result.
     """
-    result = XOK
+    def __init__(self, reason, when=None, pattern=""):
+        super(XOkayed, self).__init__(reason=reason, when=when, pattern=pattern, result=XOK)
 
 class XFlags(NamedValue):
     """xflags container.
