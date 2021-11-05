@@ -724,7 +724,7 @@ class Repeat(NamedValue):
     """
     name = "repeats"
 
-    def __init__(self, count, pattern="", until="complete"):
+    def __init__(self, count, until="complete", pattern=""):
         self.count = int(count)
         self.pattern = str(pattern)
         self.until = str(until)
@@ -748,7 +748,7 @@ class Retries(NamedValue):
 
     def __init__(self, value):
         value = dict(value)
-        value = {p: Retry(*r).value for p, r in value.items()}
+        value = {p: list(Retry(*r).value.values())[0] for p, r in value.items()}
         super(Retries, self).__init__(value)
 
 class Retry(NamedValue):
