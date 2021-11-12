@@ -1827,6 +1827,9 @@ class TestDefinition(object):
         retry_kwargs.pop("parent", None)
         retry_kwargs["type"] = TestType.RetryIteration
 
+        repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) & ~PARALLEL
+        retry_kwargs["flags"] = Flags(retry_kwargs.get("flags")) & ~PARALLEL
+
         if repeat is not None:
             _, until = repeat
             if until == "fail":
