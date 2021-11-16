@@ -304,6 +304,7 @@ class TestBase(object):
             raise TypeError("name must be specified")
         self.child_count = 0
         self.start_time = time.time()
+        self.test_time = None
         self.parent = parent
         self.id = get(id, [settings.test_id])
         self.node = get(node, self.node)
@@ -584,6 +585,7 @@ class TestBase(object):
         self._apply_xfails()
 
         self.io.output.result(self.result)
+        self.test_time = time.time() - self.start_time
 
         if top() is self:
             self.io.output.stop()
