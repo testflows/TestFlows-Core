@@ -14,6 +14,7 @@
 # limitations under the License.
 import os
 import sys
+import time
 import inspect
 import importlib
 import builtins
@@ -361,3 +362,15 @@ def getsattr(obj, name, *default):
     value = getattr(obj, name, *default)
     setattr(obj, name, value)
     return value
+
+def current_time(test=None):
+    """Return current execution time.
+    """
+    if test is None:
+        test = current()
+
+    if test.test_time is None:
+       return time.time() - test.start_time
+    else:
+       return test.test_time
+
