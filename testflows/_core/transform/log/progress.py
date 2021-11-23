@@ -29,7 +29,7 @@ progress = [
 def clear_line():
     return "\r\033[K\r"
 
-def short_test_name(msg, max=80, tail=30):
+def short_test_name(msg, max=80, tail=20):
     test_name = msg["test_name"]
     if len(test_name) > max:
         test_name = test_name[:max-tail] + "..." + test_name[-tail:]

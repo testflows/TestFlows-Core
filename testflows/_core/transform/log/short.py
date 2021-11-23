@@ -276,11 +276,15 @@ def format_result(msg, no_colors=False, use_indent=False, use_full_testname=Fals
 
     out = f"{_indent}{_result}"
 
+    _result_message = msg["result_message"]
+    if _result_message and settings.trim and int(msg["test_level"]) > 1:
+        _result_message = _result_message.strip().split("\n",1)[0].strip()
+
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        if msg["result_message"]:
+        if _result_message:
             out += color_test_name(",", no_colors=no_colors)
-            out += f" {_color(format_multiline(msg['result_message'], _indent).lstrip(), no_colors=no_colors)}"
+            out += f" {_color(format_multiline(_result_message, _indent).lstrip(), no_colors=no_colors)}"
     elif result.startswith("X"):
         out += f" {_test}"
         if msg["result_reason"]:

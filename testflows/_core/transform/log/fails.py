@@ -105,10 +105,14 @@ def format_result(msg, only_new):
 
     out = f"{_icon} "+ color_other(f"{strftimedelta(msg['message_rtime']):<10}") + f"[ {result.center(6, ' ')} ]".ljust(10, ' ').replace(result, _result)
 
+    _result_message = msg["result_message"]
+    if _result_message and settings.trim and int(msg["test_level"]) > 1:
+        _result_message = _result_message.strip().split("\n",1)[0].strip()
+
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        if msg["result_message"]:
-            out += f"\n{indent}  {color(format_multiline(msg['result_message'], indent).lstrip(), 'yellow', attrs=['bold'])}"
+        if _result_message:
+            out += f"\n{indent}  {color(format_multiline(_result_message, indent).lstrip(), 'yellow', attrs=['bold'])}"
         out += "\n"
     elif not only_new and result.startswith("X"):
         out += f" {_test}"

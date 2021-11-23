@@ -38,6 +38,8 @@ database = None
 show_skipped = False
 #: show retries
 show_retries = False
+#: show trimmed result messages
+trim = False
 #: randomize order of loaded tests
 random_order = False
 #: global thread pool

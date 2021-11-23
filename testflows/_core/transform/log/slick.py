@@ -148,11 +148,15 @@ def format_result(msg, last_test_id):
         out = cursor_up() + "\r" + out
     last_test_id = []
 
+    _result_message = msg["result_message"]
+    if _result_message and settings.trim and int(msg["test_level"]) > 1:
+        _result_message = _result_message.strip().split("\n",1)[0].strip()
+
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        if msg["result_message"]:
+        if _result_message:
             out += color_test_name(",")
-            out += f" {color(format_multiline(msg['result_message'], _indent).lstrip(), 'yellow', attrs=['bold'])}"
+            out += f" {color(format_multiline(_result_message, _indent).lstrip(), 'yellow', attrs=['bold'])}"
     elif result.startswith("X"):
         out += f" {_test}"
         if msg['result_reason']:

@@ -45,6 +45,9 @@ try:
     if args.show_skipped:
         settings.show_skipped = True
 
+    if args.trim:
+        settings.trim = True
+
     args.func(args)
 
 except (ExitException, KeyboardInterrupt, Exception) as exc:
