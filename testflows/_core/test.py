@@ -787,7 +787,7 @@ def cli_argparser(kwargs, argparser=None):
                         help="show skipped tests, default: False", default=None)
     parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
                         help="show test retries, default: False", default=None)
-    parser.add_argument("-t", "--trim", dest="_trim", action="store_true",
+    parser.add_argument("--trim", dest="_trim", action="store_true",
                         help="show trimmed result messages, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
                         help=("repeat a test until it either fails, "
