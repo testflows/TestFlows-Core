@@ -1766,6 +1766,15 @@ class TestDefinition(object):
             raise exc_value.with_traceback(exc_tb)
         self._enter_exc_info = (exc_type, exc_value, exc_tb)
 
+    def _cleanup_exception(self, exc_value):
+        if settings.debug:
+            return
+        if exc_value.__context__ is not None:
+            if isinstance(exc_value.__context__, (TestIteration, TestRerunIndividually)):
+                exc_value.__suppress_context__ = True
+                return
+            return self._cleanup_exception(exc_value.__context__)
+
     def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/_core"):
         tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
 
@@ -2007,7 +2016,7 @@ class TestDefinition(object):
                 pass
             else:
                 if TE not in self.test.flags:
-                    raise result
+                    raise result from None
                 else:
                     with self.parent.lock:
                         if isinstance(self.parent.result, Error):
@@ -2031,6 +2040,7 @@ class TestDefinition(object):
         if self._enter_exc_info:
             exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
+            self._cleanup_exception(exc_value)
             exc_traceback = self._make_complete_traceback(exc_traceback, frame)
         try:
             if isinstance(exc_value, (TestIteration, TestRerunIndividually)):
@@ -2070,8 +2080,8 @@ class TestDefinition(object):
         if self._enter_exc_info:
             exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
+            self._cleanup_exception(exc_value)
             exc_traceback = self._make_complete_traceback(exc_traceback, frame)
-
         try:
             if isinstance(exc_value, (TestIteration, TestRerunIndividually)):
                 try:
