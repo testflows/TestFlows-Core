@@ -19,6 +19,7 @@ import inspect
 import importlib
 import builtins
 import functools
+import textwrap
 
 from .message import Message, dumps
 from .name import basename
@@ -160,6 +161,31 @@ def private_key(value=None, test=None):
     else:
         value = test.private_key
     return value
+
+def text(*message, start="", end="\n", format=None, dedent=True, strip=False, file=None, test=None):
+    if test is None:
+        test = current()
+
+    text = "\n".join(message)
+
+    if file is None:
+        file = getattr(current().context, "file", None)
+
+    if dedent:
+        text = textwrap.dedent(text)
+
+    if strip:
+        text = text.strip()
+
+    if format:
+        text = format.format(text=text)
+
+    text = f"{start}{text}{end}"
+
+    if file:
+        file.write(text)
+
+    test.io.output.text(text)
 
 def note(message, test=None):
     if test is None:

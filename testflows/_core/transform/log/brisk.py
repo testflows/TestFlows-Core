@@ -324,12 +324,12 @@ def format_result(msg, prefix):
 
     return out
 
-def format_message(msg, keyword):
+def format_message(msg, keyword, prefix="", predicate=None):
     out = msg["message"]
     if msg["message_stream"]:
         out = f"[{msg['message_stream']}] {msg['message']}"
 
-    out = textwrap.indent(out, prefix=(indent * (test_type_parent_by_name[msg["test_id"]].count('/') - 1) + " " * 30))
+    out = textwrap.indent(out, prefix=(indent * (test_type_parent_by_name[msg["test_id"]].count('/') - 1) + " " * 30 + prefix), predicate=predicate)
     out = out.lstrip(" ")
 
     return color_other(f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}{keyword} {color_other(out)}\n")
@@ -372,6 +372,7 @@ formatters = {
     Message.METRIC.name: (format_metric, f"{mark}    "),
     Message.TICKET.name: (format_ticket, f"{mark}    "),
     Message.EXCEPTION.name: (format_message, f"{mark}    Exception:"),
+    Message.TEXT.name: (format_message, f"      ", f"\u270e   ", lambda line: True),
     Message.NOTE.name: (format_message, f"{mark}    [note]"),
     Message.DEBUG.name: (format_message, f"{mark}    [debug]"),
     Message.TRACE.name: (format_message, f"{mark}    [trace]"),

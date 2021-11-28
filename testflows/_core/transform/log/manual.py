@@ -312,12 +312,12 @@ def format_result(msg, no_colors=False):
 
     return out
 
-def format_message(msg, keyword, no_colors):
+def format_message(msg, keyword, prefix="", predicate=None, no_colors=False):
     out = msg["message"]
     if msg["message_stream"]:
         out = f"[{msg['message_stream']}] {msg['message']}"
     out = out.strip(" ")
-    out = textwrap.indent(out, prefix="")
+    out = textwrap.indent(out, prefix=prefix, predicate=predicate)
     return color_other(f"{keyword}{color_other(out, no_colors=no_colors)}\n", no_colors=no_colors)
 
 def format_metric(msg, keyword, no_colors=False):
@@ -353,6 +353,7 @@ formatters = {
     Message.METRIC.name: (format_metric, f""),
     Message.TICKET.name: (format_ticket, f""),
     Message.EXCEPTION.name: (format_message, f""),
+    Message.TEXT.name: (format_message, f"", f"\u270e    ", lambda line: True),
     Message.NOTE.name: (format_message, f"[note] "),
     Message.DEBUG.name: (format_message, f"[debug] "),
     Message.TRACE.name: (format_message, f"[trace] "),

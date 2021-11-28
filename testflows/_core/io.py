@@ -221,6 +221,14 @@ class TestOutput(object):
         }
         self.message(Message.RESULT, msg, object_type=MessageObjectType.TEST)
 
+    def text(self, message):
+        """Output text message.
+
+        :param message: message
+        """
+        msg = {"message": str(message)}
+        self.message(Message.TEXT, msg)
+
     def note(self, message):
         """Output note message.
 
