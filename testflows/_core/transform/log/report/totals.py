@@ -123,9 +123,17 @@ def format_test(msg, counts):
     if test_subtype == TestSubType.Example:
         counts["example"].units += 1
     elif test_type == TestType.Module:
-        counts["module"].units += 1
+        if test_subtype == TestSubType.Book:
+            counts["book"].units += 1
+        else:
+            counts["module"].units += 1
     elif test_type == TestType.Suite:
-        counts["suite"].units += 1
+        if test_subtype == TestSubType.Feature:
+            counts["feature"].units += 1
+        if test_subtype == TestSubType.Chapter:
+            counts["chapter"].units += 1
+        else:
+            counts["suite"].units += 1
     elif test_type == TestType.Outline:
         counts["outline"].units += 1
     elif test_type == TestType.Iteration:
@@ -133,11 +141,12 @@ def format_test(msg, counts):
     elif test_type == TestType.RetryIteration:
         counts["retry"].units += 1
     elif test_type == TestType.Step:
-        counts["step"].units += 1
+        if test_subtype == TestSubType.Paragraph:
+            counts["paragraph"].units += 1
+        else:
+            counts["step"].units += 1
     else:
-        if test_subtype == TestSubType.Feature:
-            counts["feature"].units += 1
-        elif test_subtype == TestSubType.Scenario:
+        if test_subtype == TestSubType.Scenario:
             counts["scenario"].units += 1
         elif test_subtype == TestSubType.Check:
             counts["check"].units += 1
@@ -149,6 +158,12 @@ def format_test(msg, counts):
             counts["minor"].units += 1
         elif test_subtype == TestSubType.Recipe:
             counts["recipe"].units += 1
+        elif test_subtype == TestSubType.Document:
+            counts["document"].units += 1
+        elif test_subtype == TestSubType.Page:
+            counts["page"].units += 1
+        elif test_subtype == TestSubType.Section:
+            counts["section"].units += 1
         else:
             counts["test"].units += 1
 
@@ -163,9 +178,17 @@ def format_result(msg, counts):
     if test_subtype == TestSubType.Example:
         setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
     elif test_type == TestType.Module:
-        setattr(counts["module"], _name, getattr(counts["module"], _name) + 1)
+        if test_subtype == TestSubType.Book:
+            setattr(counts["book"], _name, getattr(counts["book"], _name) + 1)
+        else:
+            setattr(counts["module"], _name, getattr(counts["module"], _name) + 1)
     elif test_type == TestType.Suite:
-        setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
+        if test_subtype == TestSubType.Feature:
+            setattr(counts["feature"], _name, getattr(counts["feature"], _name) + 1)
+        if test_subtype == TestSubType.Chapter:
+            setattr(counts["chapter"], _name, getattr(counts["chapter"], _name) + 1)
+        else:
+            setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
     elif test_type == TestType.Outline:
         setattr(counts["outline"], _name, getattr(counts["outline"], _name) + 1)
     elif test_type == TestType.Iteration:
@@ -173,11 +196,12 @@ def format_result(msg, counts):
     elif test_type == TestType.RetryIteration:
         setattr(counts["retry"], _name, getattr(counts["retry"], _name) + 1)
     elif test_type == TestType.Step:
-        setattr(counts["step"], _name, getattr(counts["step"], _name) + 1)
+        if test_subtype == TestSubType.Paragraph:
+            setattr(counts["paragraph"], _name, getattr(counts["paragraph"], _name) + 1)
+        else:
+            setattr(counts["step"], _name, getattr(counts["step"], _name) + 1)
     else:
-        if test_subtype == TestSubType.Feature:
-            setattr(counts["feature"], _name, getattr(counts["feature"], _name) + 1)
-        elif test_subtype == TestSubType.Scenario:
+        if test_subtype == TestSubType.Scenario:
             setattr(counts["scenario"], _name, getattr(counts["scenario"], _name) + 1)
         elif test_subtype == TestSubType.Check:
             setattr(counts["check"], _name, getattr(counts["check"], _name) + 1)
@@ -189,6 +213,12 @@ def format_result(msg, counts):
             setattr(counts["minor"], _name, getattr(counts["minor"], _name) + 1)
         elif test_subtype == TestSubType.Recipe:
             setattr(counts["recipe"], _name, getattr(counts["recipe"], _name) + 1)
+        elif test_subtype == TestSubType.Document:
+            setattr(counts["document"], _name, getattr(counts["document"], _name) + 1)
+        elif test_subtype == TestSubType.Page:
+            setattr(counts["page"], _name, getattr(counts["page"], _name) + 1)
+        elif test_subtype == TestSubType.Section:
+            setattr(counts["section"], _name, getattr(counts["section"], _name) + 1)
         else:
             setattr(counts["test"], _name, getattr(counts["test"], _name) + 1)
 
@@ -200,19 +230,25 @@ formatters = {
 def all_counts():
     return {
         "module": Counts("modules", *([0] * 10)),
+        "book": Counts("books", *([0] * 10)),
         "suite": Counts("suites", *([0] * 10)),
+        "feature": Counts("features", *([0] * 10)),
+        "chapter": Counts("chapters", *([0] * 10)),
         "test": Counts("tests", *([0] * 10)),
         "outline": Counts("outlines", *([0] * 10)),
         "iteration": Counts("iterations", *([0] * 10)),
         "retry": Counts("retries", *([0] * 10)),
+        "paragraph": Counts("paragraphs", *([0] * 10)),
         "step": Counts("steps", *([0] * 10)),
-        "feature": Counts("features", *([0] * 10)),
         "scenario": Counts("scenarios", *([0] * 10)),
         "recipe": Counts("recipes", *([0] * 10)),
         "check": Counts("checks", *([0] * 10)),
         "critical": Counts("critical", *([0] * 10)),
         "major": Counts("major", *([0] * 10)),
         "minor": Counts("minor", *([0] * 10)),
+        "document": Counts("documents", *([0] * 10)),
+        "page": Counts("pages", *([0] * 10)),
+        "section": Counts("sections", *([0] * 10)),
         "example": Counts("examples", *([0] * 10))
     }
 
@@ -237,12 +273,16 @@ def transform(stop, divider="\n"):
             line_icon = "" #"\u27a4 "
             if counts["module"]:
                 line += line_icon + str(counts["module"])
+            if counts["book"]:
+                line += line_icon + str(counts["book"])
             if counts["suite"]:
                 line += line_icon + str(counts["suite"])
-            if counts["test"]:
-                line += line_icon + str(counts["test"])
             if counts["feature"]:
                 line += line_icon + str(counts["feature"])
+            if counts["chapter"]:
+                line += line_icon + str(counts["chapter"])
+            if counts["test"]:
+                line += line_icon + str(counts["test"])
             if counts["scenario"]:
                 line += line_icon + str(counts["scenario"])
             if counts["check"]:
@@ -255,6 +295,12 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["minor"])
             if counts["recipe"]:
                 line += line_icon + str(counts["recipe"])
+            if counts["document"]:
+                line += line_icon + str(counts["document"])
+            if counts["page"]:
+                line += line_icon + str(counts["page"])
+            if counts["section"]:
+                line += line_icon + str(counts["section"])
             if counts["example"]:
                 line += line_icon + str(counts["example"])
             if counts["outline"]:
@@ -263,6 +309,8 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["iteration"])
             if counts["retry"]:
                 line += line_icon + str(counts["retry"])
+            if counts["paragraph"]:
+                line += line_icon + str(counts["paragraph"])
             if counts["step"]:
                 line += line_icon + str(counts["step"])
             line += color_line(f"\nTotal time {strftimedelta(msg['message_rtime'])}\n")
