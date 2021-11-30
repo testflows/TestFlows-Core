@@ -95,15 +95,40 @@ def format_type(msg):
     if test_subtype == TestSubType.Example:
         return "Example"
     elif test_type == TestType.Module:
-        return "Module"
+        if test_subtype == TestSubType.Book:
+            return "Book"
+        else:
+            return "Module"
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:
             return "Feature"
+        elif test_subtype == TestSubType.Chapter:
+            return "Chapter"
         else:
             return "Suite"
+    elif test_type == TestType.Outline:
+        return "Outline"
+    elif test_type == TestType.Iteration:
+        return "Iteration"
     else:
         if test_subtype == TestSubType.Scenario:
             return "Scenario"
+        elif test_subtype == TestSubType.Check:
+            return "Check"
+        elif test_subtype == TestSubType.Critical:
+            return "Critical"
+        elif test_subtype == TestSubType.Major:
+            return "Major"
+        elif test_subtype == TestSubType.Minor:
+            return "Minor"
+        elif test_subtype == TestSubType.Recipe:
+            return "Recipe"
+        elif test_subtype == TestSubType.Document:
+            return "Document"
+        elif test_subtype == TestSubType.Page:
+            return "Page"
+        elif test_subtype == TestSubType.Section:
+            return "Section"
         else:
             return "Test"
 

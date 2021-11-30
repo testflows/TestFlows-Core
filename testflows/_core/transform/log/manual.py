@@ -210,10 +210,15 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
     if test_subtype == TestSubType.Example:
         keyword += "Example"
     elif test_type == TestType.Module:
-        keyword += "MODULE"
+        if test_subtype == TestSubType.Book:
+            keyword += "BOOK"
+        else:
+            keyword += "MODULE"
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:
             keyword += "FEATURE"
+        elif test_subtype == TestSubType.Chapter:
+            keyword += "CHAPTER"
         else:
             keyword += "SUITE"
     elif test_type == TestType.Iteration:
@@ -237,6 +242,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
             keyword += and_keyword(msg, parent, "\u25a1 Finally", TestSubType.Finally)
         elif test_subtype == TestSubType.Background:
             keyword += and_keyword(msg, parent, "\u25a1 Background", TestSubType.Background)
+        elif test_subtype == TestSubType.Paragraph:
+            keyword += and_keyword(msg, parent, "\u25a1 Paragraph", TestSubType.Paragraph)
         else:
             keyword += "\u25a1 Step"
     elif test_type == TestType.Outline:
@@ -254,6 +261,12 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
             keyword += "MINOR"
         elif test_subtype == TestSubType.Recipe:
             keyword += "RECIPE"
+        elif test_subtype == TestSubType.Document:
+            keyword += "DOCUMENT"
+        elif test_subtype == TestSubType.Page:
+            keyword += "PAGE"
+        elif test_subtype == TestSubType.Section:
+            keyword += "SECTION"
         else:
             keyword += "TEST"
 
