@@ -292,10 +292,15 @@ def xnull(message=None, reason=None, test=None):
     test.result = XNull(test=test.name, message=message, reason=reason)
     raise test.result
 
-def pause(test=None):
+def pause(message=None, test=None):
     if test is None:
         test = current()
-    test.io.output.prompt("Paused, enter any key to continue...")
+    if message is None:
+        message = ", e"
+    else:
+        message = message.strip()
+        message = f", {message[:1].lower() + message[1:]}\nE"
+    test.io.output.prompt(f"Paused{message}nter any key to continue...")
     builtins.input()
     test.io.output.input("")
 
