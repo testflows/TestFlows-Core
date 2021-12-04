@@ -33,14 +33,26 @@ try:
         sys.argv.append("-h")
 
     args, unknown = parser.parse_known_args()
-    if unknown:
-        raise ExitWithError(f"unknown argument {unknown}")
 
     if args.debug:
         settings.debug = True
 
     if args.no_colors:
         settings.no_colors = True
+
+    handle_unknown = False
+    try:
+        import testflows.texts.run
+        if isinstance(args.func, testflows.texts.run.Handler):
+            handle_unknown = True
+    except ImportError:
+        pass
+
+    if handle_unknown:
+        sys.argv = sys.argv[:1] + unknown
+
+    elif unknown:
+        raise ExitWithError(f"unknown argument {unknown}")
 
     if args.show_skipped:
         settings.show_skipped = True

@@ -23,7 +23,6 @@ import functools
 import threading
 import importlib
 
-from contextlib import ExitStack
 from collections import namedtuple
 
 import testflows.settings as settings
@@ -1778,7 +1777,7 @@ class TestDefinition(object):
                 return
             return self._cleanup_exception(exc_value.__context__)
 
-    def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/_core"):
+    def _make_complete_traceback(self, exception_traceback, frame, co_filename_filter = "testflows/"):
         tb = namedtuple('tb', ('tb_frame', 'tb_lasti', 'tb_lineno', 'tb_next'))
 
         def walk_frame(frame, tb_next=None):
@@ -2219,33 +2218,8 @@ class Minor(Test):
         kwargs["subtype"] = TestSubType.Minor
         return super(Minor, cls).__new__(cls, name, **kwargs)
 
-class BackgroundTest(TestBase):
-    def __init__(self, *args, **kwargs):
-        self.contexts = []
-        super(BackgroundTest, self).__init__(*args, **kwargs)
-
-    def _enter(self):
-        self.stack = ExitStack().__enter__()
-        def _cleanup():
-            with Finally("clean up background"):
-                return self.stack.__exit__(None, None, None)
-        self.context.cleanup(_cleanup)
-        return super(BackgroundTest, self)._enter()
-
-    def append(self, ctx_manager):
-        ctx = self.stack.enter_context(ctx_manager)
-        self.contexts.append(ctx)
-        return ctx
-
-    def __iter__(self):
-        return iter(self.contexts)
-
 class Background(Step):
     subtype = TestSubType.Background
-
-    def __new__(cls, name=None, **kwargs):
-        kwargs["test"] = kwargs.pop("test", BackgroundTest)
-        return super(Background, cls).__new__(cls, name, **kwargs)
 
 class Given(Step):
     subtype = TestSubType.Given

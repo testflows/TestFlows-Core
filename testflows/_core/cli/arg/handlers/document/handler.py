@@ -32,3 +32,8 @@ class Handler(HandlerBase):
         convert_handler.add_command(document_commands)
         toc_handler.add_command(document_commands)
         new_handler.add_command(document_commands)
+        try:
+            from testflows.texts.run import Handler as run_handler
+            run_handler.add_command(document_commands)
+        except ImportError:
+            pass
