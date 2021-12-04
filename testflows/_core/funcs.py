@@ -231,6 +231,13 @@ def result(type, *args, test=None):
         return xnull(*args, test=test)
     raise TypeError(f"invalid result type {type}")
 
+def cleanup(func, *args, test=None, context=None, **kwargs):
+    if context is None:
+        if test is None:
+            test = current()
+        context = test.context
+    context.cleanup(func, *args, **kwargs)
+
 def ok(message=None, reason=None, test=None):
     if test is None:
         test = current()

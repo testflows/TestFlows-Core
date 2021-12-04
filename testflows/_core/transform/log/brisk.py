@@ -274,6 +274,8 @@ def format_test(msg, keyword):
             keyword += and_keyword(msg, parent, "But", TestSubType.But)
         elif test_subtype == TestSubType.Finally:
             keyword += and_keyword(msg, parent, "Finally", TestSubType.Finally)
+        elif test_subtype == TestSubType.Cleanup:
+            keyword += and_keyword(msg, parent, "Cleanup", TestSubType.Cleanup)
         elif test_subtype == TestSubType.Background:
             keyword += and_keyword(msg, parent, "Background", TestSubType.Background)
         elif test_subtype == TestSubType.Paragraph:

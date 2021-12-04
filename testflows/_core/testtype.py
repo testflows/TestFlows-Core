@@ -48,3 +48,4 @@ class TestSubType(IntEnum):
     But = 7
     By = 6
     Finally = 5
+    Cleanup = 4

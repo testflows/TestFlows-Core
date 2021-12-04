@@ -240,6 +240,8 @@ def format_test(msg, keyword, tests_by_parent, tests_by_id, no_colors=False):
             keyword += and_keyword(msg, parent, "\u25a1 But", TestSubType.But)
         elif test_subtype == TestSubType.Finally:
             keyword += and_keyword(msg, parent, "\u25a1 Finally", TestSubType.Finally)
+        elif test_subtype == TestSubType.Cleanup:
+            keyword += and_keyword(msg, parent, "\u25a1 Cleanup", TestSubType.Cleanup)
         elif test_subtype == TestSubType.Background:
             keyword += and_keyword(msg, parent, "\u25a1 Background", TestSubType.Background)
         elif test_subtype == TestSubType.Paragraph:

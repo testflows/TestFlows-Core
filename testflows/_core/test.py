@@ -1522,12 +1522,12 @@ class TestDefinition(object):
                     raise TypeError("`And` subtype can't be used here as it sibling is not of the same type")
                 kwargs["subtype"] = sibling.subtype
 
-            # auto set mandatory flag for Background, Given and Finally steps
-            if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given, TestSubType.Finally]:
+            # auto set mandatory flag for Background, Given, Finally and Cleanup steps
+            if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given, TestSubType.Finally, TestSubType.Cleanup]:
                 kwargs["flags"] |= MANDATORY
 
             # auto set TE flag for Finally steps
-            if kwargs.get("subtype") in [TestSubType.Finally]:
+            if kwargs.get("subtype") in [TestSubType.Finally, TestSubType.Cleanup]:
                 kwargs["flags"] |= TE
 
             # should not skip mandatory steps
@@ -2241,6 +2241,9 @@ class By(Step):
 
 class Finally(Step):
     subtype = TestSubType.Finally
+
+class Cleanup(Step):
+    subtype = TestSubType.Cleanup
 
 class NullStep():
     def __enter__(self):
