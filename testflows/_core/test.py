@@ -253,6 +253,16 @@ class Context(object):
             else:
                 return False
 
+class SharedContext(Context):
+    """Share context with parent.
+    """
+    def __init__(self, parent):
+        if not isinstance(parent, Context):
+            raise ValueError("parent must be an instance of Context")
+        self._parent = parent._parent
+        self._state = parent._state
+        self._cleanups = parent._cleanups
+
 class TestBase(object):
     """Base class for all the tests.
 
@@ -477,7 +487,7 @@ class TestBase(object):
 
             # context cleanups
             if self.type >= TestType.Iteration:
-                if self.context._cleanups:
+                if self.context._cleanups and not isinstance(self.context, SharedContext):
                     try:
                         with Finally("I clean up"):
                             cleanup_exc_type, cleanup_exc_value, cleanup_exc_traceback = self.context._cleanup()

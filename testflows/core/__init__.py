@@ -15,7 +15,7 @@
 import testflows._core.contrib.schema as config
 from testflows._core.test import Module, Suite, Test, Step, NullStep
 from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, TestBackground, TestOutline
-from testflows._core.test import Context
+from testflows._core.test import Context, SharedContext
 from testflows._core.test import Feature, Background, Scenario, Example, Outline
 from testflows._core.test import Critical, Major, Minor, Check, Given, When, Then, And, But, By, Finally, Cleanup
 from testflows._core.test import TestFeature, TestScenario, TestCheck, loads, ordered, retry, retries
