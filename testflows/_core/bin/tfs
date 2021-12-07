@@ -73,6 +73,8 @@ except (ExitException, KeyboardInterrupt, Exception) as exc:
         exitcode = exc.exitcode
     else:
         exitcode = 1
+except SystemExit as exc:
+    exitcode = exc.code
 finally:
     if not sys.stdout.isatty():
         try:
