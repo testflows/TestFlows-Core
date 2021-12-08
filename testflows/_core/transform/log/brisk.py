@@ -346,6 +346,8 @@ def format_message(msg, keyword, prefix="", predicate=None):
 
     out = textwrap.indent(out, prefix=(indent * (test_type_parent_by_name[msg["test_id"]].count('/') - 1) + " " * 30 + prefix), predicate=predicate)
     out = out.lstrip(" ")
+    if out.endswith("\n"):
+        out = out[:-1]
 
     return color_other(f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}{keyword} {color_other(out)}\n")
 

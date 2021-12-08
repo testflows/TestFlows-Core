@@ -332,6 +332,8 @@ def format_message(msg, keyword, prefix="", predicate=None, no_colors=False):
     if msg["message_stream"]:
         out = f"[{msg['message_stream']}] {msg['message']}"
     out = out.strip(" ")
+    if out.endswith("\n"):
+        out = out[:-1]
     out = textwrap.indent(out, prefix=prefix, predicate=predicate)
     return color_other(f"{keyword}{color_other(out, no_colors=no_colors)}\n", no_colors=no_colors)
 

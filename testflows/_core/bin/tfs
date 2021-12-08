@@ -49,8 +49,9 @@ try:
         pass
 
     if handle_unknown:
+        if unknown and unknown[0] == "--":
+            unknown = unknown[1:]
         sys.argv = sys.argv[:1] + unknown
-
     elif unknown:
         raise ExitWithError(f"unknown argument {unknown}")
 
