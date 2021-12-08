@@ -31,6 +31,7 @@ from .slick import transform as slick_transform
 from .classic import transform as classic_transform
 from .fails import transform as fails_transform
 from .manual import transform as manual_transform
+from .quiet import transform as quiet_transform
 from .read_and_filter import transform as read_and_filter_transform
 from .report.passing import transform as passing_report_transform
 from .report.fails import transform as fails_report_transform
@@ -117,6 +118,19 @@ class ReadRawLogPipeline(Pipeline):
             stop_transform(stop_event)
         ]
         super(ReadRawLogPipeline, self).__init__(steps, stop=stop_event)
+
+class QuietLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, show_input=True):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(),
+            quiet_transform(show_input=show_input),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(QuietLogPipeline, self).__init__(steps, stop=stop_event)
 
 class ShortLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):

@@ -31,6 +31,7 @@ from .transform.log.pipeline import SlickLogPipeline
 from .transform.log.pipeline import ClassicLogPipeline
 from .transform.log.pipeline import FailsLogPipeline
 from .transform.log.pipeline import ManualLogPipeline
+from .transform.log.pipeline import QuietLogPipeline
 from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
 
 _handlers = []
@@ -156,10 +157,13 @@ def stdout_progress_handler():
         log.seek(0)
         ProgressLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
-def stdout_silent_handler():
-    """Handler that prints no output to sys.stdout.
+def stdout_quiet_handler():
+    """Handler that prints no output to sys.stdout unless
+    top level test fails.
     """
-    pass
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        QuietLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 def start_output_handler():
     output_handler_map = {
@@ -171,7 +175,7 @@ def start_output_handler():
         "new-fails": stdout_new_fails_handler,
         "nice": stdout_nice_handler,
         "brisk": stdout_brisk_handler,
-        "quiet": stdout_silent_handler,
+        "quiet": stdout_quiet_handler,
         "short": stdout_short_handler,
         "dots": stdout_dots_handler,
         "progress": stdout_progress_handler,
