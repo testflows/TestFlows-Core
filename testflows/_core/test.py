@@ -957,7 +957,7 @@ def parse_cli_args(kwargs, parser_schema):
             for config in configs:
                 config.close()
 
-        settings.debug = args.pop("_debug", None) or False
+        settings.debug = get(args.pop("_debug"), get(settings.debug, False))
         debug_processed = True
 
         if exc is not None:
@@ -966,7 +966,7 @@ def parse_cli_args(kwargs, parser_schema):
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
 
-        settings.no_colors = args.pop("_no_colors", None) or False
+        settings.no_colors = get(args.pop("_no_colors"), get(settings.no_colors, False))
 
         if args.get("_name"):
             kwargs["name"] = args.pop("_name")
