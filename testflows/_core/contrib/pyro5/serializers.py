@@ -15,7 +15,7 @@ import numbers
 import inspect
 import marshal
 import json
-import serpent
+import testflows._core.contrib.serpent as serpent
 import contextlib
 try:
     import msgpack

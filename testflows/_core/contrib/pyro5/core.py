@@ -10,7 +10,7 @@ import contextlib
 import ipaddress
 import socket
 import random
-import serpent
+import testflows._core.contrib.serpent as serpent
 from typing import Union, Optional
 from . import config, errors, socketutil, serializers
 

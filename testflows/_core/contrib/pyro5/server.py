@@ -15,7 +15,7 @@ import logging
 import inspect
 import warnings
 import weakref
-import serpent
+import testflows._core.contrib.serpent as serpent
 import ipaddress
 from typing import Callable, Tuple, Union, Optional, Dict, Any, Sequence, Set
 from . import config, core, errors, serializers, socketutil, protocol, client

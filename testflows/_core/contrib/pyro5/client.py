@@ -6,7 +6,7 @@ Pyro - Python Remote Objects.  Copyright by Irmen de Jong (irmen@razorvine.net).
 
 import time
 import logging
-import serpent
+import testflows._core.contrib.serpent as serpent
 import contextlib
 from . import config, core, serializers, protocol, errors, socketutil
 from .callcontext import current_context
