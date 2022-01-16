@@ -36,6 +36,7 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
         -p '*.py'
 
 """
+import socket
 import logging
 import asyncio
 import uuid
@@ -170,6 +171,30 @@ class Søcket:
 
     def idstr(self) -> str:
         return self.identity.hex()
+
+    @property
+    def bind_address(self) -> Optional[Tuple[str, Optional[int]]]:
+        """Return (addr, port) tuple for bound socket or `None`.
+
+        Use this method to retrieve bounded port after calling
+        bind method with port set to `0` which let's OS pick
+        a random available port.
+
+        Supportted socket families: AF_INET, AF_INET6, AF_UNIX.
+
+        For AF_UNIX returns (path, None)
+        """
+        if self.server is None:
+            return None
+
+        sock = self.server.sockets[0]
+
+        if sock.family in (socket.AF_INET, socket.AF_INET6):
+            return sock.getsockname()[:2]
+        elif sock.family == socket.AF_UNIX:
+            return (sock.getsockname(), None)
+        else:
+            raise NotImplementedError(f"{sock.family} type is not supported")
 
     async def bind(
         self,
