@@ -58,6 +58,7 @@ setup(
         "testflows._core.contrib.yaml",
         "testflows._core.contrib.schema",
         "testflows._core.contrib.x256",
+        "testflows._core.contrib.aiomsg",
         "testflows._core.parallel",
         "testflows._core.parallel.executor",
         "testflows._core.utils",
