@@ -16,13 +16,10 @@ import sys
 import uuid
 import asyncio
 import inspect
-from re import I
-import threading
 import traceback
 
 from typing import Optional
 
-from numpy import identity
 from testflows._core.contrib import cloudpickle
 
 from testflows._core.contrib.aiomsg import Socket
@@ -197,6 +194,7 @@ class Service:
 # global process wide service
 _process_service = None
 
+
 def create_process_service(*args, **kwargs):
     """Create global process wide object service.
     """
@@ -205,6 +203,7 @@ def create_process_service(*args, **kwargs):
     if _process_service is None:
         _process_service = Service(*args, **kwargs)
     return _process_service
+
 
 class BaseServiceObject:
     """Base class for all service objects.
