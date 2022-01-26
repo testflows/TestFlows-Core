@@ -13,5 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from testflows._core.name import match, filter, matchcase, translate, normname, join
-from testflows._core.name import isabs, absname, basename, parentname, depth, split, relname
+from testflows._core.name import isabs, absname, basename, parentname, depth, split, relname, sep
 from testflows._core.name import commonprefix, commonname, normcase

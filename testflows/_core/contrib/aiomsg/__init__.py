@@ -47,6 +47,7 @@ from collections import UserDict
 from itertools import cycle
 from weakref import WeakSet
 from typing import (
+    Any,
     Dict,
     Optional,
     Tuple,
@@ -59,6 +60,8 @@ from typing import (
     Sequence,
 )
 
+import  testflows._core.contrib.cloudpickle as cloudpickle
+
 from . import header
 from . import msgproto
 from . import version_utils
@@ -66,6 +69,10 @@ from . import version_utils
 __all__ = ["Socket", "SendMode", "DeliveryGuarantee"]
 
 logger = logging.getLogger(__name__)
+# disable logging
+logger.propagate = False
+logger.disabled = True
+
 SEND_MODES = ["round_robin", "publish"]
 JSONCompatible = Union[str, int, float, bool, List, Dict, None]
 
@@ -144,7 +151,7 @@ class Søcket:
         self.send_mode = send_mode
         self.delivery_guarantee = delivery_guarantee
         self.receiver_channel = receiver_channel
-        self.identity = identity or uuid.uuid4().bytes
+        self.identity = identity or uuid.uuid1().bytes
         self.loop = loop or asyncio.get_event_loop()
 
         self._queue_recv = asyncio.Queue(maxsize=65536)
@@ -231,10 +238,11 @@ class Søcket:
         port: int = 25000,
         ssl_context=None,
         connect_timeout: float = 1.0,
+        event: asyncio.Event = None
     ):
         self.check_socket_type()
 
-        async def new_connection():
+        async def new_connection(event: asyncio.Event):
             """Called each time a new connection is attempted. This
             suspend while the connection is up."""
             writer = None
@@ -247,7 +255,7 @@ class Søcket:
                     timeout=connect_timeout,
                 )
                 logger.info(f"Socket {self.idstr()} connected.")
-                await self._connection(reader, writer)
+                await self._connection(reader, writer, event=event)
             except asyncio.TimeoutError:
                 # Make timeouts look like socket connection errors
                 raise OSError
@@ -255,14 +263,14 @@ class Søcket:
                 logger.info(f"Socket {self.idstr()} disconnected.")
                 # NOTE: the writer is closed inside _connection.
 
-        async def connect_with_retry():
+        async def connect_with_retry(event: asyncio.Event):
             """This is a long-running task that is intended to run
             for the life of the Socket object. It will continually
             try to connect."""
             logger.info(f"Socket {self.idstr()} connecting to {hostname}:{port}")
             while not self.closed:
                 try:
-                    await new_connection()
+                    await new_connection(event)
                     if self.closed:
                         break
                 except OSError:
@@ -277,7 +285,7 @@ class Søcket:
                 except Exception:
                     logger.exception("Unexpected error")
 
-        self.loop.create_task(connect_with_retry())
+        self.loop.create_task(connect_with_retry(event))
         return self
 
     async def messages(self) -> AsyncGenerator[bytes, None]:
@@ -322,7 +330,7 @@ class Søcket:
         while True:
             yield await self.recv_identity()
 
-    async def _connection(self, reader: StreamReader, writer: StreamWriter):
+    async def _connection(self, reader: StreamReader, writer: StreamWriter, event: Optional[asyncio.Event]=None):
         """Each new connection will create a task with this coroutine."""
         logger.debug("Creating new connection")
 
@@ -350,6 +358,12 @@ class Søcket:
             logger.warning("First connection made")
             self.at_least_one_connection.set()
         self._connections[connection.identity] = connection
+        
+        # Set connection event and identity of the server to
+        # which we have established the connection 
+        if event is not None:
+            event.identity = connection.identity
+            event.set()
 
         try:
             await connection.run()
@@ -477,6 +491,13 @@ class Søcket:
 
         return identity, message
 
+    def recv_identity_nowait(self) -> Tuple[bytes, bytes]:
+        # receive immediately avaiable data
+        identity, message = self._queue_recv.get_nowait()
+        logger.debug(f"Received message from {identity.hex()}: {message}")
+
+        return identity, message
+
     async def recv(self) -> bytes:
         # Just drop the identity
         _, message = await self.recv_identity()
@@ -506,6 +527,15 @@ class Søcket:
         """
         data = await self.recv()
         return json.loads(data, **kwargs)
+
+    async def recv_pickle(self, pickler=cloudpickle, **kwargs) -> Any:
+        """Automatically deserialize messages in Pickle format
+
+        The ``kwargs`` are passed to the ``json.loads()`` method.
+        By default uses cloudpickle as the default ``pickler`` module.
+        """
+        data = await self.recv()
+        return pickler.loads(data, **kwargs)
 
     async def send(self, data: bytes, identity: Optional[bytes] = None, retries=None):
         logger.debug(f"Adding message to user queue: {data[:20]}")
@@ -594,6 +624,16 @@ class Søcket:
         method.
         """
         await self.send_string(json.dumps(obj, **kwargs), identity)
+
+    async def send_pickle(
+        self, obj: Any, identity: Optional[bytes] = None, pickler=cloudpickle, **kwargs
+    ):
+        """Automatically serialise the given ``obj`` to Pickle representation.
+
+        The ``kwargs`` are passed to the ``pickler.dumps()`` method.
+        By default uses ``cloudpickle`` as the default ``pickler`` module.
+        """
+        await self.send(pickler.dumps(obj, **kwargs), identity)
 
     def _sender_publish(self, message: bytes):
         logger.debug(f"Sending message via publish")
@@ -736,7 +776,7 @@ class Connection:
     def warn_dropping_data(self):  # pragma: no cover
         if self.writer_queue.qsize():
             logger.warning(
-                f"Closing connection {self.identity.hex()} but there is"
+                f"Closing connection {self.identity.hex()} but there is "
                 f"still data in the writer queue: {self.writer_queue.qsize()}\n"
                 f"These messages will be lost."
             )

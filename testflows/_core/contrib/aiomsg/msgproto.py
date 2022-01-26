@@ -10,6 +10,10 @@ import logging
 from asyncio import StreamReader, StreamWriter
 
 logger = logging.getLogger(__name__)
+# disable logging
+logger.propagate = False
+logger.disabled = True
+
 _PREFIX_SIZE = 4
 
 
