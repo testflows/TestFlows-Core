@@ -154,14 +154,14 @@ class Søcket:
         self.identity = identity or uuid.uuid1().bytes
         self.loop = loop or asyncio.get_event_loop()
 
-        self._queue_recv = asyncio.Queue(maxsize=65536)
+        self._queue_recv = asyncio.Queue(maxsize=65536, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
-        self._user_send_queue = asyncio.Queue()
+        self._user_send_queue = asyncio.Queue(loop=self.loop)
 
         self.server = None
         self.socket_type: Optional[ConnectionEnd] = None
         self.closed = False
-        self.at_least_one_connection = asyncio.Event()
+        self.at_least_one_connection = asyncio.Event(loop=self.loop)
 
         self.waiting_for_acks: Dict[uuid.UUID, asyncio.Handle] = {}
         self.reconnection_delay = reconnection_delay

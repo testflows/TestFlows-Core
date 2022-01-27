@@ -20,14 +20,24 @@ async def start_service(self, service):
         yield _service
 
 
+@TestStep(Given)
+def sync_start_service(self, service):
+    with service as _service:
+        yield _service
+
+
 @TestStep
 async def access_attribute(self, o):
     return await o.x
 
 
+@TestStep
+def sync_access_attribute(self, o):
+    return o.x
+
 @TestFeature
 async def async_service(self):
-    """Test async services.
+    """Test service in async code.
     """
     async with Given("I create local objects"):
         t1 = Test()
@@ -75,12 +85,66 @@ async def async_service(self):
         assert v2 == '2', error()
 
 
+@TestFeature
+def sync_service(self):
+    """Test service in sync code.
+    """
+    with Given("I reset global process service"):
+        reset_process_service()
+
+    with Given("I create local objects"):
+        t1 = Test()
+        t2 = Test()
+    
+    with Scenario("create global process service"):
+        service = create_process_service("my service", address=("127.0.0.1", 22222))
+    
+    with Scenario("try registering object before starting process service"):
+        with raises(ServiceError):
+            service.register(Test())
+
+    with Given("I create global process service"):
+        service = sync_start_service(service=service)
+
+    with Scenario("check registering multiple objects"):
+        o1 = service.register(t1)
+        o2 = service.register(t2)
+
+    with Scenario("check trying to register the same object twice"):
+        o1_1 = service.register(t1)
+        assert o1.oid == o1_1.oid, error()
+        assert o1 == o1_1, error()
+
+    with Scenario("check using sevice object attribute"):
+        r = o1.x
+        assert r == 2, error()
+
+    with Scenario("check using service object methods"):
+        r = o1.add(2,3)
+        assert r == 5, error()
+    
+    with Scenario("check using multiple object methods"):
+        r = o1.add(2,3) + o2.add(3,3)
+        assert r == 11, error()
+
+    with Scenario("check accessing service object attribute from different async loops"):
+        r1 = When(test=sync_access_attribute, parallel=True)(o=o1)
+        r2 = When(test=sync_access_attribute, parallel=True)(o=o1)
+
+        v1 = r1.result().result.value
+        v2 = r2.result().result.value
+
+        assert v1 == '2', error()
+        assert v2 == '2', error()
+
+
 @TestModule
 @Name("service")
 def feature(self):
     """Check using parallel service.
     """
     Feature(test=async_service)()
+    Feature(test=sync_service)()
 
 
 if main():

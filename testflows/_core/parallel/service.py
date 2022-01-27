@@ -14,9 +14,11 @@
 # limitations under the License.
 import sys
 import uuid
+import atexit
 import asyncio
 import inspect
 import traceback
+import threading
 
 from typing import Optional
 
@@ -47,16 +49,17 @@ class Service:
 
     def __init__(self, name, address=None, loop=None):
         self.name = name
-        self.loop = loop or asyncio.get_event_loop()
+        self.loop = loop or asyncio.get_running_loop()
         self.in_socket = Socket(loop=self.loop)
         self.out_socket = Socket(loop=self.loop)
         self.address = address if address is not None else ("127.0.0.1", 0)
         self.connections = {}
         self.request_tasks = []
+        self.serve_tasks = []
         self.reply_events = {}
         self.objects = {}
         self.open = False
-        self.lock = asyncio.Lock()
+        self.lock = asyncio.Lock(loop=self.loop)
 
     @property
     def hostname(self) -> str:
@@ -72,32 +75,60 @@ class Service:
             return None
         return self.address[-1]
 
-    async def register(self, obj):
+    def register(self, obj):
         """Register object with the service to be
         by remote services.
         """
-        async with self.lock:
-            if not self.open:
-                raise ServiceError("service is not running")
-            
-            _id = id(obj)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
 
-            if _id not in self.objects:
-                self.objects[_id] = obj
+        async def _async_register(sync: bool=False):
+            async with self.lock:
+                if not self.open:
+                    raise ServiceError("service is not running")
+                
+                _id = id(obj)
 
-            return ServiceObject(obj, address=self.address)
+                if _id not in self.objects:
+                    self.objects[_id] = obj
+
+                if sync:
+                    return ServiceObject(obj, address=self.address)
+                return AsyncServiceObject(obj, address=self.address)
+
+        if loop is None:
+             return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
+        elif loop is not self.loop:
+            return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_register(), loop=self.loop))
+        else:
+            return _async_register()
 
     async def unregister(self, obj):
         """Unregister object from the service to stop
         providing object to remote services.
         """
-        async with self.lock:
-            _id = id(obj)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
 
-            if _id in self.objects:
-                del self.objects[id(obj)]
+        async def _async_unregister():
+            async with self.lock:
+                _id = id(obj)
 
-    async def connect(self, service_object):
+                if _id in self.objects:
+                    del self.objects[id(obj)]
+        
+        if loop is None:
+            return asyncio.run_coroutine_threadsafe(_async_unregister(), loop=self.loop).result()
+        elif loop is not self.loop:
+            return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_unregister(), loop=self.loop))
+        else:
+            return _async_unregister()
+
+    async def _connect(self, service_object):
         """Connect to the remote service that provides
         access to the remote object.
         """
@@ -128,24 +159,37 @@ class Service:
         
         return send
    
+    def __enter__(self):
+        """Sync context manager enter.
+        """
+        return asyncio.run_coroutine_threadsafe(self.__aenter__(), loop=self.loop).result()
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        """Sync context manager exit.
+        """
+        return asyncio.run_coroutine_threadsafe(self.__aexit__(exc_type, exc_value, exc_tb), loop=self.loop).result()
+
     async def __aenter__(self):
-        """Context manager enter.
+        """Async context manager enter.
         """
         async with self.lock:
             await self.in_socket.bind(hostname=self.hostname, port=self.port)
             self.address = self.in_socket.bind_address
-            self.in_socket.loop.create_task(self._serve_forever())
+            self.loop.create_task(self._serve_forever())
             self.open = True
             return self
 
     async def __aexit__(self, exc_type, exc_value, exc_tb):
-        """Context manager exit.
+        """Async context manager exit.
         """
         async with self.lock:
             try:
                 while self.request_tasks:
                     task = self.request_tasks.pop()
                     await task
+                while self.serve_tasks:
+                    task = self.serve_tasks.pop()
+                    task.cancel()
                 await self.out_socket.close()
                 await self.in_socket.close()
             finally:
@@ -187,8 +231,12 @@ class Service:
                 identity, message = await self.out_socket.recv_identity()
                 self.out_socket.loop.create_task(self._process_message(identity, message))
 
-        self.in_socket.loop.create_task(_serve_requests())
-        self.out_socket.loop.create_task(_serve_replies())
+        self.serve_tasks.append(
+                self.in_socket.loop.create_task(_serve_requests())
+            )
+        self.serve_tasks.append(
+                self.out_socket.loop.create_task(_serve_replies())
+            )
 
 
 # global process wide service
@@ -201,8 +249,41 @@ def create_process_service(*args, **kwargs):
     global _process_service
 
     if _process_service is None:
-        _process_service = Service(*args, **kwargs)
+        try:
+            asyncio.get_running_loop()
+
+        except RuntimeError:
+            loop = kwargs.pop("loop", None)
+
+            if loop is None:
+                loop = asyncio.new_event_loop()
+
+                def run_event_loop():
+                    asyncio.set_event_loop(loop)
+                    loop.run_forever()
+
+                thread = threading.Thread(target=run_event_loop, daemon=True)
+
+                def stop_event_loop():
+                    loop.call_soon_threadsafe(loop.stop)
+                    thread.join()
+
+                thread.start()
+                atexit.register(stop_event_loop)
+
+            kwargs["loop"] = loop
+            _process_service = Service(*args, **kwargs)
+        else:
+            _process_service = Service(*args, **kwargs)
+
     return _process_service
+
+
+def reset_process_service():
+    """Reset global process service.
+    """
+    global _process_service
+    _process_service = None
 
 
 class BaseServiceObject:
@@ -232,7 +313,7 @@ class BaseServiceObject:
             return None
         return self.address[-1]
 
-    async def __proxy_call__(self, fn, args=None, kwargs=None):
+    async def __async_proxy_call__(self, fn, args=None, kwargs=None):
         """Execute function call on the remote service.
         """
         if args is None:
@@ -240,14 +321,16 @@ class BaseServiceObject:
         if kwargs is None:
             kwargs = dict()
 
+        process_service_loop = _process_service.loop
+
         async def wrap(c):
             """Wrap coroutine that is running in another event loop.
             """
-            if asyncio.get_event_loop() is not _process_service.loop:
-                return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
+            if asyncio.get_event_loop() is not process_service_loop:
+                return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=process_service_loop))
             return await c
 
-        send = await wrap(_process_service.connect(self))
+        send = await wrap(_process_service._connect(self))
 
         response = await wrap(send(uuid.uuid1().bytes, self.oid, fn, args, kwargs, resp=True))
         await wrap(response.wait())
@@ -257,6 +340,34 @@ class BaseServiceObject:
             raise reply_body
 
         return reply_body
+
+    def __proxy_call__(self, fn, args=None, kwargs=None):
+        """Synchronously execute function call on the remote service.
+        """
+        return asyncio.run_coroutine_threadsafe(self.__async_proxy_call__(fn, args, kwargs), loop=_process_service.loop).result()
+
+
+def AsyncServiceObject(obj, address):
+    """Make async service object.
+    """
+    _id = id(obj)
+    _attrs = {}
+
+    for name, value in inspect.getmembers(obj):
+        if name.startswith("_"):
+            continue
+
+        if callable(value):
+            exec(f"async def {name}(self, *args, **kwargs):\n"
+                 f"    return await self.__async_proxy_call__(\"{name}\", args, kwargs)",
+                _attrs)
+        else:
+            exec(f"@property\n"
+                 f"async def {name}(self):\n"
+                 f"    return await self.__async_proxy_call__(\"__getattribute__\", \"{name}\")",
+                _attrs)
+
+    return type(f"AsyncServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
 
 
 def ServiceObject(obj, address):
@@ -270,13 +381,13 @@ def ServiceObject(obj, address):
             continue
 
         if callable(value):
-            exec(f"async def {name}(self, *args, **kwargs):\n"
-                 f"    return await self.__proxy_call__(\"{name}\", args, kwargs)",
+            exec(f"def {name}(self, *args, **kwargs):\n"
+                 f"    return self.__proxy_call__(\"{name}\", args, kwargs)",
                 _attrs)
         else:
             exec(f"@property\n"
-                 f"async def {name}(self):\n"
-                 f"    return await self.__proxy_call__(\"__getattribute__\", \"{name}\")",
+                 f"def {name}(self):\n"
+                 f"    return self.__proxy_call__(\"__getattribute__\", \"{name}\")",
                 _attrs)
 
     return type(f"ServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
