@@ -50,6 +50,7 @@ from testflows._core import __author__, __version__, __license__
 from testflows._core.parallel import join, top, current, previous
 from testflows._core.parallel.executor.thread import ThreadPoolExecutor as Pool, ThreadPoolExecutor as ThreadPool, SharedThreadPoolExecutor as SharedThreadPool
 from testflows._core.parallel.executor.asyncio import AsyncPoolExecutor as AsyncPool, SharedAsyncPoolExecutor as SharedAsyncPool
+from testflows._core.parallel.executor.process import ProcessPoolExecutor as ProcessPool, SharedProcessPoolExecutor as SharedProcessPool, process_service
 
 import testflows.core.parallel as parallel
 import testflows.core.objects as objects

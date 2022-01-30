@@ -85,6 +85,7 @@ setup(
     },
     scripts=[
         "testflows/_core/bin/tfs",
+        "testflows/_core/bin/tfs-worker"
     ],
     zip_safe=False,
     install_requires=[

@@ -60,8 +60,7 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         self._broken = False
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
-        self._thread_name_prefix = (thread_name_prefix or
-                ("ThreadPoolExecutor-%d" % self._counter()))
+        self._thread_name_prefix = f"{thread_name_prefix}ThreadPoolExecutor-{self._counter()}"
 
     @property
     def open(self):

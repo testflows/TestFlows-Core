@@ -44,7 +44,7 @@ async def async_service(self):
         t2 = Test()
     
     async with Scenario("create global process service"):
-        service = create_process_service("my service", address=("127.0.0.1", 22222))
+        service = process_service()
     
     async with Scenario("try registering object before starting process service"):
         with raises(ServiceError):
@@ -97,7 +97,7 @@ def sync_service(self):
         t2 = Test()
     
     with Scenario("create global process service"):
-        service = create_process_service("my service", address=("127.0.0.1", 22222))
+        service = process_service()
     
     with Scenario("try registering object before starting process service"):
         with raises(ServiceError):

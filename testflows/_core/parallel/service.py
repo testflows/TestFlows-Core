@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import sys
 import uuid
 import atexit
@@ -133,11 +134,12 @@ class Service:
         access to the remote object.
         """
         address = service_object.address
-        
+
         async def send(rid, oid, fn, args, kwargs, resp=True):
             """Send sevice object request to remote service.
             """
             await self.connections[address].wait()
+
             await self.out_socket.send_pickle(
                     obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
                     identity=self.connections[address].identity
@@ -205,11 +207,19 @@ class Service:
             oid, fn, args, kwargs = msg_body
             msg_type = self.MsgTypes.REPLY_RESULT
             try:
-                r = getattr(self.objects[oid], fn)(*args, **kwargs)
+                def r():
+                    if fn == "__getattribute__":
+                        return getattr(self.objects[oid], *args)
+                    else:
+                        return getattr(self.objects[oid], fn)(*args, **kwargs)
+                
+                r = await self.loop.run_in_executor(None, r)
+                if asyncio.iscoroutine(r):
+                    r = await r
             except BaseException as e:
                 msg_type = self.MsgTypes.REPLY_EXCEPTION
                 exc_type, exc_value, exc_tb = sys.exc_info()
-                r = exc_type(str(exc_value) + "\n\nService Traceback (most recent call last):\n" + "\n".join(traceback.format_tb(exc_tb)).rstrip())
+                r = exc_type(str(exc_value) + "\n\nService Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
 
             await self.in_socket.send_pickle((msg_type, rid, r), identity=identity)
         else:
@@ -243,15 +253,14 @@ class Service:
 _process_service = None
 
 
-def create_process_service(*args, **kwargs):
-    """Create global process wide object service.
+def process_service(**kwargs):
+    """Get or create global process wide object service.
     """
     global _process_service
 
     if _process_service is None:
         try:
             asyncio.get_running_loop()
-
         except RuntimeError:
             loop = kwargs.pop("loop", None)
 
@@ -272,9 +281,10 @@ def create_process_service(*args, **kwargs):
                 atexit.register(stop_event_loop)
 
             kwargs["loop"] = loop
-            _process_service = Service(*args, **kwargs)
-        else:
-            _process_service = Service(*args, **kwargs)
+
+        kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
+
+        _process_service = Service(**kwargs)
 
     return _process_service
 
@@ -333,6 +343,7 @@ class BaseServiceObject:
         send = await wrap(_process_service._connect(self))
 
         response = await wrap(send(uuid.uuid1().bytes, self.oid, fn, args, kwargs, resp=True))
+
         await wrap(response.wait())
         reply_type, reply_body = response.message
 
@@ -364,19 +375,18 @@ def AsyncServiceObject(obj, address):
         else:
             exec(f"@property\n"
                  f"async def {name}(self):\n"
-                 f"    return await self.__async_proxy_call__(\"__getattribute__\", \"{name}\")",
+                 f"    return await self.__async_proxy_call__(\"__getattribute__\", [\"{name}\"])",
                 _attrs)
 
     return type(f"AsyncServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
 
 
-def ServiceObject(obj, address):
-    """Make service object.
+def ServiceObjectType(type_name, expose):
+    """Make service object type.
     """
-    _id = id(obj)
     _attrs = {}
 
-    for name, value in inspect.getmembers(obj):
+    for name, value in expose:
         if name.startswith("_"):
             continue
 
@@ -387,7 +397,15 @@ def ServiceObject(obj, address):
         else:
             exec(f"@property\n"
                  f"def {name}(self):\n"
-                 f"    return self.__proxy_call__(\"__getattribute__\", \"{name}\")",
+                 f"    return self.__proxy_call__(\"__getattribute__\", [\"{name}\"])",
                 _attrs)
 
-    return type(f"ServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
+    return type(f"ServiceObject[{type_name}]", (BaseServiceObject,), _attrs)
+
+
+def ServiceObject(obj, address, expose=None):
+    """Make service object.
+    """
+    _id = id(obj)
+
+    return ServiceObjectType(f"{type(obj)}@{_id}", expose or inspect.getmembers(obj))(oid=_id, address=address)
