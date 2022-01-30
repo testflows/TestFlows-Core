@@ -14,20 +14,22 @@
 # limitations under the License.
 # to the end flag
 import os
+import sys
 import atexit
 import inspect
 import weakref
 import queue
 import threading
+import traceback
 import itertools
 import subprocess
 import concurrent.futures._base as _base
 
 from .future import Future
 
-from .. import _get_parallel_context
 from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import ServiceObjectType, process_service
+from .. import current, top, previous, _get_parallel_context
 
 _process_queues = weakref.WeakKeyDictionary()
 _shutdown = False
@@ -47,7 +49,12 @@ atexit.register(_python_exit)
 WorkQueueType = ServiceObjectType("WorkQueue", inspect.getmembers(queue.Queue()))
 
 class _WorkItem(object):
-    def __init__(self, future, fn, args, kwargs):
+    def __init__(self, write_logfile, read_logfile, current_test, previous_test, top_test, future, fn, args, kwargs):
+        self.write_logfile = write_logfile
+        self.read_logfile = read_logfile
+        self.current_test = current_test
+        self.previous_test = previous_test
+        self.top_test = top_test
         self.future = future
         self.fn = fn
         self.args = args
@@ -57,14 +64,29 @@ class _WorkItem(object):
         if not self.future.set_running_or_notify_cancel():
             return
 
-        try:
-            result = self.fn(*self.args, **self.kwargs)
-        except BaseException as exc:
-            self.future.set_exception(exc)
-            # Break a reference cycle with the exception 'exc'
-            self = None
-        else:
-            self.future.set_result(result)
+        ctx = _get_parallel_context()
+        
+        def runner(self):
+            import testflows.settings as settings
+
+            top(self.top_test)
+            previous(self.previous_test)
+            current(self.current_test)
+            settings.write_logfile = self.write_logfile
+            settings.read_logfile = self.read_logfile
+
+            try:
+                result = self.fn(*self.args, **self.kwargs)
+            except BaseException:
+                exc_type, exc_value, exc_tb = sys.exc_info()
+                exc = exc_type(str(exc_value) + "\n\nWorker Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
+                self.future.set_exception(exc)
+                # Break a reference cycle with the exception 'exc'
+                self = None
+            else:
+                self.future.set_result(result)
+        
+        ctx.run(runner, self)
 
 
 class ProcessPoolExecutor(_base.Executor):
@@ -112,13 +134,17 @@ class ProcessPoolExecutor(_base.Executor):
                 raise RuntimeError("cannot schedule new futures after "
                     "interpreter shutdown")
 
-            future = process_service().register(Future())
+            service = process_service()
 
-            # FIXME: need to handle context
-            #ctx = _get_parallel_context() 
-            #args = fn, *args
-            
-            work_item = _WorkItem(future, fn, args, kwargs)
+            future = service.register(Future())
+
+            current_test = service.register(current())
+            previous_test = service.register(previous())
+            top_test = service.register(top())
+            write_logfile = service.register(current().io.io.io.writer)
+            read_logfile = service.register(current().io.io.io.reader)
+
+            work_item = _WorkItem(write_logfile, read_logfile, current_test, previous_test, top_test, future, fn, args, kwargs)
 
             idle_workers = self._adjust_process_count()
 

@@ -15,6 +15,7 @@
 import os
 import sys
 import uuid
+import types
 import atexit
 import asyncio
 import inspect
@@ -26,7 +27,7 @@ from typing import Optional
 from testflows._core.contrib import cloudpickle
 
 from testflows._core.contrib.aiomsg import Socket
-
+from testflows._core.exceptions import exception as get_exception
 
 class ServiceError(Exception):
     """Service error.
@@ -76,7 +77,7 @@ class Service:
             return None
         return self.address[-1]
 
-    def register(self, obj):
+    def register(self, obj, sync=None):
         """Register object with the service to be
         by remote services.
         """
@@ -102,9 +103,9 @@ class Service:
         if loop is None:
              return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
         elif loop is not self.loop:
-            return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_register(), loop=self.loop))
+            return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_register(sync=sync), loop=self.loop))
         else:
-            return _async_register()
+            return _async_register(sync=sync)
 
     async def unregister(self, obj):
         """Unregister object from the service to stop
@@ -210,6 +211,8 @@ class Service:
                 def r():
                     if fn == "__getattribute__":
                         return getattr(self.objects[oid], *args)
+                    elif fn == "__setattribute__":
+                        return setattr(self.objects[oid], *args)
                     else:
                         return getattr(self.objects[oid], fn)(*args, **kwargs)
                 
@@ -220,8 +223,12 @@ class Service:
                 msg_type = self.MsgTypes.REPLY_EXCEPTION
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 r = exc_type(str(exc_value) + "\n\nService Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
-
-            await self.in_socket.send_pickle((msg_type, rid, r), identity=identity)
+            try:
+                await self.in_socket.send_pickle((msg_type, rid, r), identity=identity)
+            except TypeError as e:
+                _r = await self.register(r, sync=True)
+                await self.in_socket.send_pickle((msg_type, rid, _r), identity=identity)  
+                
         else:
             # process reply
             reply_event = self.reply_events.pop(rid)
@@ -375,7 +382,11 @@ def AsyncServiceObject(obj, address):
         else:
             exec(f"@property\n"
                  f"async def {name}(self):\n"
-                 f"    return await self.__async_proxy_call__(\"__getattribute__\", [\"{name}\"])",
+                 f"    return await self.__async_proxy_call__(\"__getattribute__\", [\"{name}\"])"
+                 f"\n"
+                 f"@{name}.setter\n"
+                 f"async def {name}(self, v):\n"
+                 f"    return self.__async_proxy_call__(\"__setattribute__\", [\"{name}\", v])",
                 _attrs)
 
     return type(f"AsyncServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
@@ -390,14 +401,18 @@ def ServiceObjectType(type_name, expose):
         if name.startswith("_"):
             continue
 
-        if callable(value):
+        if type(value) in [types.MethodWrapperType, types.MethodType, types.BuiltinMethodType]:
             exec(f"def {name}(self, *args, **kwargs):\n"
                  f"    return self.__proxy_call__(\"{name}\", args, kwargs)",
                 _attrs)
         else:
             exec(f"@property\n"
                  f"def {name}(self):\n"
-                 f"    return self.__proxy_call__(\"__getattribute__\", [\"{name}\"])",
+                 f"    return self.__proxy_call__(\"__getattribute__\", [\"{name}\"])"
+                 f"\n"
+                 f"@{name}.setter\n"
+                 f"def {name}(self, v):\n"
+                 f"    return self.__proxy_call__(\"__setattribute__\", [\"{name}\", v])",
                 _attrs)
 
     return type(f"ServiceObject[{type_name}]", (BaseServiceObject,), _attrs)

@@ -1436,9 +1436,12 @@ class TestDefinition(object):
 
             if parent:
                 kwargs["parent"] = parent
-                with parent.lock:
+                try:
+                    parent.lock.acquire()
                     kwargs["id"] = parent.id + [parent.child_count]
                     parent.child_count += 1
+                finally:
+                    parent.lock.release()
                 kwargs["cflags"] = parent.cflags
                 # propagate manual flag if automatic test flag is not set
                 if not kwargs["flags"] & AUTO:
@@ -1657,9 +1660,12 @@ class TestDefinition(object):
 
         if end.match(name):
             if parent:
-                with parent.lock:
+                try:
+                    parent.lock.acquire()
                     parent.end = None
                     parent.skip = [The("/*")]
+                finally:
+                    parent.lock.release()
 
     def _apply_start(self, name, parent, kwargs):
         start = kwargs.get("start")
@@ -1671,8 +1677,11 @@ class TestDefinition(object):
         elif start.match(name, prefix=False):
             kwargs["start"] = None
             if parent:
-                with parent.lock:
+                try:
+                    parent.lock.acquire()
                     parent.start = None
+                finally:
+                    parent.lock.release()
 
     def _apply_repeats(self, name, repeats):
         if not repeats:
@@ -2030,7 +2039,8 @@ class TestDefinition(object):
                 if TE not in self.test.flags:
                     raise result from None
                 else:
-                    with self.parent.lock:
+                    try:
+                        self.parent.lock.acquire()
                         if isinstance(self.parent.result, Error):
                             pass
                         elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
@@ -2043,6 +2053,8 @@ class TestDefinition(object):
                             self.parent.result = result
                         else:
                             pass
+                    finally:
+                        self.parent.lock.release()
         return True
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
@@ -2079,8 +2091,11 @@ class TestDefinition(object):
 
         except (Exception, KeyboardInterrupt) as exc:
             if self.parent:
-                with self.parent.lock:
+                try:
+                    self.parent.lock.acquire()
                     self.parent.terminating = exc
+                finally:
+                    self.parent.lock.release()
             else:
                 self.terminating = exc
             raise
@@ -2119,8 +2134,11 @@ class TestDefinition(object):
 
         except (Exception, KeyboardInterrupt) as exc:
             if self.parent:
-                with self.parent.lock:
+                try:
+                    self.parent.lock.acquire()
                     self.parent.terminating = exc
+                finally:
+                    self.parent.lock.release()
             else:
                 self.terminating = exc
             raise

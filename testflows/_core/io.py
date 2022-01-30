@@ -25,6 +25,7 @@ from .exceptions import exception as get_exception
 from .message import Message, MessageObjectType, dumps
 from .objects import Tag, ExamplesRow
 from . import __version__
+from .parallel.service import BaseServiceObject
 
 def object_fields(obj, prefix):
     return {f"{prefix}{'_' if prefix else ''}{field}":getattr(obj, field) for field in obj._fields}
@@ -466,8 +467,15 @@ class LogIO(object):
     :param write: file descriptor for write
     """
     def __init__(self):
-        self.writer = LogWriter()
-        self.reader = LogReader()
+        if isinstance(settings.write_logfile, BaseServiceObject):
+            self.writer = settings.write_logfile
+        else:
+            self.writer = LogWriter()
+        
+        if isinstance(settings.read_logfile, BaseServiceObject):
+            self.reader = settings.read_logfile
+        else:
+            self.reader = LogReader()
 
     def write(self, msg):
         return self.writer.write(msg)
