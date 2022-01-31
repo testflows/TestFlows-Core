@@ -25,6 +25,8 @@ import itertools
 import subprocess
 import concurrent.futures._base as _base
 
+import testflows.settings as settings
+
 from .future import Future
 
 from ..asyncio import is_running_in_event_loop, wrap_future
@@ -84,8 +86,11 @@ class _WorkItem(object):
                 # Break a reference cycle with the exception 'exc'
                 self = None
             else:
-                self.future.set_result(result)
-        
+                try:
+                    self.future.set_result(result)
+                except TypeError:
+                    self.future.set_result(process_service().register(result))
+
         ctx.run(runner, self)
 
 
@@ -170,11 +175,18 @@ class ProcessPoolExecutor(_base.Executor):
         num_procs = len(self._processes)
 
         if num_procs < self._max_workers:
-            proc = subprocess.Popen(["tfs-worker",
-                    "--oid", str(self._work_queue.oid),
-                    "--hostname", str(self._work_queue.hostname),
-                    "--port", str(self._work_queue.port)
-                ])
+            command = ["tfs-worker",
+                "--oid", str(self._work_queue.oid),
+                "--hostname", str(self._work_queue.hostname),
+                "--port", str(self._work_queue.port)
+            ]
+
+            if settings.debug:
+                command.append("--debug")
+            if settings.no_colors:
+                command.append("--no-colors")
+
+            proc = subprocess.Popen(command)
             self._processes.add(proc)
             _process_queues[proc] = self._work_queue
             return True

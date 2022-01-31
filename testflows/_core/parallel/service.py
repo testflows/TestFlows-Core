@@ -17,7 +17,6 @@ import sys
 import uuid
 import types
 import atexit
-import asyncio
 import inspect
 import traceback
 import threading
@@ -28,6 +27,8 @@ from testflows._core.contrib import cloudpickle
 
 from testflows._core.contrib.aiomsg import Socket
 from testflows._core.exceptions import exception as get_exception
+
+from .asyncio import asyncio
 
 class ServiceError(Exception):
     """Service error.

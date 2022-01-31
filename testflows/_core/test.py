@@ -16,7 +16,6 @@ import os
 import sys
 import time
 import random
-import asyncio
 import inspect
 import builtins
 import functools
@@ -29,6 +28,7 @@ import testflows.settings as settings
 import testflows._core.contrib.yaml as yaml
 import testflows._core.contrib.schema as schema
 
+from .parallel.asyncio import asyncio
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
@@ -1268,10 +1268,9 @@ class TestDefinition(object):
         self.name = None
         self.test = None
         self.parent = None
-        self.parallel = kwargs.pop("parallel", None)
-        self.executor = kwargs.pop("executor", None)
         self.kwargs = kwargs
         self.tags = None
+        self.parallel = self.kwargs.pop("parallel", None)
         self.repeats = None
         self.retries = None
         self.rerun_individually = None
@@ -1285,6 +1284,8 @@ class TestDefinition(object):
             raise TypeError(f"only named arguments are allowed but {pargs} positional arguments were passed")
 
         test = self.kwargs.get("test", None)
+        executor = self.kwargs.pop("executor", None)
+        
         self.kwargs["args"] = dict(self.kwargs.get("args") or {})
         self.kwargs["args"].update(args)
 
@@ -1350,7 +1351,6 @@ class TestDefinition(object):
 
             elif is_parallel:
                 self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | PARALLEL
-                executor = self.executor
                 if is_async:
                     executor = settings.global_async_pool or executor
                 else:

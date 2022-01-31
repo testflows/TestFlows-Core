@@ -15,14 +15,13 @@
 # to the end flag
 import atexit
 import weakref
-import asyncio
 import itertools
 import threading
 import concurrent.futures.thread as _base
 
 from .future import Future 
 from .. import _get_parallel_context
-from ..asyncio import is_running_in_event_loop
+from ..asyncio import is_running_in_event_loop, asyncio
 
 _tasks_queues = weakref.WeakKeyDictionary()
 _shutdown = False
