@@ -27,10 +27,17 @@ try:
 except KeyboardInterrupt:
     sys.exit(1)
 
+def worker_ready():
+    """Signal that worker is ready.
+    """
+    sys.stdout.write("ready\n")
+    sys.stdout.flush()
 
 def worker(args):
     """TestFlows process worker.
     """
+    worker_ready()
+
     with process_service() as service:
         try:
             work_queue = WorkQueueType(oid=int(args.oid), address=(args.hostname, int(args.port)))

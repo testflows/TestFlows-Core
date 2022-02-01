@@ -22,6 +22,7 @@ import queue
 import threading
 import traceback
 import itertools
+import textwrap
 import subprocess
 import concurrent.futures._base as _base
 
@@ -39,6 +40,7 @@ _shutdown = False
 def _python_exit():
     global _shutdown
     _shutdown = True
+
     items = list(_process_queues.items())
     for proc, _ in items:
         proc.terminate()
@@ -49,6 +51,8 @@ atexit.register(_python_exit)
 
 
 WorkQueueType = ServiceObjectType("WorkQueue", inspect.getmembers(queue.Queue()))
+
+ProcessError = subprocess.SubprocessError
 
 class _WorkItem(object):
     def __init__(self, write_logfile, read_logfile, current_test, previous_test, top_test, future, fn, args, kwargs):
@@ -71,13 +75,13 @@ class _WorkItem(object):
         def runner(self):
             import testflows.settings as settings
 
-            top(self.top_test)
-            previous(self.previous_test)
-            current(self.current_test)
-            settings.write_logfile = self.write_logfile
-            settings.read_logfile = self.read_logfile
-
             try:
+                top(self.top_test)
+                previous(self.previous_test)
+                current(self.current_test)
+                settings.write_logfile = self.write_logfile
+                settings.read_logfile = self.read_logfile
+
                 result = self.fn(*self.args, **self.kwargs)
             except BaseException:
                 exc_type, exc_value, exc_tb = sys.exc_info()
@@ -186,7 +190,11 @@ class ProcessPoolExecutor(_base.Executor):
             if settings.no_colors:
                 command.append("--no-colors")
 
-            proc = subprocess.Popen(command)
+            proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            proc.stdout.readline()
+            if proc.poll() is not None:
+                returncode, err = proc.returncode, textwrap.indent(proc.stderr.read().decode('utf-8'), prefix='  ')
+                raise ProcessError(f"failed to start worker process {proc.pid} return code {returncode}\n{err}")
             self._processes.add(proc)
             _process_queues[proc] = self._work_queue
             return True

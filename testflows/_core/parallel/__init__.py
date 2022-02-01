@@ -133,9 +133,6 @@ def join(*futures, cancel=None, test=None, raise_exception=True):
             break
         future = futures.pop()
 
-        if not isinstance(future, ConcurrentFuture):
-            continue
-
         try:
             if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
                 future.cancel()
