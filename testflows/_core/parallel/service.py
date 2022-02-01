@@ -210,14 +210,13 @@ class Service:
             msg_type = self.MsgTypes.REPLY_RESULT
             try:
                 def r():
-                    if fn == "__getattribute__":
-                        return getattr(self.objects[oid], *args)
-                    elif fn == "__setattribute__":
-                        return setattr(self.objects[oid], *args)
-                    else:
-                        return getattr(self.objects[oid], fn)(*args, **kwargs)
-                
-                r = await self.loop.run_in_executor(None, r)
+                    return getattr(self.objects[oid], fn)(*args, **kwargs)
+                if fn == "__getattribute__":
+                    r = getattr(self.objects[oid], *args)
+                elif fn == "__setattribute__":
+                    r = setattr(self.objects[oid], *args)
+                else:
+                    r = await self.loop.run_in_executor(None, r)
                 if asyncio.iscoroutine(r):
                     r = await r
             except BaseException as e:
