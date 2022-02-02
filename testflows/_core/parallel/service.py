@@ -355,6 +355,8 @@ class BaseServiceObject:
         reply_type, reply_body = response.message
 
         if reply_type == Service.MsgTypes.REPLY_EXCEPTION:
+            if isinstance(reply_body, (SystemExit, KeyboardInterrupt)):
+                reply_body = RuntimeError(f"{reply_body.__class__}: {reply_body}")
             raise reply_body
 
         return reply_body

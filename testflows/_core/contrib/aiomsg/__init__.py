@@ -377,7 +377,10 @@ class Søcket:
             if connection.identity in self._connections:
                 del self._connections[connection.identity]
 
-            await version_utils.stream_close(writer)
+            try:
+                await version_utils.stream_close(writer)
+            except BaseException:
+                logger.exception(f"Exception while trying to close writer stream")
 
             if not self._connections:
                 logger.warning("No connections!")
