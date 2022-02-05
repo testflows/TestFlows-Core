@@ -108,7 +108,8 @@ class ProcessPoolExecutor(_base.Executor):
             raise ValueError("max_workers must be greater than 0")
         self._open = False
         self._max_workers = max_workers
-        self._work_queue = process_service().register(queue.Queue())
+        self._raw_work_queue = queue.Queue()
+        self._work_queue = process_service().register(self._raw_work_queue)
         self._processes = set()
         self._broken = False
         self._shutdown = False
@@ -158,7 +159,7 @@ class ProcessPoolExecutor(_base.Executor):
             idle_workers = self._adjust_process_count()
 
             if (idle_workers or block) and self._max_workers > 0:
-                self._work_queue.put(work_item)
+                self._raw_work_queue.put(work_item)
 
         if (not block and not idle_workers) or self._max_workers < 1:
             work_item.run()
@@ -173,7 +174,7 @@ class ProcessPoolExecutor(_base.Executor):
         Return `True` if worker is immediately available to handle
         the work item or `False` otherwise.
         """
-        if len(self._processes) - self._work_queue.unfinished_tasks > 0:
+        if len(self._processes) - self._raw_work_queue.unfinished_tasks > 0:
             return True
 
         num_procs = len(self._processes)
@@ -196,7 +197,7 @@ class ProcessPoolExecutor(_base.Executor):
                 returncode, err = proc.returncode, textwrap.indent(proc.stderr.read().decode('utf-8'), prefix='  ')
                 raise ProcessError(f"failed to start worker process {proc.pid} return code {returncode}\n{err}")
             self._processes.add(proc)
-            _process_queues[proc] = self._work_queue
+            _process_queues[proc] = self._raw_work_queue
             return True
 
         return False
@@ -208,7 +209,7 @@ class ProcessPoolExecutor(_base.Executor):
             self._shutdown = True
 
             for proc in self._processes:
-                self._work_queue.put_nowait(None)
+                self._raw_work_queue.put_nowait(None)
 
         if wait:
             for proc in self._processes:

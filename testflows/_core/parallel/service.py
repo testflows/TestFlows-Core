@@ -227,8 +227,8 @@ class Service:
                 await self.in_socket.send_pickle((msg_type, rid, r), identity=identity)
             except TypeError as e:
                 _r = await self.register(r, sync=True)
-                await self.in_socket.send_pickle((msg_type, rid, _r), identity=identity)  
-                
+                await self.in_socket.send_pickle((msg_type, rid, _r), identity=identity)
+
         else:
             # process reply
             reply_event = self.reply_events.pop(rid)
