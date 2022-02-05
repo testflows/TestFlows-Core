@@ -31,7 +31,7 @@ import testflows.settings as settings
 from .future import Future
 
 from ..asyncio import is_running_in_event_loop, wrap_future
-from ..service import ServiceObjectType, process_service, auto_expose
+from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context
 
 _process_queues = weakref.WeakKeyDictionary()
@@ -151,10 +151,16 @@ class ProcessPoolExecutor(_base.Executor):
             current_test = service.register(current())
             previous_test = service.register(previous())
             top_test = service.register(top())
-            write_logfile = service.register(current().io.io.io.writer)
-            read_logfile = service.register(current().io.io.io.reader)
+            
+            log_writer_fd = current().io.io.io.writer.fd
+            if not isinstance(log_writer_fd, BaseServiceObject):
+                log_writer_fd = service.register(log_writer_fd)
+            
+            log_reader_fd = current().io.io.io.reader.fd
+            if not isinstance(log_reader_fd, BaseServiceObject):
+                log_reader_fd = service.register(log_reader_fd)
 
-            work_item = _WorkItem(write_logfile, read_logfile, current_test, previous_test, top_test, future, fn, args, kwargs)
+            work_item = _WorkItem(log_writer_fd, log_reader_fd, current_test, previous_test, top_test, future, fn, args, kwargs)
 
             idle_workers = self._adjust_process_count()
 

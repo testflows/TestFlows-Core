@@ -298,8 +298,8 @@ class TestIO(object):
     def flush(self):
         self.io.flush()
 
-    def close(self, final=False):
-        self.io.close(final=final)
+    def close(self, flush=False, final=False):
+        self.io.close(flush=flush, final=final)
 
 class MessageIO(object):
     """Message input and output.
@@ -345,8 +345,8 @@ class MessageIO(object):
             self.io.write(f"{self.buffer}\n")
         self.buffer = ""
 
-    def close(self, final=False):
-        self.io.close(final=final)
+    def close(self, flush=False, final=False):
+        self.io.close(flush=flush, final=final)
 
 class NamedMessageIO(MessageIO):
     """Message input and output.
@@ -385,11 +385,43 @@ class NamedMessageIO(MessageIO):
         self.buffer = ""
 
 
+class ProtectedFile:
+    """Thread lock wrapped file descriptor.
+    """ 
+    def __init__(self, fd):
+        self.fd = fd
+        self.lock = threading.Lock()
+    
+    def write(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.write(*args, **kwargs)
+
+    def read(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.read(*args, **kwargs)
+
+    def flush(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.flush(*args, **kwargs)
+
+    def close(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.close(*args, **kwargs)
+
+    def tell(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.tell(*args, **kwargs)
+
+    def seek(self, *args, **kwargs):
+        with self.lock:
+            return self.fd.seek(*args, **kwargs)
+
+
 class LogReader(object):
     """Read messages from the log.
     """
-    def __init__(self):
-        self.fd = open(settings.read_logfile, "rb", buffering=0)
+    def __init__(self, fd=None):
+        self.fd = fd or ProtectedFile(open(settings.read_logfile, "rb", buffering=0))
 
     def tell(self):
         return self.fd.tell()
@@ -401,7 +433,8 @@ class LogReader(object):
         raise NotImplementedError
 
     def close(self, final=False):
-        self.fd.close()
+        if final:
+            self.fd.close()
 
 
 class LogWriter(object):
@@ -412,10 +445,12 @@ class LogWriter(object):
     auto_flush_interval = 0.15
 
     def __new__(cls, *args, **kwargs):
+        fd = kwargs.pop("fd", None)
+
         with cls.lock:
             if not cls.instance:
                 self = object.__new__(LogWriter)
-                self.fd = open(settings.write_logfile, "ab", buffering=0)
+                self.fd = fd or ProtectedFile(open(settings.write_logfile, "ab", buffering=0))
                 self.lock = threading.Lock()
                 self.buffer = []
                 self.pool = Pool(1)
@@ -424,7 +459,7 @@ class LogWriter(object):
                 cls.instance = self
             return cls.instance
 
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         pass
 
     def write(self, msg):
@@ -453,12 +488,15 @@ class LogWriter(object):
                 self.cancel = False
                 self.pool.apply_async(self.flush, (), dict(sleep=self.auto_flush_interval, force=True))
 
-    def close(self, final=False):
+    def close(self, flush=False, final=False):
         if final:
             self.pool.close()
             self.flush(force=True, final=True)
             self.fd.close()
             self.pool.join()
+        elif flush:
+            self.flush(force=True)
+
 
 class LogIO(object):
     """Log file reader and writer.
@@ -468,12 +506,12 @@ class LogIO(object):
     """
     def __init__(self):
         if isinstance(settings.write_logfile, BaseServiceObject):
-            self.writer = settings.write_logfile
+            self.writer = LogWriter(fd=settings.write_logfile)
         else:
             self.writer = LogWriter()
         
         if isinstance(settings.read_logfile, BaseServiceObject):
-            self.reader = settings.read_logfile
+            self.reader = LogReader(fd=settings.read_logfile)
         else:
             self.reader = LogReader()
 
@@ -492,6 +530,6 @@ class LogIO(object):
     def read(self, topic, timeout=None):
         return self.reader.read(topic, timeout)
 
-    def close(self, final=False):
-        self.writer.close(final=final)
+    def close(self, flush=False, final=False):
+        self.writer.close(flush=flush, final=final)
         self.reader.close(final=final)

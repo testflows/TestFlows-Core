@@ -76,6 +76,8 @@ LAST_RETRY = 1 << 36
 PAUSE_ON_PASS = 1 << 37
 # pause on failing result
 PAUSE_ON_FAIL = 1 << 38
+# remote test
+REMOTE = 1 << 39
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -97,7 +99,7 @@ class Flags(object):
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
             REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
             ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY,
-            PAUSE_ON_PASS, PAUSE_ON_FAIL
+            PAUSE_ON_PASS, PAUSE_ON_FAIL, REMOTE
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
@@ -106,7 +108,7 @@ class Flags(object):
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
             "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
             "ASYNC", "REPEATED", "NOT_REPEATABLE", "RETRIED", "LAST_RETRY",
-            "PAUSE_ON_PASS", "PAUSE_ON_FAIL"
+            "PAUSE_ON_PASS", "PAUSE_ON_FAIL", "REMOTE"
         ]
 
     def __init__(self, flags=0):

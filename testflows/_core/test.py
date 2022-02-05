@@ -32,7 +32,7 @@ from .parallel.asyncio import asyncio
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
-from .flags import PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
+from .flags import REMOTE, PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER, PAUSE_ON_PASS, PAUSE_ON_FAIL
@@ -64,6 +64,7 @@ from .parallel import current, top, previous, _check_parallel_context, join as p
 from .parallel import convert_result_to_concurrent_future
 from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
+from .parallel.executor.process import ProcessPoolExecutor, GlobalProcessPoolExecutor
 from .parallel.asyncio import is_running_in_event_loop, async_next
 
 try:
@@ -600,7 +601,7 @@ class TestBase(object):
             self.io.output.stop()
             self.io.close(final=True)
         else:
-            self.io.close()
+            self.io.close(flush=self.flags & REMOTE)
 
         if not self.flags & SKIP:
             if self.flags & PAUSE_AFTER:
@@ -1369,6 +1370,9 @@ class TestDefinition(object):
 
                 if isinstance(executor, AsyncPoolExecutor):
                     future = executor.submit(async_callable)
+                elif isinstance(executor, ProcessPoolExecutor):
+                    self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | REMOTE
+                    future = executor.submit(callable)
                 else:
                     future = executor.submit(callable)
 

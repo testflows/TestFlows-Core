@@ -102,7 +102,7 @@ class Service:
                 return AsyncServiceObject(obj, address=self.address)
 
         if loop is None:
-             return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
+            return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
         elif loop is not self.loop:
             return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_register(sync=sync), loop=self.loop))
         else:
