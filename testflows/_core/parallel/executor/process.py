@@ -31,7 +31,7 @@ import testflows.settings as settings
 from .future import Future
 
 from ..asyncio import is_running_in_event_loop, wrap_future
-from ..service import ServiceObjectType, process_service
+from ..service import ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context
 
 _process_queues = weakref.WeakKeyDictionary()
@@ -50,7 +50,7 @@ def _python_exit():
 atexit.register(_python_exit)
 
 
-WorkQueueType = ServiceObjectType("WorkQueue", inspect.getmembers(queue.Queue()))
+WorkQueueType = ServiceObjectType("WorkQueue", auto_expose(queue.Queue()))
 
 ProcessError = subprocess.SubprocessError
 

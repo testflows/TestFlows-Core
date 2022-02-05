@@ -309,6 +309,9 @@ class BaseServiceObject:
     :param oid: object id
     :param address: address `tuple(hostname, port)`
     """
+    _exposed = None
+    _typename = None
+
     def __init__(self, oid, address) -> None:
         self.oid = oid
         self.address = address
@@ -366,58 +369,88 @@ class BaseServiceObject:
         """
         return asyncio.run_coroutine_threadsafe(self.__async_proxy_call__(fn, args, kwargs), loop=_process_service.loop).result()
 
+    def __reduce__(self):
+        """Make service object serializable.
+        """
+        return (RebuildServiceObject, (self._typename, self._exposed, self.oid, self.address))
 
-def AsyncServiceObject(obj, address):
-    """Make async service object.
+
+class AsyncBaseServiceObject(BaseServiceObject):
+    """Async base service object.
     """
-    _id = id(obj)
+    def __reduce__(self):
+        """Make service object serializable.
+        """
+        return (RebuildAsyncServiceObject, (self._typename, self._exposed, self.oid, self.address))
+
+
+def RebuildServiceObject(typename, exposed, oid, address):
+    """Rebuild service object during unpickling.
+    """
+    return ServiceObjectType(typename, exposed)(oid=oid, address=address)
+
+
+def RebuildAsyncServiceObject(typename, exposed, oid, address):
+    """Rebuild async service object during unpickling.
+    """
+    return ServiceObjectType(typename, exposed, _async=True)(oid=oid, address=address)
+
+
+def ServiceObjectType(typename, expose, _async=False):
+    """Make service object type.
+    """
     _attrs = {}
+
+    for name in expose["methods"]:
+        exec(f"{'async ' if _async else ''}def {name}(self, *args, **kwargs):\n"
+                f"    return self.__{'async_' if _async else ''}proxy_call__(\"{name}\", args, kwargs)",
+            _attrs)
+
+    for name in expose["properties"]:
+        exec(f"@property\n"
+                f"{'async ' if _async else ''}def {name}(self):\n"
+                f"    return self.__{'async_' if _async else ''}proxy_call__(\"__getattribute__\", [\"{name}\"])"
+                f"\n"
+                f"@{name}.setter\n"
+                f"{'async ' if _async else ''}def {name}(self, v):\n"
+                f"    return self.__{'async_' if _async else ''}proxy_call__(\"__setattribute__\", [\"{name}\", v])",
+            _attrs)
+
+    base = AsyncBaseServiceObject if _async else BaseServiceObject
+
+    service_type = type(f"{'Async' if _async else ''}ServiceObject[{typename}]", (base,), _attrs)
+    service_type._exposed = expose
+    service_type._typename = typename
+
+    return service_type
+
+
+def auto_expose(obj):
+    """Auto expose all public methods and properties of an object.
+    """
+    exposed = {
+        "methods": [],
+        "properties": []
+    }
 
     for name, value in inspect.getmembers(obj):
         if name.startswith("_"):
             continue
 
-        if callable(value):
-            exec(f"async def {name}(self, *args, **kwargs):\n"
-                 f"    return await self.__async_proxy_call__(\"{name}\", args, kwargs)",
-                _attrs)
-        else:
-            exec(f"@property\n"
-                 f"async def {name}(self):\n"
-                 f"    return await self.__async_proxy_call__(\"__getattribute__\", [\"{name}\"])"
-                 f"\n"
-                 f"@{name}.setter\n"
-                 f"async def {name}(self, v):\n"
-                 f"    return self.__async_proxy_call__(\"__setattribute__\", [\"{name}\", v])",
-                _attrs)
-
-    return type(f"AsyncServiceObject[{type(obj)}@{_id}]", (BaseServiceObject,), _attrs)(oid=_id, address=address)
-
-
-def ServiceObjectType(type_name, expose):
-    """Make service object type.
-    """
-    _attrs = {}
-
-    for name, value in expose:
-        if name.startswith("_"):
-            continue
-
         if type(value) in [types.MethodWrapperType, types.MethodType, types.BuiltinMethodType]:
-            exec(f"def {name}(self, *args, **kwargs):\n"
-                 f"    return self.__proxy_call__(\"{name}\", args, kwargs)",
-                _attrs)
+            exposed["methods"].append(name)
         else:
-            exec(f"@property\n"
-                 f"def {name}(self):\n"
-                 f"    return self.__proxy_call__(\"__getattribute__\", [\"{name}\"])"
-                 f"\n"
-                 f"@{name}.setter\n"
-                 f"def {name}(self, v):\n"
-                 f"    return self.__proxy_call__(\"__setattribute__\", [\"{name}\", v])",
-                _attrs)
+            exposed["properties"].append(name)
 
-    return type(f"ServiceObject[{type_name}]", (BaseServiceObject,), _attrs)
+    return exposed
+
+
+def AsyncServiceObject(obj, address, expose=None):
+    """Make async service object.
+    """
+    _id = id(obj)
+
+    return ServiceObjectType(f"{type(obj)}@{_id}", expose or auto_expose(obj), _async=True)(oid=_id, address=address)
 
 
 def ServiceObject(obj, address, expose=None):
@@ -425,4 +458,4 @@ def ServiceObject(obj, address, expose=None):
     """
     _id = id(obj)
 
-    return ServiceObjectType(f"{type(obj)}@{_id}", expose or inspect.getmembers(obj))(oid=_id, address=address)
+    return ServiceObjectType(f"{type(obj)}@{_id}", expose or auto_expose(obj))(oid=_id, address=address)
