@@ -46,3 +46,5 @@ random_order = False
 global_thread_pool = None
 #: global async pool
 global_async_pool = None
+#: global process pool
+global_process_pool = None

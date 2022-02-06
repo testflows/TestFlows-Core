@@ -194,6 +194,11 @@ class Service:
                 while self.serve_tasks:
                     task = self.serve_tasks.pop()
                     task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
+
                 await self.out_socket.close()
                 await self.in_socket.close()
             finally:
@@ -258,6 +263,7 @@ class Service:
 
 # global process wide service
 _process_service = None
+_process_service_lock = threading.Lock()
 
 
 def process_service(**kwargs):
@@ -265,42 +271,48 @@ def process_service(**kwargs):
     """
     global _process_service
 
-    if _process_service is None:
-        try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            loop = kwargs.pop("loop", None)
+    with _process_service_lock:
+        if _process_service is None:
+            try:
+                asyncio.get_running_loop()
+            except RuntimeError:
+                loop = kwargs.pop("loop", None)
 
-            if loop is None:
-                loop = asyncio.new_event_loop()
+                if loop is None:
+                    loop = asyncio.new_event_loop()
 
-                def run_event_loop():
-                    asyncio.set_event_loop(loop)
-                    loop.run_forever()
+                    def run_event_loop():
+                        asyncio.set_event_loop(loop)
+                        loop.run_forever()
 
-                thread = threading.Thread(target=run_event_loop, daemon=True)
+                    thread = threading.Thread(target=run_event_loop, daemon=True)
 
-                def stop_event_loop():
-                    loop.call_soon_threadsafe(loop.stop)
-                    thread.join()
+                    def stop_event_loop():
+                        loop.call_soon_threadsafe(loop.stop)
+                        thread.join()
 
-                thread.start()
-                atexit.register(stop_event_loop)
+                    thread.start()
+                    atexit.register(stop_event_loop)
 
-            kwargs["loop"] = loop
+                kwargs["loop"] = loop
 
-        kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
+            kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
 
-        _process_service = Service(**kwargs)
+            _process_service = Service(**kwargs).__enter__()
+            atexit.register(_stop_process_service)
 
     return _process_service
 
 
-def reset_process_service():
-    """Reset global process service.
+def _stop_process_service():
+    """Stop global process service.
     """
     global _process_service
-    _process_service = None
+ 
+    with _process_service_lock:
+        if _process_service is not None:
+            _process_service.__exit__(None, None, None)
+            _process_service = None
 
 
 class BaseServiceObject:

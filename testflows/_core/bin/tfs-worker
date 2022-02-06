@@ -38,23 +38,24 @@ def worker(args):
     """
     worker_ready()
 
-    with process_service() as service:
-        try:
-            work_queue = WorkQueueType(oid=int(args.oid), address=(args.hostname, int(args.port)))
-            while True:
-                work_item = work_queue.get(block=True)
-                try:
-                    if work_item is not None:
-                        work_item.run()
-                        del work_item
-                        continue
-                    else:
-                        # exit worker
-                        break
-                finally:
-                    work_queue.task_done()
-        except BaseException as e:
-            raise
+    process_service()
+
+    try:
+        work_queue = WorkQueueType(oid=int(args.oid), address=(args.hostname, int(args.port)))
+        while True:
+            work_item = work_queue.get(block=True)
+            try:
+                if work_item is not None:
+                    work_item.run()
+                    del work_item
+                    continue
+                else:
+                    # exit worker
+                    break
+            finally:
+                work_queue.task_done()
+    except BaseException as e:
+        raise
 
 
 parser = ArgumentParser(prog="tfs-worker", description="""Worker process that executes remote tests.""")

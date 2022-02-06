@@ -42,7 +42,7 @@ import asyncio
 import uuid
 import json
 from enum import Enum, auto
-from asyncio import StreamReader, StreamWriter
+from asyncio import CancelledError, StreamReader, StreamWriter
 from collections import UserDict
 from itertools import cycle
 from weakref import WeakSet
@@ -169,6 +169,7 @@ class Søcket:
         logger.debug("Starting the sender task.")
         # Note this task is started before any connections have been made.
         self.sender_task = self.loop.create_task(self._sender_main())
+        self.connect_with_retry_task = None
         if send_mode is SendMode.PUBLISH:
             self.sender_handler = self._sender_publish
         elif send_mode is SendMode.ROUNDROBIN:
@@ -268,24 +269,29 @@ class Søcket:
             for the life of the Socket object. It will continually
             try to connect."""
             logger.info(f"Socket {self.idstr()} connecting to {hostname}:{port}")
-            while not self.closed:
-                try:
-                    await new_connection(event)
-                    if self.closed:
+            try:
+                while not self.closed:
+                    try:
+                        await new_connection(event)
+                        if self.closed:
+                            break
+                    except CancelledError:
                         break
-                except OSError:
-                    if self.closed:
-                        break
-                    else:
-                        logger.warning("Connection error, reconnecting...")
-                        await asyncio.sleep(self.reconnection_delay())
-                        continue
-                except asyncio.CancelledError:
-                    break
-                except Exception:
-                    logger.exception("Unexpected error")
+                    except OSError as e:
+                        if self.closed:
+                            break
+                        else:
+                            logger.warning("Connection error, reconnecting...")
+                            async def _reconnection_delay():
+                                await asyncio.sleep(self.reconnection_delay())
+                            await self.loop.create_task(_reconnection_delay)
+                            continue
+                    except Exception:
+                        logger.exception("Unexpected error")
+            except Exception:
+                logger.exception("Unexpected error")
 
-        self.loop.create_task(connect_with_retry(event))
+        self.connect_with_retry_task = self.loop.create_task(connect_with_retry(event))
         return self
 
     async def messages(self) -> AsyncGenerator[bytes, None]:
@@ -389,6 +395,13 @@ class Søcket:
     async def _close(self):
         logger.info(f"Closing {self.idstr()}")
         self.closed = True
+
+        if self.connect_with_retry_task:
+            self.connect_with_retry_task.cancel()
+            try:
+                await self.connect_with_retry_task
+            except CancelledError:
+                pass
 
         # REP dict, close all events waiting to fire
         for msg_id, handle in self.waiting_for_acks.items():

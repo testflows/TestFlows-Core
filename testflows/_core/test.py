@@ -508,6 +508,8 @@ class TestBase(object):
                     settings.global_thread_pool.__exit__(None, None, None)
                 if settings.global_async_pool is not None:
                     settings.global_async_pool.__exit__(None, None, None)
+                if settings.global_process_pool is not None:
+                    settings.global_process_pool.__exit__(None, None, None)
 
             # set result
             self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
@@ -556,6 +558,8 @@ class TestBase(object):
                     settings.global_thread_pool.__exit__(None, None, None)
                 if settings.global_async_pool is not None:
                     settings.global_async_pool.__exit__(None, None, None)
+                if settings.global_process_pool is not None:
+                    settings.global_process_pool.__exit__(None, None, None)
 
             # set result
             self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
@@ -1095,6 +1099,7 @@ def parse_cli_args(kwargs, parser_schema):
             pool_size = args.pop("_parallel_pool")
             settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=pool_size)
             settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=pool_size)
+            settings.global_process_pool = GlobalProcessPoolExecutor(max_workers=pool_size)
 
         if args.get("_repeat"):
             repeats = []
@@ -1272,6 +1277,7 @@ class TestDefinition(object):
         self.kwargs = kwargs
         self.tags = None
         self.parallel = self.kwargs.pop("parallel", None)
+        self.remote = self.kwargs.pop("remote", None)
         self.repeats = None
         self.retries = None
         self.rerun_individually = None
@@ -1345,6 +1351,7 @@ class TestDefinition(object):
         current_test = current()
         is_async = is_running_in_event_loop()
         is_parallel = self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel
+        is_remote = self.kwargs.get("flags", Flags()) & REMOTE or self.remote or (executor and (isinstance(executor, ProcessPoolExecutor)))
 
         if current_test:
             if current_test.cflags & NO_PARALLEL:
@@ -1354,14 +1361,19 @@ class TestDefinition(object):
                 self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | PARALLEL
                 if is_async:
                     executor = settings.global_async_pool or executor
+                elif is_remote:
+                    executor = settings.global_process_pool or executor
                 else:
                     executor = settings.global_thread_pool or executor
 
                 if executor is None:
                     if is_async:
                         executor = current_test.executor or AsyncPoolExecutor()
+                    elif is_remote:
+                        executor = current_test.executor or ProcessPoolExecutor()
                     else:
                         executor = current_test.executor or ThreadPoolExecutor()
+                    
                     if current_test.executor is None:
                         current_test.executor = executor
 

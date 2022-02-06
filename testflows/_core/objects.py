@@ -61,6 +61,9 @@ class Result(TestObject, ResultException):
     def value(self):
         return self.values[-1].value if self.values else None
 
+    def __reduce__(self):
+        raise TypeError("not serializable")
+
     def __call__(self, result=None):
         if result is None:
             result = getattr(self.__module__, str(self.type))
