@@ -227,6 +227,8 @@ class SharedAsyncPoolExecutor(AsyncPoolExecutor):
     """Shared async pool executor.
     """
     def __init__(self, max_workers, task_name_prefix=""):
+        self.initargs = (max_workers, task_name_prefix) 
+
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedAsyncPoolExecutor, self).__init__(

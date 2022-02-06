@@ -144,6 +144,8 @@ class SharedThreadPoolExecutor(ThreadPoolExecutor):
     """Shared thread pool executor.
     """
     def __init__(self, max_workers, thread_name_prefix=""):
+        self.initargs = (max_workers, thread_name_prefix)
+
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedThreadPoolExecutor, self).__init__(

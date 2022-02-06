@@ -24,12 +24,15 @@ import traceback
 import itertools
 import textwrap
 import subprocess
+import contextlib
 import concurrent.futures._base as _base
 
 import testflows.settings as settings
 
 from .future import Future
 
+from .thread import GlobalThreadPoolExecutor
+from .asyncio import GlobalAsyncPoolExecutor
 from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context
@@ -54,10 +57,48 @@ WorkQueueType = ServiceObjectType("WorkQueue", auto_expose(queue.Queue()))
 
 ProcessError = subprocess.SubprocessError
 
+class WorkerSettings:
+    """Remote service object that is used to pass settings
+    to the worker process.
+    """
+    def __init__(self):
+        self.debug = settings.debug
+        self.time_resolution = settings.debug
+        self.hash_length = settings.hash_length
+        self.hash_func = settings.hash_func
+        self.no_colors = settings.no_colors
+        self.test_id = settings.test_id
+        self.output_format = settings.output_format
+        self.write_logfile = self._set_service_object(current().io.io.io.writer.fd)
+        self.read_logfile = self._set_service_object(current().io.io.io.reader.fd)
+        self.database = settings.database
+        self.show_skipped = settings.show_skipped
+        self.show_retries = settings.show_retries
+        self.trim = settings.trim
+        self.random_order = settings.random_order
+        self.global_thread_pool = (
+                settings.global_thread_pool.__class__,
+                settings.global_thread_pool.initargs
+            ) if settings.global_thread_pool is not None else None
+        self.global_async_pool = (
+                settings.global_async_pool.__class__,
+                settings.global_async_pool.initargs
+            ) if settings.global_async_pool is not None else None
+        self.global_process_pool = self._set_service_object(settings.global_process_pool)
+
+    def _set_service_object(self, obj):
+        if obj is None:
+            return obj
+        if not isinstance(obj, BaseServiceObject):
+            obj = process_service().register(obj)
+        return obj
+
+
 class _WorkItem(object):
-    def __init__(self, write_logfile, read_logfile, current_test, previous_test, top_test, future, fn, args, kwargs):
-        self.write_logfile = write_logfile
-        self.read_logfile = read_logfile
+    """Work item for the remote worker.
+    """
+    def __init__(self, settings, current_test, previous_test, top_test, future, fn, args, kwargs):
+        self.settings = settings
         self.current_test = current_test
         self.previous_test = previous_test
         self.top_test = top_test
@@ -66,29 +107,67 @@ class _WorkItem(object):
         self.args = args
         self.kwargs = kwargs
 
-    def run(self):
+    def run(self, local=False):
+        """This function will be run in worker process.
+        """
         if not self.future.set_running_or_notify_cancel():
             return
 
         ctx = _get_parallel_context()
-        
+
+        def set_settings(work_settings):
+            """Set global test settings for this work item.
+            """
+            settings.debug = work_settings.debug
+            settings.time_resolution = work_settings.time_resolution
+            settings.hash_length = work_settings.hash_length
+            settings.hash_func = work_settings.hash_func
+            settings.no_colors = work_settings.no_colors
+            settings.test_id = work_settings.test_id
+            settings.output_format = work_settings.output_format
+            settings.write_logfile = work_settings.write_logfile
+            settings.read_logfile = work_settings.read_logfile
+            settings.database = work_settings.database
+            settings.show_skipped = work_settings.show_skipped
+            settings.show_retries = work_settings.show_retries
+            settings.trim = work_settings.trim
+            settings.random_order = work_settings.random_order
+            # set global thread pool
+            settings.global_thread_pool = None
+            if work_settings.global_thread_pool is not None:
+                cls, initargs = work_settings.global_thread_pool
+                settings.global_thread_pool = cls(*initargs)
+            # set global async pool
+            settings.global_async_pool = None
+            if work_settings.global_async_pool is not None:
+                cls, initargs = work_settings.global_async_pool
+                settings.global_async_pool = cls(*initargs)
+            # set shared global process pool
+            settings.global_process_pool = work_settings.global_process_pool
+
         def runner(self):
-            import testflows.settings as settings
-
             try:
-                top(self.top_test)
-                previous(self.previous_test)
-                current(self.current_test)
-                settings.write_logfile = self.write_logfile
-                settings.read_logfile = self.read_logfile
+                if not local:
+                    top(self.top_test)
+                    previous(self.previous_test)
+                    current(self.current_test)
 
-                result = self.fn(*self.args, **self.kwargs)
+                    set_settings(self.settings)
+                    
+                    # global thread and async pool are local to each work item
+                    with (settings.global_thread_pool or contextlib.nullcontext()), (
+                            settings.global_async_pool or contextlib.nullcontext()):
+                        result = self.fn(*self.args, **self.kwargs)
+                else:
+                    result = self.fn(*self.args, **self.kwargs)
+
             except BaseException:
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 exc = exc_type(str(exc_value) + "\n\nWorker Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
                 self.future.set_exception(exc)
                 # Break a reference cycle with the exception 'exc'
                 self = None
+
             else:
                 try:
                     self.future.set_result(result)
@@ -151,16 +230,8 @@ class ProcessPoolExecutor(_base.Executor):
             current_test = service.register(current())
             previous_test = service.register(previous())
             top_test = service.register(top())
-            
-            log_writer_fd = current().io.io.io.writer.fd
-            if not isinstance(log_writer_fd, BaseServiceObject):
-                log_writer_fd = service.register(log_writer_fd)
-            
-            log_reader_fd = current().io.io.io.reader.fd
-            if not isinstance(log_reader_fd, BaseServiceObject):
-                log_reader_fd = service.register(log_reader_fd)
 
-            work_item = _WorkItem(log_writer_fd, log_reader_fd, current_test, previous_test, top_test, future, fn, args, kwargs)
+            work_item = _WorkItem(WorkerSettings(), current_test, previous_test, top_test, future, fn, args, kwargs)
 
             idle_workers = self._adjust_process_count()
 
@@ -168,7 +239,7 @@ class ProcessPoolExecutor(_base.Executor):
                 self._raw_work_queue.put(work_item)
 
         if (not block and not idle_workers) or self._max_workers < 1:
-            work_item.run()
+            work_item.run(local=True)
 
         if is_running_in_event_loop():
             return wrap_future(future)
