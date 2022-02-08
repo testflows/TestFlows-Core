@@ -295,7 +295,8 @@ class TestBase(object):
                  xfails=None, xflags=None, ffails=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
-                 repeats=None, retries=None, private_key=None, setup=None, first_fail=None, test_to_end=None):
+                 repeats=None, retries=None, private_key=None, setup=None, first_fail=None, test_to_end=None,
+                 parallel_pool_size=None):
 
         self.lock = threading.Lock()
 
@@ -357,6 +358,7 @@ class TestBase(object):
         self.terminating = None
         self.first_fail = get(first_fail, None)
         self.test_to_end = get(test_to_end, None)
+        self.parallel_pool_size = get(parallel_pool_size, None)
 
         if self.setup is not None:
             if isinstance(self.setup, (TestDecorator, TestDefinition)):
@@ -430,6 +432,12 @@ class TestBase(object):
 
         self.caller_test = current()
         current(self)
+
+        if top() is self:
+            if self.parallel_pool_size:
+                settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=self.parallel_pool_size)
+                settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=self.parallel_pool_size)
+                settings.global_process_pool = GlobalProcessPoolExecutor(max_workers=self.parallel_pool_size)
 
         for pattern, force_fail in (self.ffails or {}).items():
             force_result, force_reason, force_when = force_fail[0], force_fail[1], force_fail[2:]
@@ -1096,10 +1104,7 @@ def parse_cli_args(kwargs, parser_schema):
             kwargs["flags"] |= NO_PARALLEL
 
         if args.get("_parallel_pool"):
-            pool_size = args.pop("_parallel_pool")
-            settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=pool_size)
-            settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=pool_size)
-            settings.global_process_pool = GlobalProcessPoolExecutor(max_workers=pool_size)
+            kwargs["parallel_pool_size"] = args.pop("_parallel_pool")
 
         if args.get("_repeat"):
             repeats = []
