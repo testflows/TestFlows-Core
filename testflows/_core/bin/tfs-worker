@@ -24,13 +24,14 @@ try:
     from testflows._core.cli.text import danger, warning
     from testflows._core.cli.arg.exit import *
     from testflows._core.cli.arg.parser import ArgumentParser
+    from testflows._core.parallel.executor.process import WORKER_READY
 except KeyboardInterrupt:
     sys.exit(1)
 
 def worker_ready():
     """Signal that worker is ready.
     """
-    sys.stdout.write("ready\n")
+    sys.stdout.write(WORKER_READY)
     sys.stdout.flush()
 
 def worker(args):

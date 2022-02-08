@@ -15,8 +15,8 @@
 # to the end flag
 import os
 import sys
+import codecs
 import atexit
-import inspect
 import weakref
 import queue
 import threading
@@ -32,6 +32,7 @@ import testflows.settings as settings
 from .future import Future
 
 from .thread import GlobalThreadPoolExecutor
+from .asyncio import asyncio
 from .asyncio import GlobalAsyncPoolExecutor
 from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
@@ -40,22 +41,41 @@ from .. import current, top, previous, _get_parallel_context
 _process_queues = weakref.WeakKeyDictionary()
 _shutdown = False
 
+WORKER_READY = "_tfs_worker__ready__\n"
+
+class Process:
+    """Process for asyncio.subprocess_exec.
+    """
+    def __init__(self, transport, protocol):
+        self.transport = transport
+        self.protocol = protocol
+
+ProcessError = subprocess.SubprocessError
+
+
+def async_wait_for(aw, loop):
+    return asyncio.run_coroutine_threadsafe(asyncio.wait_for(aw, None), loop=loop).result()
+
+
 def _python_exit():
     global _shutdown
     _shutdown = True
 
     items = list(_process_queues.items())
     for proc, _ in items:
-        proc.terminate()
+        try:
+            proc.transport.terminate()
+        except ProcessLookupError:
+            pass
+
+    loop = process_service().loop
     for proc, _ in items:
-        proc.wait()
+        async_wait_for(proc.protocol.exit_future, loop=loop)
 
 atexit.register(_python_exit)
 
 
 WorkQueueType = ServiceObjectType("WorkQueue", auto_expose(queue.Queue()))
-
-ProcessError = subprocess.SubprocessError
 
 class WorkerSettings:
     """Remote service object that is used to pass settings
@@ -177,6 +197,50 @@ class _WorkItem(object):
         ctx.run(runner, self)
 
 
+class WorkerProtocol(asyncio.SubprocessProtocol):
+    """Worker process protocol that set exit_future
+    on process exit and logs all output on stdout
+    and stderr to message_io.
+    """
+    def __init__(self, test_io, io_prefix, loop, encoding="utf-8", errors=None):
+        self.decoder = codecs.getincrementaldecoder(encoding)(errors=errors)
+        self.test_io = test_io
+        self.io_prefix = io_prefix
+        self.exit_future = asyncio.Future(loop=loop)
+        self.ready_future = asyncio.Future(loop=loop)
+        self.buffer = ''
+        self.transport = None
+        self.stdout_io = None
+        self.stderr_io = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+        worker_pid = self.transport.get_pid()
+        self.stdout_io = self.test_io.message_io(f"{self.io_prefix}-worker-{worker_pid}:stdout")
+        self.stderr_io = self.test_io.message_io(f"{self.io_prefix}-worker-{worker_pid}:stderr")
+
+    def pipe_data_received(self, fd, data):
+        if not self.ready_future.done() and data:
+            self.buffer += self.decoder.decode(data)
+            if self.buffer.startswith(WORKER_READY):
+                data = self.buffer[len(WORKER_READY):]
+                self.ready_future.set_result(True)
+
+        elif data:
+            data = self.decoder.decode(data)
+        
+        if data:
+            if fd == 1:
+                self.stdout_io.write(data)
+            else:
+                self.stderr_io.write(data)
+
+    def process_exited(self):
+        if not self.ready_future.done():
+            self.ready_future.set_result(True)
+        self.exit_future.set_result(True)
+
+
 class ProcessPoolExecutor(_base.Executor):
     """Process pool executor.
     """
@@ -268,11 +332,19 @@ class ProcessPoolExecutor(_base.Executor):
             if settings.no_colors:
                 command.append("--no-colors")
 
-            proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            proc.stdout.readline()
-            if proc.poll() is not None:
-                returncode, err = proc.returncode, textwrap.indent(proc.stderr.read().decode('utf-8'), prefix='  ')
-                raise ProcessError(f"failed to start worker process {proc.pid} return code {returncode}\n{err}")
+            loop = process_service().loop
+
+            proc = Process(*asyncio.run_coroutine_threadsafe(
+                loop.subprocess_exec(
+                    lambda: WorkerProtocol(test_io=current(), io_prefix=self._process_name_prefix, loop=loop),
+                    *command), loop=loop).result())
+
+            async_wait_for(proc.protocol.ready_future, loop=loop)
+
+            returncode = proc.transport.get_returncode()
+            if returncode:
+                output = textwrap.indent(proc.protocol.buffer, prefix='  ')
+                raise ProcessError(f"failed to start worker process {proc.transport.get_pid()} return code {returncode}\n{output}")
             self._processes.add(proc)
             _process_queues[proc] = self._raw_work_queue
             return True
@@ -285,12 +357,13 @@ class ProcessPoolExecutor(_base.Executor):
                 return
             self._shutdown = True
 
-            for proc in self._processes:
+            for _ in self._processes:
                 self._raw_work_queue.put_nowait(None)
 
         if wait:
+            loop = process_service().loop
             for proc in self._processes:
-                proc.wait()
+                async_wait_for(proc.protocol.exit_future, loop=loop)
 
 
 class SharedProcessPoolExecutor(ProcessPoolExecutor):
