@@ -28,7 +28,7 @@ from testflows._core.contrib import cloudpickle
 from testflows._core.contrib.aiomsg import Socket
 from testflows._core.exceptions import exception as get_exception
 
-from .asyncio import asyncio
+from .asyncio import asyncio, is_running_in_event_loop, CancelledError
 
 class ServiceError(Exception):
     """Service error.
@@ -78,7 +78,7 @@ class Service:
             return None
         return self.address[-1]
 
-    def register(self, obj, sync=None):
+    def register(self, obj, sync=None, expose=None):
         """Register object with the service to be
         by remote services.
         """
@@ -98,8 +98,8 @@ class Service:
                     self.objects[_id] = obj
 
                 if sync:
-                    return ServiceObject(obj, address=self.address)
-                return AsyncServiceObject(obj, address=self.address)
+                    return ServiceObject(obj, address=self.address, expose=expose)
+                return AsyncServiceObject(obj, address=self.address, expose=expose)
 
         if loop is None:
             return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
@@ -271,11 +271,36 @@ def process_service(**kwargs):
     """
     global _process_service
 
+    running_in_loop = is_running_in_event_loop()
+
+    async def _async_stop_service():
+        global _process_service
+        try:
+            while True:
+                await asyncio.sleep(0.01)
+        except CancelledError:
+            pass
+        finally:
+            if _process_service is not None:
+                await _process_service.__aexit__(None, None, None)
+                _process_service = None
+
+    async def _async_start_service():
+        global _process_service
+        _process_service = await Service(**kwargs).__aenter__()
+        task = asyncio.create_task(_async_stop_service())
+        task.cleanup = True
+        return _process_service
+
+    async def _async_process_service():
+        return _process_service
+
     with _process_service_lock:
         if _process_service is None:
             try:
                 asyncio.get_running_loop()
             except RuntimeError:
+                assert running_in_loop is False, "must not be running in event loop"
                 loop = kwargs.pop("loop", None)
 
                 if loop is None:
@@ -298,8 +323,14 @@ def process_service(**kwargs):
 
             kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
 
+            if running_in_loop:
+                return _async_start_service()
+            
             _process_service = Service(**kwargs).__enter__()
             atexit.register(_stop_process_service)
+
+        if running_in_loop:
+            return _async_process_service()
 
     return _process_service
 
@@ -415,17 +446,17 @@ def make_exposed_defs(exposed, asynced):
 
     for name in exposed.methods:
         defs.append(f"{'async ' if asynced else ''}def {name}(self, *args, **kwargs):\n"
-                f"    return self.__{'async_' if asynced else ''}proxy_call__(\"{name}\", args, kwargs)",
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(\"{name}\", args, kwargs)",
             )
 
     for name in exposed.properties:
         defs.append(f"@property\n"
                 f"{'async ' if asynced else ''}def {name}(self):\n"
-                f"    return self.__{'async_' if asynced else ''}proxy_call__(\"__getattribute__\", [\"{name}\"])"
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(\"__getattribute__\", [\"{name}\"])"
                 f"\n"
                 f"@{name}.setter\n"
                 f"{'async ' if asynced else ''}def {name}(self, v):\n"
-                f"    return self.__{'async_' if asynced else ''}proxy_call__(\"__setattribute__\", [\"{name}\", v])",
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(\"__setattribute__\", [\"{name}\", v])",
             )
     
     return defs

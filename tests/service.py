@@ -12,20 +12,6 @@ class Test:
         return x + y
 
 
-@TestStep(Given)
-async def start_service(self, service):
-    """Start service.
-    """
-    async with service as _service:
-        yield _service
-
-
-@TestStep(Given)
-def sync_start_service(self, service):
-    with service as _service:
-        yield _service
-
-
 @TestStep
 async def access_attribute(self, o):
     return await o.x
@@ -44,15 +30,8 @@ async def async_service(self):
         t2 = Test()
     
     async with Scenario("create global process service"):
-        service = process_service()
+        service = await process_service()
     
-    async with Scenario("try registering object before starting process service"):
-        with raises(ServiceError):
-            await service.register(Test())
-
-    async with Given("I create global process service"):
-        service = await start_service(service=service)
-
     async with Scenario("check registering multiple objects"):
         o1 = await service.register(t1)
         o2 = await service.register(t2)
@@ -89,22 +68,12 @@ async def async_service(self):
 def sync_service(self):
     """Test service in sync code.
     """
-    with Given("I reset global process service"):
-        reset_process_service()
-
     with Given("I create local objects"):
         t1 = Test()
         t2 = Test()
     
     with Scenario("create global process service"):
         service = process_service()
-    
-    with Scenario("try registering object before starting process service"):
-        with raises(ServiceError):
-            service.register(Test())
-
-    with Given("I create global process service"):
-        service = sync_start_service(service=service)
 
     with Scenario("check registering multiple objects"):
         o1 = service.register(t1)
@@ -137,6 +106,16 @@ def sync_service(self):
         assert v1 == '2', error()
         assert v2 == '2', error()
 
+    with Scenario("create service object that exposes magic methods"):
+        l1 = service.register(list(), expose=ExposedMethodsAndProperties(methods=(
+                '__add__', '__contains__', '__delitem__', '__getitem__', '__len__',
+                '__mul__', '__reversed__', '__rmul__', '__setitem__',
+                'append', 'count', 'extend', 'index', 'insert', 'pop', 'remove',
+                'reverse', 'sort', '__imul__'
+            ), properties=tuple()))
+        l1.append('a')
+        assert l1[0] == 'a', error()
+        
 
 @TestModule
 @Name("service")
