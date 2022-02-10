@@ -97,6 +97,11 @@ def _async_loop_thread(loop, stop_event):
     """
     asyncio.set_event_loop(loop)
     loop.run_until_complete(_loop_main(stop_event))
+    cleanup_tasks = [task for task in asyncio.all_tasks(loop=loop) if getattr(task, "cleanup", None)]
+    for task in cleanup_tasks:
+        task.cancel()
+    loop.run_until_complete(asyncio.gather(*cleanup_tasks))
+    loop.close()
 
 
 class AsyncPoolExecutor(_base._base.Executor):
