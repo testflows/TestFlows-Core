@@ -25,6 +25,7 @@ try:
     from testflows._core.cli.arg.exit import *
     from testflows._core.cli.arg.parser import ArgumentParser
     from testflows._core.parallel.executor.process import WORKER_READY
+    from testflows._core.parallel.service import Address
 except KeyboardInterrupt:
     sys.exit(1)
 
@@ -42,7 +43,7 @@ def worker(args):
     process_service()
 
     try:
-        work_queue = WorkQueueType(oid=int(args.oid), address=(args.hostname, int(args.port)))
+        work_queue = WorkQueueType(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
         while True:
             work_item = work_queue.get(block=True)
             try:

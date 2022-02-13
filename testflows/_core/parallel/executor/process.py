@@ -323,8 +323,8 @@ class ProcessPoolExecutor(_base.Executor):
         if num_procs < self._max_workers:
             command = ["tfs-worker",
                 "--oid", str(self._work_queue.oid),
-                "--hostname", str(self._work_queue.hostname),
-                "--port", str(self._work_queue.port)
+                "--hostname", str(self._work_queue.address.hostname),
+                "--port", str(self._work_queue.address.port)
             ]
 
             if settings.debug:
