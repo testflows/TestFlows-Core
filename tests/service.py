@@ -63,6 +63,14 @@ async def async_service(self):
         assert v1 == '2', error()
         assert v2 == '2', error()
 
+    async with Scenario("check basic registered object garbage collection"):
+        o1 = await service.register(Test())
+        oid = o1.oid
+        assert oid in service.objects, error()
+        del o1
+        await asyncio.sleep(0.1)
+        assert oid not in service.objects, error()
+
 
 @TestFeature
 def sync_service(self):
@@ -115,7 +123,14 @@ def sync_service(self):
             ), properties=tuple()))
         l1.append('a')
         assert l1[0] == 'a', error()
-        
+    
+    with Scenario("check basic registered object garbage collection"):
+        o1 = service.register(Test())
+        oid = o1.oid
+        assert oid in service.objects, error()
+        del o1
+        assert oid not in service.objects, error()
+
 
 @TestModule
 @Name("service")
