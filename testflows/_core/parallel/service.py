@@ -330,27 +330,12 @@ def process_service(**kwargs):
 
     running_in_loop = is_running_in_event_loop()
 
-    async def _async_stop_service():
-        """Stop process service.
-        """
-        global _process_service
-        try:
-            while True:
-                await asyncio.sleep(0.01)
-        except CancelledError:
-            pass
-        finally:
-            if _process_service is not None:
-                await _process_service.__aexit__(None, None, None)
-                _process_service = None
-
-    async def _async_start_service():
+    async def _async_start_service(**kwargs):
         """Start process service.
         """
         global _process_service
         _process_service = await Service(**kwargs).__aenter__()
-        task = asyncio.create_task(_async_stop_service())
-        task.cleanup = True
+        atexit.register(_stop_process_service)
         return _process_service
 
     async def _async_process_service():
@@ -360,35 +345,30 @@ def process_service(**kwargs):
 
     with _process_service_lock:
         if _process_service is None:
-            try:
-                asyncio.get_running_loop()
-            except RuntimeError:
-                assert running_in_loop is False, "must not be running in event loop"
-                loop = kwargs.pop("loop", None)
+            loop = kwargs.pop("loop", None)
 
-                if loop is None:
-                    loop = asyncio.new_event_loop()
+            if loop is None:
+                loop = asyncio.new_event_loop()
 
-                    def run_event_loop():
-                        asyncio.set_event_loop(loop)
-                        loop.run_forever()
+                def run_event_loop():
+                    asyncio.set_event_loop(loop)
+                    loop.run_forever()
 
-                    thread = threading.Thread(target=run_event_loop, daemon=True)
+                thread = threading.Thread(target=run_event_loop, daemon=True)
 
-                    def stop_event_loop():
-                        loop.call_soon_threadsafe(loop.stop)
-                        thread.join()
+                def stop_event_loop():
+                    loop.call_soon_threadsafe(loop.stop)
+                    thread.join()
 
-                    thread.start()
-                    atexit.register(stop_event_loop)
+                thread.start()
+                atexit.register(stop_event_loop)
 
-                kwargs["loop"] = loop
-
+            kwargs["loop"] = loop
             kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
 
             if running_in_loop:
-                return _async_start_service()
-            
+                return _async_start_service(**kwargs)
+
             _process_service = Service(**kwargs).__enter__()
             atexit.register(_stop_process_service)
 
@@ -452,14 +432,14 @@ class BaseServiceObject:
             try:
                 await BaseServiceObject.__async_proxy_call__(
                     oid, address, "__decref__", timeout=0.1)
-            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError):
+            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
                 pass
 
         def _call():
             try:
                 BaseServiceObject.__proxy_call__(
                     oid, address, "__decref__", timeout=0.1)
-            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError):
+            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
                 pass
 
         if is_running_in_event_loop():
