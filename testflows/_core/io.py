@@ -420,8 +420,20 @@ class ProtectedFile:
 class LogReader(object):
     """Read messages from the log.
     """
+    lock = threading.Lock()
+    fd = None
+
+    def __new__(cls, *args, **kwargs):
+        fd = kwargs.pop("fd", None)
+
+        with cls.lock:
+            if not cls.fd:
+                cls.fd = fd or ProtectedFile(open(settings.read_logfile, "rb", buffering=0))
+
+            return object.__new__(LogReader)
+
     def __init__(self, fd=None):
-        self.fd = fd or ProtectedFile(open(settings.read_logfile, "rb", buffering=0))
+        self.fd = fd or self.__class__.fd
 
     def tell(self):
         return self.fd.tell()
