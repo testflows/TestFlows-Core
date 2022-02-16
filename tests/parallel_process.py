@@ -94,16 +94,16 @@ def feature(self):
                 with raises(TypeError):
                     f.result()
 
-    # with Scenario("run decorated tests in parallel"):
-    #     with ProcessPool() as pool:
-    #         futures = []
-    #         for i in range(10):
-    #             futures.append(
-    #                     Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
-    #                 )
-    #         for v in join(*futures):
-    #             v = v.result.value
-    #             assert v == "value", error()
+    with Scenario("run decorated tests in parallel"):
+        with ProcessPool() as pool:
+            futures = []
+            for i in range(10):
+                futures.append(
+                        Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
+                    )
+            for v in join(*futures):
+                v = v.result.value
+                assert v == "value", error()
 
 #           with Scenario("booo"):
 #               for i in range(2):

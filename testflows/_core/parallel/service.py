@@ -352,7 +352,14 @@ def process_service(**kwargs):
 
                 def run_event_loop():
                     asyncio.set_event_loop(loop)
-                    loop.run_forever()
+                    try:
+                        loop.run_forever()
+                    finally:                       
+                        tasks = [task for task in asyncio.all_tasks(loop=loop)]
+                        for task in tasks:
+                            task.cancel()
+                        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+                        loop.close()
 
                 thread = threading.Thread(target=run_event_loop, daemon=True)
 
@@ -536,7 +543,7 @@ def make_exposed_defs(exposed, asynced):
                 f"\n"
                 f"@{name}.setter\n"
                 f"{'async ' if asynced else ''}def {name}(self, v):\n"
-                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.out, self.address, \"__setattribute__\", [\"{name}\", v])",
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.oid, self.address, \"__setattribute__\", [\"{name}\", v])",
             )
     
     return defs
