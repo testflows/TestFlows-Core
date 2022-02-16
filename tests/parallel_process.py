@@ -70,14 +70,14 @@ def feature(self):
                     f = pool.submit(simple, args=[2,2])
                     r = f.result()
                     assert r == 4, error()
-
-            with Example("multiple"):
-                tasks = []
-                for i in range(10):
-                    tasks.append(pool.submit(simple, kwargs={"x":2,"y":2}))
-                for task in tasks:
-                    r = task.result()
-                    assert r == 4, error()
+            for i in range(3):
+                with Example(f"multiple {i}"):
+                    tasks = []
+                    for i in range(10):
+                        tasks.append(pool.submit(simple, kwargs={"x":2,"y":2}))
+                    for task in tasks:
+                        r = task.result()
+                        assert r == 4, error()
             
             with Example("raises exception"):
                 f = pool.submit(simple_error)
@@ -96,19 +96,30 @@ def feature(self):
 
     with Scenario("run decorated tests in parallel"):
         with ProcessPool() as pool:
-            futures = []
-            for i in range(10):
-                futures.append(
-                        Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
-                    )
-            for v in join(*futures):
-                v = v.result.value
-                assert v == "value", error()
+            with Scenario("multiple tests"):
+                futures = []
+                for i in range(10):
+                    futures.append(
+                            Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
+                        )
+                for v in join(*futures):
+                    v = v.result.value
+                    assert v == "value", error()
 
-#           with Scenario("booo"):
+            with Scenario("check child count is being incremented") as test:
+                count = test.child_count
+                debug(f"before: {test.child_count}")
+                futures = []
+                for i in range(2):
+                    futures.append(Scenario(name=f"my test {i}", test=my_scenario, parallel=True, executor=pool)())
+                join(*futures)
+                debug(f"after: {test.child_count}")
+                assert test.child_count == count + 2, error()
+
+
+#           with Scenario("failing test"):
 #               for i in range(2):
-#                   f = Scenario(name=f"test {i}", test=my_test, parallel=True, flags=TE)()#, executor=pool)()
-#               fail("failing")
+#                   f = Scenario(name=f"test {i}", test=my_test, parallel=True, flags=TE)()#, executor=pool)()               
 #           #for i in range(1):
 #           #    f = pool.submit(fn, args=[my_test])
 #           #f.result()

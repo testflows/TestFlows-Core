@@ -233,6 +233,33 @@ class Service:
             finally:
                 self.open = False
 
+    def __incref__(self, oid, obj_item=None):
+        """Increment object reference count.
+        """
+        if not obj_item:
+            try:
+                obj_item = self.objects[oid]
+            except KeyError:
+                raise ServiceObjectNotFoundError(f"{oid} not found")
+
+        obj_item.refcount += 1
+
+    def __decref__(self, oid, obj_item=None):
+        """Decrement object reference count.
+        """
+        if not obj_item:
+            try:
+                obj_item = self.objects[oid]
+            except KeyError:
+                raise ServiceObjectNotFoundError(f"{oid} not found")
+        
+        if obj_item.refcount < 0:
+            raise ValueError(f"{oid} for {obj_item.obj} has invalid refcount {obj_item.refcount}")
+        obj_item.refcount -= 1
+
+        if obj_item.refcount <= 0:
+            del self.objects[oid]
+
     async def _exec(self, oid, fn, args, kwargs):
         """Execute fn request on a service object specified
         by the object id.
@@ -253,15 +280,9 @@ class Service:
             elif fn == "__setattribute__":
                 r = setattr(obj_item.obj, *args)
             elif fn == "__incref__":
-                r = None
-                obj_item.refcount += 1
+                r = self.__incref__(oid, obj_item)
             elif fn == "__decref__":
-                r = None
-                if obj_item.refcount < 0:
-                    raise ValueError(f"{oid} for {obj_item.obj} has invalid refcount {obj_item.refcount}")
-                obj_item.refcount -= 1
-                if obj_item.refcount <= 0:
-                    del self.objects[oid]
+                r = self.__decref__(oid, obj_item)
             else:
                 r = await self.loop.run_in_executor(None, r)
 
@@ -426,33 +447,28 @@ class BaseServiceObject:
         """Increment service object reference count.
         """
         if is_running_in_event_loop():
-            asyncio.get_running_loop().create_task(BaseServiceObject.__async_proxy_call__(
-                oid, address, "__incref__"))
-        else:
-            BaseServiceObject.__proxy_call__(oid, address, "__incref__")
+            if _process_service: 
+                if _process_service.loop is asyncio.get_running_loop():
+                    _process_service.__incref__(oid)
+                    return
+
+        BaseServiceObject.__proxy_call__(oid, address, "__incref__")
 
     @staticmethod
     def _decref(oid, address):
         """Decrement service object reference count.
         """
-        async def _async_call():
-            try:
-                await BaseServiceObject.__async_proxy_call__(
-                    oid, address, "__decref__", timeout=0.1)
-            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
-                pass
+        try:
+            if is_running_in_event_loop():
+                if _process_service: 
+                    if _process_service.loop is asyncio.get_running_loop():  
+                        _process_service.__decref__(oid)
+                        return
 
-        def _call():
-            try:
-                BaseServiceObject.__proxy_call__(
-                    oid, address, "__decref__", timeout=0.1)
-            except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
-                pass
-
-        if is_running_in_event_loop():
-            asyncio.get_running_loop().create_task(_async_call())
-        else:
-            _call()
+            BaseServiceObject.__proxy_call__(
+                oid, address, "__decref__", timeout=0.1)
+        except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
+            pass
 
     def __eq__(self, other: object) -> bool:
         """Compare to service objects.
@@ -520,7 +536,7 @@ def RebuildServiceObject(typename, exposed, oid, address, _incref=True):
     return ServiceObjectType(typename, exposed)(oid=oid, address=address, _incref=_incref)
 
 
-def RebuildAsyncServiceObject(typename, exposed, oid, address, _incref):
+def RebuildAsyncServiceObject(typename, exposed, oid, address, _incref=True):
     """Rebuild async service object during unpickling.
     """
     return ServiceObjectType(typename, exposed, _async=True)(oid=oid, address=address, _incref=_incref)
@@ -593,13 +609,13 @@ def auto_expose(obj):
     return ExposedMethodsAndProperties(tuple(methods), tuple(properties))
 
 
-def AsyncServiceObject(obj, address, expose=None):
+def AsyncServiceObject(obj, address, expose=None, _incref=True):
     """Make async service object.
     """
-    return ServiceObjectType(f"{type(obj)}", expose or auto_expose(obj), asynced=True)(oid=id(obj), address=address)
+    return ServiceObjectType(f"{type(obj)}", expose or auto_expose(obj), asynced=True)(oid=id(obj), address=address, _incref=_incref)
 
 
-def ServiceObject(obj, address, expose=None):
+def ServiceObject(obj, address, expose=None, _incref=True):
     """Make service object.
     """
-    return ServiceObjectType(f"{type(obj)}", expose or auto_expose(obj))(oid=id(obj), address=address)
+    return ServiceObjectType(f"{type(obj)}", expose or auto_expose(obj))(oid=id(obj), address=address, _incref=_incref)
