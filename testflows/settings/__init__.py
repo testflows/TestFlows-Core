@@ -48,3 +48,5 @@ global_thread_pool = None
 global_async_pool = None
 #: global process pool
 global_process_pool = None
+#: service timeout
+service_timeout = 0.1

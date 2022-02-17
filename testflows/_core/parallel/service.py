@@ -21,13 +21,13 @@ import inspect
 import traceback
 import threading
 
+import testflows.settings as settings
+
 from collections import namedtuple
-from typing import Optional
 from multiprocessing.util import Finalize
 
 from testflows._core.contrib import cloudpickle
 from testflows._core.contrib.aiomsg import Socket
-from testflows._core.exceptions import exception as get_exception
 
 from .asyncio import asyncio, is_running_in_event_loop, CancelledError
 
@@ -455,9 +455,15 @@ class BaseServiceObject:
         BaseServiceObject.__proxy_call__(oid, address, "__incref__")
 
     @staticmethod
-    def _decref(oid, address):
+    def _decref(oid, address, _timeout_err={}, _service_not_running_err=[False]):
         """Decrement service object reference count.
         """
+        if _service_not_running_err[0]:
+            return
+
+        if _timeout_err.get(address):
+            return
+
         try:
             if is_running_in_event_loop():
                 if _process_service: 
@@ -466,8 +472,15 @@ class BaseServiceObject:
                         return
 
             BaseServiceObject.__proxy_call__(
-                oid, address, "__decref__", timeout=0.1)
-        except (TimeoutError, ServiceObjectNotFoundError, ServiceNotRunningError, CancelledError):
+                oid, address, "__decref__", timeout=settings.service_timeout)
+
+        except TimeoutError:
+            _timeout_err[address] = True
+
+        except ServiceNotRunningError:
+            _service_not_running_err[0] = True
+
+        except (ServiceObjectNotFoundError, CancelledError):
             pass
 
     def __eq__(self, other: object) -> bool:

@@ -96,6 +96,7 @@ class WorkerSettings:
         self.show_retries = settings.show_retries
         self.trim = settings.trim
         self.random_order = settings.random_order
+        self.service_timeout = settings.service_timeout
         self.global_thread_pool = (
                 settings.global_thread_pool.__class__,
                 settings.global_thread_pool.initargs
@@ -152,6 +153,7 @@ class _WorkItem(object):
             settings.show_retries = work_settings.show_retries
             settings.trim = work_settings.trim
             settings.random_order = work_settings.random_order
+            settings.service_timeout = work_settings.service_timeout
             # set global thread pool
             settings.global_thread_pool = None
             if work_settings.global_thread_pool is not None:
