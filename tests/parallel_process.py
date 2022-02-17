@@ -121,6 +121,15 @@ def feature(self):
             with Scenario("failing parallel test"):
                 Scenario(name=f"test", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)(force_fail=True).result()         
 
+            with Scenario("check if parallel test future is added to futures") as test:
+                f1 = Scenario(name=f"test 0", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)()
+                f2 = Scenario(name=f"test 1", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)()
+                assert len(test.futures) == 2, error()
+                join(f1)
+                join(f2)
+                join()
+                assert len(test.futures) == 0, error()
+
 
 if main():
     feature()
