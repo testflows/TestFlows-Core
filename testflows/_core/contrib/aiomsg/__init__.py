@@ -129,6 +129,7 @@ class Søcket:
         identity: Optional[bytes] = None,
         loop=None,
         reconnection_delay: Callable[[], float] = lambda: 0.1,
+        pickler = cloudpickle
     ):
         """
         :param reconnection_delay: In large microservices
@@ -153,6 +154,7 @@ class Søcket:
         self.receiver_channel = receiver_channel
         self.identity = identity or uuid.uuid1().bytes
         self.loop = loop or asyncio.get_event_loop()
+        self.pickler = pickler
 
         self._queue_recv = asyncio.Queue(maxsize=65536, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
@@ -544,12 +546,15 @@ class Søcket:
         data = await self.recv()
         return json.loads(data, **kwargs)
 
-    async def recv_pickle(self, pickler=cloudpickle, **kwargs) -> Any:
+    async def recv_pickle(self, pickler=None, **kwargs) -> Any:
         """Automatically deserialize messages in Pickle format
 
         The ``kwargs`` are passed to the ``json.loads()`` method.
         By default uses cloudpickle as the default ``pickler`` module.
         """
+        if pickler is None:
+            pickler = self.pickler
+
         data = await self.recv()
         return pickler.loads(data, **kwargs)
 
@@ -642,13 +647,16 @@ class Søcket:
         await self.send_string(json.dumps(obj, **kwargs), identity)
 
     async def send_pickle(
-        self, obj: Any, identity: Optional[bytes] = None, pickler=cloudpickle, **kwargs
+        self, obj: Any, identity: Optional[bytes] = None, pickler=None, **kwargs
     ):
         """Automatically serialise the given ``obj`` to Pickle representation.
 
         The ``kwargs`` are passed to the ``pickler.dumps()`` method.
         By default uses ``cloudpickle`` as the default ``pickler`` module.
         """
+        if pickler is None:
+            pickler = self.pickler
+
         await self.send(pickler.dumps(obj, **kwargs), identity)
 
     def _sender_publish(self, message: bytes):

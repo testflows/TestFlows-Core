@@ -95,7 +95,7 @@ class Service:
         self.open = False
         self.lock = asyncio.Lock(loop=self.loop)
 
-    def register(self, obj, sync=None, expose=None):
+    def register(self, obj, sync=None, expose=None, awaited=True):
         """Register object with the service to be by remote services.
         """
         try:
@@ -103,21 +103,26 @@ class Service:
         except RuntimeError:
             loop = None
 
-        async def _async_register(sync: bool=False):
-            async with self.lock:
-                if not self.open:
-                    raise ServiceNotRunningError("service is not running")
-                
-                _id = id(obj)
+        def _register(sync: bool=False):
+            if not self.open:
+                raise ServiceNotRunningError("service is not running")
+            
+            _id = id(obj)
 
-                if _id not in self.objects:
-                    self.objects[_id] = Service.ObjectItem(obj)
+            if _id not in self.objects:
+                self.objects[_id] = Service.ObjectItem(obj)
 
             if sync:
                 return ServiceObject(obj, address=self.address, expose=expose)
             return AsyncServiceObject(obj, address=self.address, expose=expose)
 
-        if loop is None:
+        async def _async_register(sync: bool=False):
+            return _register(sync=sync)
+
+        if loop is self.loop and not awaited:
+            return _register(sync=sync)
+
+        if loop is None or not awaited:
             return asyncio.run_coroutine_threadsafe(_async_register(sync=True), loop=self.loop).result()
         elif loop is not self.loop:
             return asyncio.wrap_future(asyncio.run_coroutine_threadsafe(_async_register(sync=sync), loop=self.loop))
@@ -167,10 +172,34 @@ class Service:
             """
             await asyncio.wait_for(self.connections[address].wait(), timeout=timeout)
 
-            await asyncio.wait_for(self.out_socket.send_pickle(
-                    obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
-                    identity=self.connections[address].identity
-                ), timeout=timeout)
+            try:
+                await asyncio.wait_for(self.out_socket.send_pickle(
+                        obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
+                        identity=self.connections[address].identity
+                    ), timeout=timeout)
+            except TypeError:
+                # convert any unpicklable objects to service objects
+                pickler = self.out_socket.pickler
+
+                args = list(args)
+                for i in range(len(args)):
+                    arg = args[i]
+                    try:
+                        pickler.dumps(arg)
+                    except TypeError:
+                        args[i] = await self.register(arg, sync=True)
+                
+                for k in kwargs:
+                    arg = kwargs[k]
+                    try:
+                        pickler.dumps(arg)
+                    except TypeError:
+                        kwargs[k] = await self.register(arg, sync=True)
+
+                await asyncio.wait_for(self.out_socket.send_pickle(
+                        obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
+                        identity=self.connections[address].identity
+                    ), timeout=timeout)
 
             if resp:
                 event = asyncio.Event()
@@ -348,22 +377,6 @@ def process_service(**kwargs):
     """Get or create global process wide object service.
     """
     global _process_service
-
-    running_in_loop = is_running_in_event_loop()
-
-    async def _async_start_service(**kwargs):
-        """Start process service.
-        """
-        global _process_service
-        _process_service = await Service(**kwargs).__aenter__()
-        atexit.register(_stop_process_service)
-        return _process_service
-
-    async def _async_process_service():
-        """Return process service.
-        """
-        return _process_service
-
     with _process_service_lock:
         if _process_service is None:
             loop = kwargs.pop("loop", None)
@@ -394,14 +407,8 @@ def process_service(**kwargs):
             kwargs["loop"] = loop
             kwargs["name"] = kwargs.get("name", f"process-service-{os.getpid()}")
 
-            if running_in_loop:
-                return _async_start_service(**kwargs)
-
             _process_service = Service(**kwargs).__enter__()
             atexit.register(_stop_process_service)
-
-        if running_in_loop:
-            return _async_process_service()
 
     return _process_service
 
@@ -552,7 +559,7 @@ def RebuildServiceObject(typename, exposed, oid, address, _incref=True):
 def RebuildAsyncServiceObject(typename, exposed, oid, address, _incref=True):
     """Rebuild async service object during unpickling.
     """
-    return ServiceObjectType(typename, exposed, _async=True)(oid=oid, address=address, _incref=_incref)
+    return ServiceObjectType(typename, exposed, asynced=True)(oid=oid, address=address, _incref=_incref)
 
 
 def make_exposed_defs(exposed, asynced):

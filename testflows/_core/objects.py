@@ -47,9 +47,11 @@ class Result(TestObject, ResultException):
     def __init__(self, message=None, reason=None, type=None, test=None, metrics=None, tickets=None, values=None):
         from .funcs import current
         self.test = test if test is not None else current().name
+        if not isinstance(self.test, str):
+            raise TypeError("test must be of 'str' type")
         self.type = get(type, self.type)
         if self.type is None:
-            raise TypeError("result type must be defined")
+            raise TypeError("type must be defined")
         self.message = message
         self.reason = reason
         self.metrics = get(metrics, list(self.metrics))
@@ -60,9 +62,6 @@ class Result(TestObject, ResultException):
     @property
     def value(self):
         return self.values[-1].value if self.values else None
-
-    def __reduce__(self):
-        raise TypeError("not serializable")
 
     def __call__(self, result=None):
         if result is None:

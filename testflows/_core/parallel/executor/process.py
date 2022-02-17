@@ -37,6 +37,7 @@ from .asyncio import GlobalAsyncPoolExecutor
 from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context
+from ...objects import Result
 
 _process_queues = weakref.WeakKeyDictionary()
 _shutdown = False
@@ -183,9 +184,10 @@ class _WorkItem(object):
                 else:
                     result = self.fn(*self.args, **self.kwargs)
 
-            except BaseException:
-                exc_type, exc_value, exc_tb = sys.exc_info()
-                exc = exc_type(str(exc_value) + "\n\nWorker Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
+            except BaseException as exc:
+                if not isinstance(exc, Result):
+                    exc_type, exc_value, exc_tb = sys.exc_info()
+                    exc = exc_type(str(exc_value) + "\n\nWorker Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
                 self.future.set_exception(exc)
                 # Break a reference cycle with the exception 'exc'
                 self = None

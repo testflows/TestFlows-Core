@@ -16,7 +16,7 @@ def start_process_service(self):
         yield service
 
 @TestScenario
-def my_scenario(self, count=1, sleep=0):
+def my_scenario(self, count=1, sleep=0, force_fail=False):
     """Simple scenario with 0 or more steps.
     """
     for i in range(1):
@@ -24,6 +24,8 @@ def my_scenario(self, count=1, sleep=0):
     for i in range(count):
         with Step(f"hello there {i} - {self.name}"):
             time.sleep(sleep)
+            if force_fail:
+                fail("forced fail")
     return "value"
 
 
@@ -116,13 +118,8 @@ def feature(self):
                 debug(f"after: {test.child_count}")
                 assert test.child_count == count + 2, error()
 
-
-#           with Scenario("failing test"):
-#               for i in range(2):
-#                   f = Scenario(name=f"test {i}", test=my_test, parallel=True, flags=TE)()#, executor=pool)()               
-#           #for i in range(1):
-#           #    f = pool.submit(fn, args=[my_test])
-#           #f.result()
+            with Scenario("failing parallel test"):
+                Scenario(name=f"test", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)(force_fail=True).result()         
 
 
 if main():

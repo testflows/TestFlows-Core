@@ -30,7 +30,7 @@ async def async_service(self):
         t2 = Test()
     
     async with Scenario("create global process service"):
-        service = await process_service()
+        service = process_service()
     
     async with Scenario("check registering multiple objects"):
         o1 = await service.register(t1)
