@@ -56,6 +56,15 @@ def simple_error():
     """
     raise ValueError("error")
 
+@TestScenario
+async def my_async_test(self):
+    with ProcessPool() as pool:
+        r = await Scenario(name=f"test 0", test=my_scenario, parallel=True, executor=pool)()
+        assert r.result.value == "value", error()
+
+        r = await Scenario(name=f"test 1", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)(force_fail=True)
+        assert isinstance(r.result, XFail), error()
+
 
 @TestFeature
 def feature(self):
@@ -130,6 +139,8 @@ def feature(self):
                 join()
                 assert len(test.futures) == 0, error()
 
+        with Scenario("async test that runs parallel tests in a process pool"):
+            Scenario(test=my_async_test)()
 
 if main():
     feature()

@@ -112,7 +112,7 @@ class WorkerSettings:
         if obj is None:
             return obj
         if not isinstance(obj, BaseServiceObject):
-            obj = process_service().register(obj)
+            obj = process_service().register(obj, sync=True, awaited=False)
         return obj
 
 
@@ -196,7 +196,7 @@ class _WorkItem(object):
                 try:
                     self.future.set_result(result)
                 except TypeError:
-                    self.future.set_result(process_service().register(result))
+                    self.future.set_result(process_service().register(result, sync=True, awaited=False))
 
         ctx.run(runner, self)
 
@@ -256,7 +256,7 @@ class ProcessPoolExecutor(_base.Executor):
         self._open = False
         self._max_workers = max_workers
         self._raw_work_queue = queue.Queue()
-        self._work_queue = process_service().register(self._raw_work_queue)
+        self._work_queue = process_service().register(self._raw_work_queue, sync=True, awaited=False)
         self._processes = set()
         self._broken = False
         self._shutdown = False
@@ -293,11 +293,12 @@ class ProcessPoolExecutor(_base.Executor):
 
             service = process_service()
 
-            future = service.register(Future())
+            _raw_future = Future()
+            future = service.register(_raw_future, sync=True, awaited=False)
 
-            current_test = service.register(current())
-            previous_test = service.register(previous())
-            top_test = service.register(top())
+            current_test = service.register(current(), sync=True, awaited=False)
+            previous_test = service.register(previous(), sync=True, awaited=False)
+            top_test = service.register(top(), sync=True, awaited=False)
 
             work_item = _WorkItem(WorkerSettings(), current_test, previous_test, top_test, future, fn, args, kwargs)
 
@@ -310,9 +311,9 @@ class ProcessPoolExecutor(_base.Executor):
             work_item.run(local=True)
 
         if is_running_in_event_loop():
-            return wrap_future(future)
+            return wrap_future(_raw_future)
 
-        return future
+        return _raw_future
 
     def _adjust_process_count(self):
         """Increase worker count up to max_workers if needed.
