@@ -2,6 +2,8 @@ from multiprocessing.managers import ValueProxy
 import os
 import sys
 import time
+import asyncio
+
 from tracemalloc import start
 
 from testflows.core import *
@@ -9,6 +11,7 @@ from testflows.asserts import error, raises
 
 from testflows._core.parallel.service import BaseServiceObject, ServiceError
 from testflows._core.exceptions import exception as get_exception
+
 
 @TestStep(Given)
 def start_process_service(self):
@@ -57,13 +60,29 @@ def simple_error():
     raise ValueError("error")
 
 @TestScenario
+async def simple_async_test(self):
+    note(f"hello {self.name} {os.getpid()}")
+
+@TestScenario
 async def my_async_test(self):
     with ProcessPool() as pool:
-        r = await Scenario(name=f"test 0", test=my_scenario, parallel=True, executor=pool)()
+        f = Scenario(name=f"test 0", test=my_scenario, parallel=True, executor=pool)()
+        assert isinstance(f, asyncio.Future), error()
+        r = await f
         assert r.result.value == "value", error()
 
         r = await Scenario(name=f"test 1", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)(force_fail=True)
         assert isinstance(r.result, XFail), error()
+
+        async with Scenario("multiple parallel tests"):
+            for i in range(10):
+                Scenario(name=f"test {i}", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)()
+            await join()
+        
+        #async with Scenario("multiple parallel async tests"):
+        #    for i in range(10):
+        #        Scenario(name=f"test {i}", test=simple_async_test, flags=XFAIL, parallel=True, executor=pool)()
+        #    await join()
 
 
 @TestFeature

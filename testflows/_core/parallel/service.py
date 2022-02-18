@@ -504,26 +504,28 @@ class BaseServiceObject:
         if kwargs is None:
             kwargs = dict()
 
-        if _process_service is None:
-            raise ServiceNotRunningError("service has not been started")
+        try:
+            async def wrap(c):
+                """Wrap coroutine that is running in another event loop.
+                """
+                if asyncio.get_event_loop() is not _process_service.loop:
+                    return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
+                return await c
 
-        async def wrap(c):
-            """Wrap coroutine that is running in another event loop.
-            """
-            if asyncio.get_event_loop() is not _process_service.loop:
-                return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
-            return await c
+            send = await wrap(_process_service._connect(address))
+            response = await wrap(send(uuid.uuid1().bytes, oid, fn, args, kwargs, resp=True, timeout=timeout))
 
-        send = await wrap(_process_service._connect(address))
-        response = await wrap(send(uuid.uuid1().bytes, oid, fn, args, kwargs, resp=True, timeout=timeout))
+            await asyncio.wait_for(wrap(response.wait()), timeout=timeout)
+            reply_type, reply_body = response.message
 
-        await asyncio.wait_for(wrap(response.wait()), timeout=timeout)
-        reply_type, reply_body = response.message
-
-        if reply_type == Service.MsgTypes.REPLY_EXCEPTION:
-            if isinstance(reply_body, (SystemExit, KeyboardInterrupt)):
-                reply_body = RuntimeError(f"{reply_body.__class__}: {reply_body}")
-            raise reply_body
+            if reply_type == Service.MsgTypes.REPLY_EXCEPTION:
+                if isinstance(reply_body, (SystemExit, KeyboardInterrupt)):
+                    reply_body = RuntimeError(f"{reply_body.__class__}: {reply_body}")
+                raise reply_body
+        except AttributeError:
+            if _process_service is None:
+                raise ServiceNotRunningError("service has not been started")
+            raise
 
         return reply_body
 
