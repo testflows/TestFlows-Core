@@ -333,9 +333,62 @@ class ExamplesRow(TestObject):
         self.row_format = row_format
 
 class Secret(TestObject):
-    """RSA encrypted secret.
+    """Secret value.
     """
-    _fields = ("name", "code", "pubkey_id", "type", "group", "uid")
+    _fields = ("name", "type", "group", "uid")
+    _defaults = (None,) * 4
+    
+    uid = None
+    type = None
+    name = None
+    group = None
+
+    def __init__(self, name=None, type=None, group=None, uid=None):
+        self.name = get(name, self.name)
+        if self.name is None:
+            raise TypeError("name must be specified")
+        self.type = get(type, self.type)
+        self.group = get(group, self.group)
+        self.uid = get(uid, self.uid)
+        self._value = None
+
+    def clear(self):
+        self._value = None
+        return self
+
+    def __call__(self, value=None):
+        if value is not None:
+            self._value = str(value)
+
+        return self
+
+    @property
+    def value(self):
+        """Return plaintext value of the secret.
+        """
+        if self._value is None:
+            raise ValueError("no value")
+        return self._value
+
+    def __str__(self):
+        return self.__repr__()
+
+    def __repr__(self):
+        """Custom object representation.
+        """
+        kwargs = []
+        for field in self._fields:
+            value = getattr(self, field)
+            if value is None:
+                continue
+            kwargs.append(f"{field}={repr(value)}")
+
+        return f"Secret({','.join(kwargs)})"
+
+class RSASecret(Secret):
+    """RSA encrypted secret value.
+    """
+    _fields = ("name", "type", "group", "uid", "code", "pubkey_id",)
     _defaults = (None,) * 6
     uid = None
     name = None
@@ -343,7 +396,7 @@ class Secret(TestObject):
     group = None
     encoding = "utf-8"
 
-    def __init__(self, name=None, code=None, pubkey_id=None, type=None, group=None, uid=None):
+    def __init__(self, name=None, type=None, group=None, uid=None, code=None, pubkey_id=None):
         self.name = get(name, None)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
@@ -355,10 +408,6 @@ class Secret(TestObject):
         self._value = None
 
         self.__call__(code=code)
-
-    def clear(self):
-        self._value = None
-        return self
 
     def __call__(self, value=None, code=None, private_key=None, public_key=None):
         if value is not None:
@@ -388,17 +437,6 @@ class Secret(TestObject):
             self._value = rsa.decrypt(self.code, private_key).decode(self.encoding)
 
         return self
-
-    @property
-    def value(self):
-        """Return plaintext value of the secret.
-        """
-        if self._value is None:
-            raise ValueError("no value")
-        return self._value
-
-    def __str__(self):
-        return self.__repr__()
 
     def __repr__(self):
         """Custom object representation.
