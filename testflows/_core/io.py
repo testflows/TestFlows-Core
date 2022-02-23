@@ -23,7 +23,7 @@ from .compress import compress
 from .constants import id_sep, end_of_message
 from .exceptions import exception as get_exception
 from .message import Message, MessageObjectType, dumps
-from .objects import Tag, ExamplesRow
+from .objects import Tag, ExamplesRow, secrets_registry
 from . import __version__
 from .parallel.service import BaseServiceObject
 
@@ -42,6 +42,15 @@ class TestOutput(object):
     :param io: message IO
     """
     protocol_version = "TFSPv2.1"
+
+    filter_keys = {
+        "test_description": True,
+        "message": True,
+        "attribute_value": True,
+        "argument_value": True,
+        "result_message": True,
+        "value_value": True
+        }
 
     def __init__(self, test, io):
         self.io = io
@@ -81,8 +90,11 @@ class TestOutput(object):
             "message_rtime": round(msg_time - self.test.start_time, settings.time_resolution)
         }
         msg.update(self.prefix)
-        msg.update(message)
 
+        if not secrets_registry.is_empty():
+            message = {k: secrets_registry.filter(v) if v is not None and k in self.filter_keys else v for k,v in message.items()}
+
+        msg.update(message)       
         msg = dumps(msg)
 
         self.msg_hash = settings.hash_func(msg.encode("utf-8")).hexdigest()[:settings.hash_length]

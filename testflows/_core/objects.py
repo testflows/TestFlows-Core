@@ -12,14 +12,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import re
 import base64
 import hashlib
+import threading
+
 from collections import namedtuple
 from .utils.enum import IntEnum
 from .exceptions import SpecificationError, RequirementError, ResultException
 from .baseobject import TestObject, Table
 from .baseobject import get, hash
 from .testtype import TestType
+
 import testflows._core.contrib.rsa as rsa
 
 class Result(TestObject, ResultException):
@@ -332,6 +336,50 @@ class ExamplesRow(TestObject):
         self.values = [str(value) for value in values]
         self.row_format = row_format
 
+class Secrets:
+    """Secrets registry.
+    """
+    def __init__(self):
+        self._secrets = set()
+        self._filter_regex = re.compile(r"")
+        self._filter_secrets = []
+        self._lock = threading.Lock()
+    
+    def is_empty(self):
+        """Return True if registry is empty.
+        """
+        with self._lock:
+            return not bool(self._filter_secrets)
+
+    def register(self, secret):
+        """Register secret object.
+        """
+        with self._lock:
+            self._secrets.add(secret)
+            self._update_filter()
+
+    def unregister(self, secret):
+        """Unregister secret object.
+        """
+        with self._lock:
+            self._secrets.remove(secret)
+            self._update_filter()
+
+    def _update_filter(self):
+        """Update filter regex.
+        """
+        self._filter_secrets = [s for s in self._secrets if s.is_set()]
+        self._filter_regex = re.compile("|".join([f"(?P<{s.name}>{re.escape(s.value)})" for s in self._filter_secrets]))
+
+    def filter(self, message):
+        """Filter all secret values from message.
+        """
+        with self._lock:
+            return self._filter_regex.sub(lambda m: f"[masked]:{self._filter_secrets[m.lastindex-1]}", message)
+
+
+secrets_registry = Secrets()
+
 class Secret(TestObject):
     """Secret value.
     """
@@ -359,8 +407,14 @@ class Secret(TestObject):
     def __call__(self, value=None):
         if value is not None:
             self._value = str(value)
+            secrets_registry.register(self)
 
         return self
+
+    def is_set(self):
+        """Return true if value has been set.
+        """
+        return self._value is not None
 
     @property
     def value(self):

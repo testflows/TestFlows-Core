@@ -41,7 +41,7 @@ from .objects import get, Null, OK, Fail, Skip, Error, PassResults, FailResults,
 from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
 from .objects import NamedValue, OnlyTags, SkipTags
-from .objects import Secret
+from .objects import RSASecret
 from .constants import name_sep
 from .io import TestIO
 from .name import join, depth, match, absname, isabs
@@ -1204,7 +1204,7 @@ def parse_cli_args(kwargs, parser_schema):
         if kwargs.get("private_key"):
             private_key = kwargs.get("private_key")
             for name, value in args.items():
-                if isinstance(value, Secret):
+                if isinstance(value, RSASecret):
                     value(public_key=private_key.pubkey)
 
     except (ExitException, KeyboardInterrupt, Exception) as exc:
