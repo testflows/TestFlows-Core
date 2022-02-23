@@ -98,6 +98,9 @@ class Service:
     def register(self, obj, sync=None, expose=None, awaited=True):
         """Register object with the service to be by remote services.
         """
+        if isinstance(obj, BaseServiceObject):
+            raise ValueError(f"registering service objects not allowed")
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -139,11 +142,10 @@ class Service:
             loop = None
 
         async def _async_unregister():
-            async with self.lock:
-                _id = id(obj)
+            _id = id(obj)
 
-                if _id in self.objects:
-                    del self.objects[id(obj)]
+            if _id in self.objects:
+                del self.objects[id(obj)]
         
         if loop is None:
             return asyncio.run_coroutine_threadsafe(_async_unregister(), loop=self.loop).result()
@@ -449,6 +451,12 @@ class BaseServiceObject:
             exitpriority=1
             )
 
+    def __str__(self):
+        return f"{self.__class__.__name__}:0x{self.oid:x},{self.address}] object at 0x{id(self):x}"
+
+    def __repr__(self):
+        return str(self)
+
     @staticmethod
     def _incref(oid, address):
         """Increment service object reference count.
@@ -533,7 +541,12 @@ class BaseServiceObject:
     def __proxy_call__(oid, address, fn, args=None, kwargs=None, timeout=None):
         """Synchronously execute function call on the remote service.
         """
-        return asyncio.run_coroutine_threadsafe(BaseServiceObject.__async_proxy_call__(oid, address, fn, args, kwargs, timeout=timeout), loop=_process_service.loop).result()
+        try:
+            return asyncio.run_coroutine_threadsafe(BaseServiceObject.__async_proxy_call__(oid, address, fn, args, kwargs, timeout=timeout), loop=_process_service.loop).result()
+        except AttributeError:
+            if _process_service is None:
+                raise ServiceNotRunningError("service has not been started")
+            raise
 
     def __reduce__(self):
         """Make service object serializable.
