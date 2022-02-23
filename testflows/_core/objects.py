@@ -374,8 +374,15 @@ class Secrets:
     def filter(self, message):
         """Filter all secret values from message.
         """
-        with self._lock:
+        def _filter(message):
             return self._filter_regex.sub(lambda m: f"[masked]:{self._filter_secrets[m.lastindex-1]}", message)
+    
+        with self._lock:
+            if type(message) in (list, tuple):
+                for i, e in enumerate(message):
+                    message[i] = _filter(e)
+                return message
+            return _filter(message)
 
 
 secrets_registry = Secrets()

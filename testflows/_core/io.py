@@ -49,7 +49,11 @@ class TestOutput(object):
         "attribute_value": True,
         "argument_value": True,
         "result_message": True,
-        "value_value": True
+        "result_reason": True,
+        "value_value": True,
+        "example_values": True,
+        "metric_value": True,
+        "tag_value": True
         }
 
     def __init__(self, test, io):

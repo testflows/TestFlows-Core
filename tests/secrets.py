@@ -9,15 +9,34 @@ def argparser(parser):
 def feature(self, secret):
     """Test basic usage of secret.
     """
-    with When("I use secret object"):
+    with When("secret object"):
         note(secret)
     
-    with When("I use secret value"):
+    with When("in note, debug, trace"):
         note(secret.value)
-        note("bobo")
+        debug(secret.value)
+        trace(secret.value)
     
-    with When("bobo"):
+    with When(f"in test name {secret.value}"):
         pass
+
+    with When("in examples", examples=Examples("x y", [(secret.value, secret.value)])):
+        pass
+
+    with When("in value"):
+        value("test", {secret.value: secret.value})
+    
+    with When("in tag value", tags=[secret.value, secret.value]):
+        pass
+
+    with When("in description", description=f"{secret.value}"):
+        pass
+
+    with When("in result"):
+        xfail(secret.value, reason=f"{secret.value}")
+
+    with When("in metric"):
+        metric("test", units="", value=f"{secret.value}")
 
 if main():
     feature()
