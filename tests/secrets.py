@@ -38,5 +38,8 @@ def feature(self, secret):
     with When("in metric"):
         metric("test", units="", value=f"{secret.value}")
 
+    with When("RSASecret object"):
+        s = RSASecret("my RSA encrypted secret")
+
 if main():
     feature()

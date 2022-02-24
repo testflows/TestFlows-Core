@@ -28,7 +28,7 @@ from testflows._core.objects import OnlyTags, SkipTags
 from testflows._core.objects import FFails, Skipped, Failed, XFailed, XErrored, Okayed, XOkayed
 from testflows._core.objects import Attributes, Requirements, Specifications, Examples, ArgumentParser
 from testflows._core.objects import Node, Tag, Argument, Attribute, Requirement, Specification, Metric, Value, Ticket
-from testflows._core.objects import Secret
+from testflows._core.objects import Secret, RSASecret
 from testflows._core.baseobject import Table
 from testflows._core.filters import The
 from testflows._core.funcs import load, append_path, cleanup
