@@ -1,4 +1,5 @@
 from testflows.core import *
+from testflows.asserts import raises
 
 def argparser(parser):
     parser.add_argument("-s", "--secret", type=Secret(name="secret"), metavar="secret", help="secret value", required=True)
@@ -9,9 +10,16 @@ def argparser(parser):
 def feature(self, secret):
     """Test basic usage of secret.
     """
+    with When("creating secret"):
+        Secret("my_secret")("my secret value")
+    
+    with When("creating secret with invalid name"):
+        with raises(ValueError):
+            Secret("my secret")("my secret value")
+
     with When("secret object"):
         note(secret)
-    
+
     with When("in note, debug, trace"):
         note(secret.value)
         debug(secret.value)

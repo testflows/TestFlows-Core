@@ -400,8 +400,15 @@ class Secret(TestObject):
 
     def __init__(self, name=None, type=None, group=None, uid=None):
         self.name = get(name, self.name)
+
         if self.name is None:
             raise TypeError("name must be specified")
+        else:
+            try:
+                re.compile(rf"(?P<{self.name}>)")
+            except re.error as e:
+                raise ValueError("invalid secret name, " + str(e).replace("group name ", "")) from None
+
         self.type = get(type, self.type)
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
