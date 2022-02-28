@@ -340,7 +340,7 @@ class Secrets:
     """Secrets registry.
     """
     def __init__(self):
-        self._secrets = set()
+        self._secrets = {}
         self._filter_regex = re.compile(r"")
         self._filter_secrets = []
         self._lock = threading.Lock()
@@ -355,20 +355,22 @@ class Secrets:
         """Register secret object.
         """
         with self._lock:
-            self._secrets.add(secret)
+            if secret.name in self._secrets:
+                raise ValueError(f"secret '{secret.name}' already registered")
+            self._secrets[secret.name] = secret
             self._update_filter()
 
     def unregister(self, secret):
         """Unregister secret object.
         """
         with self._lock:
-            self._secrets.remove(secret)
+            self._secrets.pop(secret.name, None)
             self._update_filter()
 
     def _update_filter(self):
         """Update filter regex.
         """
-        self._filter_secrets = [s for s in self._secrets if s.is_set()]
+        self._filter_secrets = [s for s in self._secrets.values() if s.is_set()]
         self._filter_regex = re.compile("|".join([f"(?P<{s.name}>{re.escape(s.value)})" for s in self._filter_secrets]))
 
     def filter(self, message):
@@ -414,8 +416,15 @@ class Secret(TestObject):
         self.uid = get(uid, self.uid)
         self._value = None
 
+    def __enter__(self):
+        return self
+    
+    def __exit__(self, exc_value, exc_type, exc_tb):
+        self.clear()
+
     def clear(self):
         self._value = None
+        secrets_registry.unregister(self)
         return self
 
     def __call__(self, value=None):

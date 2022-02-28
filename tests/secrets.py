@@ -1,15 +1,12 @@
 from testflows.core import *
 from testflows.asserts import raises
 
-def argparser(parser):
-    parser.add_argument("-s", "--secret", type=Secret(name="secret"), metavar="secret", help="secret value", required=True)
-
-
 @TestModule
-@ArgumentParser(argparser)
-def feature(self, secret):
+def feature(self):
     """Test basic usage of secret.
     """
+    secret = Secret("secret")("hello there")
+
     with When("creating secret"):
         Secret("my_secret")("my secret value")
     
@@ -45,6 +42,18 @@ def feature(self, secret):
 
     with When("in metric"):
         metric("test", units="", value=f"{secret.value}")
+
+    with When("creating secrets with duplicate names"):
+        Secret("my_duplicate")("hello")
+        with raises(ValueError):
+            Secret("my_duplicate")("there")
+
+    with When("creating secrets using context manager"):
+        with Secret("my_duplicate_2")("hello"):
+            with raises(ValueError):
+                Secret("my_duplicate_2")("there")
+        with Secret("my_duplicate_2")("hello"):
+            pass
 
     with When("RSASecret object"):
         s = RSASecret("my RSA encrypted secret")
