@@ -50,3 +50,5 @@ global_async_pool = None
 global_process_pool = None
 #: service timeout
 service_timeout = 0.1
+#: secrets registry
+secrets_registry = None

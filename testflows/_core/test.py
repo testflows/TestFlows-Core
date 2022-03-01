@@ -41,7 +41,7 @@ from .objects import get, Null, OK, Fail, Skip, Error, PassResults, FailResults,
 from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
 from .objects import NamedValue, OnlyTags, SkipTags
-from .objects import RSASecret
+from .objects import RSASecret, Secrets
 from .constants import name_sep
 from .io import TestIO
 from .name import join, depth, match, absname, isabs
@@ -1008,6 +1008,7 @@ def parse_cli_args(kwargs, parser_schema):
         settings.show_retries = args.pop("_show_retries", None) or False
         settings.trim = args.pop("_trim", None) or False
         settings.random_order = args.pop("_random", None) or False
+        settings.secrets_registry = Secrets()
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})

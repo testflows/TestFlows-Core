@@ -17,6 +17,8 @@ import base64
 import hashlib
 import threading
 
+import testflows.settings as settings
+
 from collections import namedtuple
 from .utils.enum import IntEnum
 from .exceptions import SpecificationError, RequirementError, ResultException
@@ -339,12 +341,16 @@ class ExamplesRow(TestObject):
 class Secrets:
     """Secrets registry.
     """
-    def __init__(self):
-        self._secrets = {}
+    def __init__(self, secrets=None):
+        self._secrets = secrets or {}
         self._filter_regex = re.compile(r"")
         self._filter_secrets = []
         self._lock = threading.Lock()
+        self._update_filter()
     
+    def __reduce__(self):
+        return (Secrets, (self._secrets,))
+
     def is_empty(self):
         """Return True if registry is empty.
         """
@@ -393,8 +399,6 @@ class Secrets:
                 return _message
             return _filter(message)
 
-secrets_registry = Secrets()
-
 class Secret(TestObject):
     """Secret value.
     """
@@ -430,13 +434,17 @@ class Secret(TestObject):
 
     def clear(self):
         self._value = None
-        secrets_registry.unregister(self)
+        if not settings.secrets_registry:
+            raise RuntimeError("no secrets registry")
+        settings.secrets_registry.unregister(self)
         return self
 
     def __call__(self, value=None):
         if value is not None:
             self._value = str(value)
-            secrets_registry.register(self)
+            if not settings.secrets_registry:
+                raise RuntimeError("no secrets registry")
+            settings.secrets_registry.register(self)
 
         return self
 

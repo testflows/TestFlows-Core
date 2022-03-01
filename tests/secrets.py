@@ -1,5 +1,17 @@
 from testflows.core import *
 from testflows.asserts import raises
+from testflows.connect import Shell
+
+@TestScenario
+def check_filtering(self, secret):
+    with When("in note, debug, trace"):
+        note(secret.value)
+        debug(secret.value)
+        trace(secret.value)
+
+    with When("in terminal"):
+        with Shell() as bash:
+            bash(f"export SECRET=\"{secret.value}\"")
 
 @TestModule
 def feature(self):
@@ -17,11 +29,13 @@ def feature(self):
     with When("secret object"):
         note(secret)
 
-    with When("in note, debug, trace"):
-        note(secret.value)
-        debug(secret.value)
-        trace(secret.value)
-    
+    with Scenario("check filtering"):
+        check_filtering(secret=secret)
+
+    with Scenario("in another process"):
+        with ProcessPool() as pool:
+            Scenario(test=check_filtering, parallel=True, executor=pool)(secret=secret)
+
     with When(f"in test name {secret.value}"):
         pass
 

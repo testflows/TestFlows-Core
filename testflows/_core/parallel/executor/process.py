@@ -107,6 +107,7 @@ class WorkerSettings:
                 settings.global_async_pool.initargs
             ) if settings.global_async_pool is not None else None
         self.global_process_pool = self._set_service_object(settings.global_process_pool)
+        self.secrets_registry = settings.secrets_registry
 
     def _set_service_object(self, obj):
         if obj is None:
@@ -167,6 +168,7 @@ class _WorkItem(object):
                 settings.global_async_pool = cls(*initargs)
             # set shared global process pool
             settings.global_process_pool = work_settings.global_process_pool
+            settings.secrets_registry = work_settings.secrets_registry
 
         def runner(self):
             try:
@@ -176,7 +178,7 @@ class _WorkItem(object):
                     current(self.current_test)
 
                     set_settings(self.settings)
-                    
+
                     # global thread and async pool are local to each work item
                     with (settings.global_thread_pool or contextlib.nullcontext()), (
                             settings.global_async_pool or contextlib.nullcontext()):
@@ -226,8 +228,8 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
     def pipe_data_received(self, fd, data):
         if not self.ready_future.done() and data:
             self.buffer += self.decoder.decode(data)
-            if self.buffer.startswith(WORKER_READY):
-                data = self.buffer[len(WORKER_READY):]
+            if WORKER_READY in self.buffer:
+                data = self.buffer.split(WORKER_READY, 1)[-1]
                 self.ready_future.set_result(True)
 
         elif data:
