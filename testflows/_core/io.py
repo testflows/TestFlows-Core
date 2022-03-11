@@ -86,6 +86,8 @@ class TestOutput(object):
             if not settings.secrets_registry.is_empty():
                 if "message" in message:
                     message["message"] = settings.secrets_registry.filter(message["message"])
+                if "result_message" in message:
+                    message["result_message"] = settings.secrets_registry.filter(message["result_message"])
 
         msg.update(message)       
         msg = dumps(msg)

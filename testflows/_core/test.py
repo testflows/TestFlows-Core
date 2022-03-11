@@ -78,6 +78,9 @@ output_formats = ["new-fails", "fails", "classic", "slick", "nice",
 rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
     "xok", "xfail", "xerror", "xnull", "skip"]
 
+# global secrets registry
+settings.secrets_registry = Secrets()
+
 async def run_async_generator(generator, consume=False):
     """Run async generator.
     """
@@ -1008,7 +1011,6 @@ def parse_cli_args(kwargs, parser_schema):
         settings.show_retries = args.pop("_show_retries", None) or False
         settings.trim = args.pop("_trim", None) or False
         settings.random_order = args.pop("_random", None) or False
-        settings.secrets_registry = Secrets()
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})
