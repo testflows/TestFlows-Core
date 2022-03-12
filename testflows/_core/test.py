@@ -294,7 +294,7 @@ class TestBase(object):
 
     def __init__(self, name=None, flags=None, cflags=None, type=None, subtype=None,
                  uid=None, tags=None, attributes=None, requirements=None, specifications=None,
-                 examples=None, description=None, parent=None,
+                 examples=None, description=None, parent=None, parent_type=None,
                  xfails=None, xflags=None, ffails=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
                  args=None, id=None, node=None, map=None, context=None,
@@ -320,6 +320,7 @@ class TestBase(object):
         self.start_time = time.time()
         self.test_time = None
         self.parent = parent
+        self.parent_type = parent_type
         self.id = get(id, [settings.test_id])
         self.node = get(node, self.node)
         self.map = get(map, list(self.map))
@@ -1796,6 +1797,7 @@ class TestDefinition(object):
 
         kwargs["subtype"] = subtype
         kwargs["type"] = type
+        kwargs["parent_type"] = parent_type
 
     def __repeat__(self, repeat=None, retry=None, *args):
         sys.settrace(self.trace)

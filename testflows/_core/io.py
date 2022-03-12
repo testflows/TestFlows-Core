@@ -55,7 +55,8 @@ class TestOutput(object):
             "test_name": self.test.name,
             "test_flags": int(self.test.flags),
             "test_cflags": int(self.test.cflags),
-            "test_level": len(self.test.id)
+            "test_level": len(self.test.id),
+            "test_parent_type": str(self.test.parent_type) if self.test.parent_type is not None else None
         }
 
     def message(self, keyword, message, object_type=0, stream=None):
