@@ -798,7 +798,7 @@ def cli_argparser(kwargs, argparser=None):
     parser.add_argument("--debug", dest="_debug", action="store_true",
                         help="enable debugging mode", default=None)
     parser.add_argument("--no-colors", dest="_no_colors",
-                        choices=["yes", "no", "on", "off", 0, 1],
+                        metavar=onoff_type.metavar,
                         help="disable terminal color highlighting", nargs='?',
                         type=onoff_type, default=NoneValue)
     parser.add_argument("--id", metavar="id", dest="_id", type=str, help="custom test id")
@@ -813,8 +813,9 @@ def cli_argparser(kwargs, argparser=None):
                         help="show skipped tests, default: False", default=None)
     parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
                         help="show test retries, default: False", default=None)
-    parser.add_argument("--trim-results", dest="_trim_results", action="store_true",
-                        help="show trimmed result messages, default: False", default=None)
+    parser.add_argument("--trim-results", dest="_trim_results",
+                        help="enable or disable trimming result messages, default: on",
+                        type=onoff_type, metavar=onoff_type.metavar, default=NoneValue)
     parser.add_argument("--repeat", dest="_repeat",
                         help=("repeat a test until it either fails, "
                               "passes or all iterations are completed.\n"
@@ -851,7 +852,7 @@ def cli_argparser(kwargs, argparser=None):
                               "--reference log file individually."))
 
     parser.add_argument("--parallel", dest="_parallel", type=onoff_type,
-                        choices=["yes", "no", "on", "off", 0, 1],
+                        metavar=onoff_type.metavar,
                         help=("enable or disable parallelism for tests "
                               "that support it, default: on"))
     parser.add_argument("--parallel-pool", dest="_parallel_pool",
@@ -914,6 +915,7 @@ def parse_cli_args(kwargs, parser_schema):
         schema.Optional("random"): bool,
         schema.Optional("debug"): bool,
         schema.Optional("no-colors"): bool,
+        schema.Optional("trim-results"): bool,
         schema.Optional("colors"): bool,
         schema.Optional("id"): str,
         schema.Optional("output"): schema.Or(*output_formats, error="key 'output' value is not a valid format"),
@@ -950,6 +952,8 @@ def parse_cli_args(kwargs, parser_schema):
             args["_no_colors"] = True
         elif args["_no_colors"] == NoneValue:
             args["_no_colors"] = None
+        if args["_trim_results"] == NoneValue:
+            args["_trim_results"] = None
 
         try:
             configs.reverse()
@@ -974,7 +978,7 @@ def parse_cli_args(kwargs, parser_schema):
             for config in configs:
                 config.close()
 
-        settings.debug = get(args.pop("_debug"), get(settings.debug, False))
+        settings.debug = get(args.pop("_debug", None), get(settings.debug, False))
         debug_processed = True
 
         if exc is not None:
@@ -983,7 +987,8 @@ def parse_cli_args(kwargs, parser_schema):
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
 
-        settings.no_colors = get(args.pop("_no_colors"), get(settings.no_colors, False))
+        settings.no_colors = get(args.pop("_no_colors", None), get(settings.no_colors, False))
+        settings.trim_results = get(args.pop("_trim_results", None), get(settings.trim_results, True))
 
         if args.get("_name"):
             kwargs["name"] = args.pop("_name")
@@ -1010,7 +1015,6 @@ def parse_cli_args(kwargs, parser_schema):
 
         settings.show_skipped = args.pop("_show_skipped", None) or False
         settings.show_retries = args.pop("_show_retries", None) or False
-        settings.trim_results = args.pop("_trim_results", None) or False
         settings.random_order = args.pop("_random", None) or False
 
         if args.get("_pause_before"):

@@ -25,6 +25,7 @@ from .handlers.requirement.handler import Handler as requirement_handler
 from .handlers.report.handler import Handler as report_handler
 from .handlers.show.handler import Handler as show_handler
 from .handlers.log import Handler as log_handler
+from .type import onoff as onoff_type
 
 try:
     from testflows.database.cli.handler import Handler as database_handler
@@ -51,8 +52,9 @@ parser.add_argument("--no-colors", dest="no_colors", action="store_true",
                     help="disable terminal color highlighting", default=False)
 parser.add_argument("--show-skipped", dest="show_skipped", action="store_true",
                     help="show skipped tests, default: False", default=False)
-parser.add_argument("--trim-results", dest="trim_results", action="store_true",
-                    help="show trimmed result messages, default: False", default=False)
+parser.add_argument("--trim-results", dest="trim_results", type=onoff_type,
+                    help="enable or disable trimming of result messages, default: on",
+                    metavar=onoff_type.metavar, default="on")
 parser.add_argument("-v", "--version", action="version", version=f"{__version__}")
 parser.add_argument("--license", action="version", help="show program's license and exit", version=f"{__license__}")
 

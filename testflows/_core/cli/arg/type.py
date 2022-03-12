@@ -195,10 +195,12 @@ def tags_filter(value):
     return option
 
 def onoff(value):
-    if value in ["yes", "1", "on"]:
+    if value.lower() in ["yes", "1", "on"]:
         return True
-    elif value in ["no", "0", "off"]:
+    elif value.lower() in ["no", "0", "off"]:
         return False
     elif value == NoneValue:
         return NoneValue
     raise ArgumentTypeError(f"'{value}' is invalid")
+
+onoff.metavar = str(set(["yes", "1", "on", "no", "0", "off"])).replace(" ","").replace("'","")
