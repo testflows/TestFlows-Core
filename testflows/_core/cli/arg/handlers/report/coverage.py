@@ -12,15 +12,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import os
-import sys
-import json
 import time
+import math
 import base64
-import threading
 import importlib.util
 
-from datetime import datetime
 from functools import partial
 
 import testflows.settings as settings
@@ -133,10 +129,15 @@ class Formatter:
     def format_summary(self, data):
         counts = data["counts"]
 
-        def template(value, title, color):
+        def template(value, units, title, color):
+            p_value = value / float(units) * 100
+            if p_value > 1:
+                value = f"{p_value:.1f}".rstrip("0").rstrip(".") + "%"
+            else:
+                value = f"<1%"
             return (
-                f'<div class="c100 p{value} {color} smaller-title">'
-                    f'<span>{value}%</span>'
+                f'<div class="c100 p{math.floor(p_value):.0f} {color} smaller-title">'
+                    f'<span>{value}</span>'
                     f'<span class="title">{title}</span>'
                     '<div class="slice">'
                         '<div class="bar"></div>'
@@ -150,11 +151,11 @@ class Formatter:
         else:
             s += '<div class="chart">'
             if counts.satisfied > 0:
-                s += template(f"{counts.satisfied / float(counts.units) * 100:.0f}", "Satisfied", "green")
+                s += template(counts.satisfied, counts.units, "Satisfied", "green")
             if counts.unsatisfied > 0:
-                s += template(f"{counts.unsatisfied / float(counts.units) * 100:.0f}", "Unsatisfied", "red")
+                s += template(counts.unsatisfied, counts.units, "Unsatisfied", "red")
             if counts.untested > 0:
-                s += template(f"{counts.untested / float(counts.units) * 100:.0f}", "Untested", "orange")
+                s += template(counts.untested, counts.units, "Untested", "orange")
             s += '</div>\n'
         return s
 

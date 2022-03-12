@@ -14,6 +14,7 @@
 # limitations under the License.
 import json
 import time
+import math
 import base64
 
 from json import JSONEncoder
@@ -133,10 +134,15 @@ class MarkdownFormatter:
         errored = total("error")
         skipped = total("skip")
 
-        def template(value, title, color):
+        def template(value, units, title, color):
+            p_value = value / float(units) * 100
+            if p_value > 1:
+                value = f"{p_value:.1f}".rstrip("0").rstrip(".") + "%"
+            else:
+                value = f"<1%"
             return (
-                f'<div class="c100 p{value} {color}">'
-                    f'<span>{value}%</span>'
+                f'<div class="c100 p{math.floor(p_value):.0f} {color}">'
+                    f'<span>{value}</span>'
                     f'<span class="title">{title}</span>'
                     '<div class="slice">'
                         '<div class="bar"></div>'
@@ -152,17 +158,17 @@ class MarkdownFormatter:
             s += '<div class="chart">'
             if settings.show_skipped:
                 if skipped > 0:
-                    s += template(f"{skipped / float(units) * 100:.0f}", "Skip", "gray")
+                    s += template(skipped, units, "Skip", "gray")
             if passed > 0:
-                s += template(f"{passed / float(units) * 100:.0f}", "OK", "green")
+                s += template(passed, units, "OK", "green")
             if xout > 0:
-                s += template(f"{xout / float(units) * 100:.0f}", "Known", "")
+                s += template(xout, units, "Known", "")
             if failed > 0:
-                s += template(f"{failed / float(units) * 100:.0f}", "Fail", "red")
+                s += template(failed, units, "Fail", "red")
             if errored > 0:
-                s += template(f"{errored / float(units) * 100:.0f}", "Error", "orange")
+                s += template(errored, units, "Error", "orange")
             if nulled > 0:
-                s += template(f"{nulled / float(units) * 100:.0f}", "Null", "purple")
+                s += template(nulled, units, "Null", "purple")
             s += '</div>'
         return s
 
