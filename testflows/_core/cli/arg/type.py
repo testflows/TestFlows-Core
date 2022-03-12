@@ -165,6 +165,16 @@ def retry(value):
         if len(fields) < 2:
             raise ValueError("needs at least 2 values")
         pattern, count, timeout, delay, backoff = [*fields, *["", None, None, 0, 1][len(fields):]]
+        if not pattern:
+            pattern = ""
+        if not count:
+            count = None
+        if not timeout:
+            timeout = None
+        if not delay:
+            delay = 0
+        if not backoff:
+            backoff = 1
         option = Retry(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, pattern=pattern)
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")

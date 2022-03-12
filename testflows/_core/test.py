@@ -1879,10 +1879,12 @@ class TestDefinition(object):
 
         repeat_kwargs.pop("name", None)
         repeat_kwargs.pop("parent", None)
+        repeat_kwargs.pop("parent_type", None)
         repeat_kwargs["type"] = TestType.Iteration
 
         retry_kwargs.pop("name", None)
         retry_kwargs.pop("parent", None)
+        retry_kwargs.pop("parent_type", None)
         retry_kwargs["type"] = TestType.RetryIteration
 
         repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) & ~PARALLEL
@@ -2656,6 +2658,7 @@ class retries(object):
 
         if self.started and self.timeout is not None and time.time() - self.started >= self.timeout:
             flags |= LAST_RETRY
+            flags &= ~TE
 
         if not self.started:
             self.started = time.time()
@@ -2664,6 +2667,7 @@ class retries(object):
 
         if self.count is not None and self.count <= self.number + 1:
             flags |= LAST_RETRY
+            flags &= ~TE
 
         self.retry = RetryIteration(f"try #{self.number}", flags=flags, parent_type=parent_type, **kwargs)
 
