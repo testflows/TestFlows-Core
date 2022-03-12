@@ -70,7 +70,7 @@ MessageMap = namedtuple(
     )
 
 def dumps(o):
-    return json.dumps(o, separators=(",", ":"))
+    return json.dumps(o, separators=(",", ":"), ensure_ascii=False)
 
 def loads(s):
     return json.loads(s)
