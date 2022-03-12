@@ -305,7 +305,7 @@ def format_result(msg, no_colors=False):
     out += f", {_test}"
 
     _result_message = msg["result_message"]
-    if _result_message and settings.trim and int(msg["test_level"]) > 1:
+    if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
         _result_message = _result_message.strip().split("\n",1)[0].strip()
 
     if result in ("Fail", "Error", "Null"):

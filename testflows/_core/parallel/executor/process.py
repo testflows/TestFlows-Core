@@ -95,7 +95,7 @@ class WorkerSettings:
         self.database = settings.database
         self.show_skipped = settings.show_skipped
         self.show_retries = settings.show_retries
-        self.trim = settings.trim
+        self.trim_results = settings.trim_results
         self.random_order = settings.random_order
         self.service_timeout = settings.service_timeout
         self.global_thread_pool = (
@@ -153,7 +153,7 @@ class _WorkItem(object):
             settings.database = work_settings.database
             settings.show_skipped = work_settings.show_skipped
             settings.show_retries = work_settings.show_retries
-            settings.trim = work_settings.trim
+            settings.trim_results = work_settings.trim_results
             settings.random_order = work_settings.random_order
             settings.service_timeout = work_settings.service_timeout
             # set global thread pool

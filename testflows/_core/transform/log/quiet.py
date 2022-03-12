@@ -99,7 +99,7 @@ def format_result(msg, prefix):
     _indent = f"{strftimedelta(msg['message_rtime']):>10}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
     _result_message = msg["result_message"]
-    if _result_message and settings.trim and int(msg["test_level"]) > 1:
+    if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
         _result_message = _result_message.strip().split("\n",1)[0].strip()
 
     out = (f"{color_other(_indent)}{_result} "

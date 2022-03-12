@@ -813,7 +813,7 @@ def cli_argparser(kwargs, argparser=None):
                         help="show skipped tests, default: False", default=None)
     parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
                         help="show test retries, default: False", default=None)
-    parser.add_argument("--trim", dest="_trim", action="store_true",
+    parser.add_argument("--trim-results", dest="_trim_results", action="store_true",
                         help="show trimmed result messages, default: False", default=None)
     parser.add_argument("--repeat", dest="_repeat",
                         help=("repeat a test until it either fails, "
@@ -1010,7 +1010,7 @@ def parse_cli_args(kwargs, parser_schema):
 
         settings.show_skipped = args.pop("_show_skipped", None) or False
         settings.show_retries = args.pop("_show_retries", None) or False
-        settings.trim = args.pop("_trim", None) or False
+        settings.trim_results = args.pop("_trim_results", None) or False
         settings.random_order = args.pop("_random", None) or False
 
         if args.get("_pause_before"):
