@@ -316,6 +316,7 @@ class TestBase(object):
         self.name = name
         if self.name is None:
             raise TypeError("name must be specified")
+        self.name = repr(self.name)[1:-1]
         self.child_count = 0
         self.start_time = time.time()
         self.test_time = None
