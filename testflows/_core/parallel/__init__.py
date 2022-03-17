@@ -131,22 +131,27 @@ def join(*futures, cancel=None, test=None, raise_exception=True):
     while True:
         if not futures:
             break
-        future = futures.pop(0)
-
+        future = None
         try:
-            if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
-                future.cancel()
+            future = futures.pop(0)
             try:
-                exception = future.exception(timeout=0.1)
-                if exception is not None:
-                    exceptions.append(exception)
-                else:
-                    tests.append(future.result(timeout=0.1))
-            except TimeoutError:
+                if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
+                    future.cancel()
+                try:
+                    exception = future.exception(timeout=0.1)
+                    if exception is not None:
+                        exceptions.append(exception)
+                    else:
+                        tests.append(future.result(timeout=0.1))
+                except TimeoutError:
+                    futures.append(future)
+                    continue
+            except CancelledError:
+                pass
+        except BaseException:
+            if future is not None:
                 futures.append(future)
-                continue
-        except CancelledError:
-            pass
+            raise
 
     if raise_exception is False:
         return tests, exceptions
@@ -178,29 +183,32 @@ async def _async_join(*futures, cancel=None, test=None, raise_exception=True):
     while True:
         if not futures:
             break
-        future = futures.pop()
-
-        if isinstance(future, ConcurrentFuture):
-            future = asyncio.wrap_future(future)
-
-        if not isinstance(future, AsyncFuture):
-            continue
-
+        future = None
         try:
-            if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
-                future.cancel()
-            try:
-                await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
-                exception = future.exception()
-                if exception is not None:
-                    exceptions.append(exception)
-                else:
-                    tests.append(future.result())
-            except AsyncTimeoutError:
-                futures.append(future)
+            future = futures.pop()
+            if isinstance(future, ConcurrentFuture):
+                future = asyncio.wrap_future(future)
+            if not isinstance(future, AsyncFuture):
                 continue
-        except AsyncCancelledError:
-            pass
+            try:
+                if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
+                    future.cancel()
+                try:
+                    await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
+                    exception = future.exception()
+                    if exception is not None:
+                        exceptions.append(exception)
+                    else:
+                        tests.append(future.result())
+                except AsyncTimeoutError:
+                    futures.append(future)
+                    continue
+            except AsyncCancelledError:
+                pass
+        except BaseException:
+            if future is not None:
+                futures.append(future)
+            raise
 
     if raise_exception is False:
         return tests, exceptions

@@ -2100,7 +2100,10 @@ class TestDefinition(object):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Synchronous text exit.
         """
+        if isinstance(exc_value, KeyboardInterrupt):
+            self.test.terminating = exc_value
         frame = inspect.currentframe().f_back
+
         if self._enter_exc_info:
             exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
@@ -2137,13 +2140,16 @@ class TestDefinition(object):
                 finally:
                     self.parent.lock.release()
             else:
-                self.terminating = exc
+                self.test.terminating = exc
             raise
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         """Asynchronous test exit.
         """
+        if isinstance(exc_value, KeyboardInterrupt):
+            self.test.terminating = exc_value
         frame = inspect.currentframe().f_back
+
         if self._enter_exc_info:
             exc_type, exc_value, exc_traceback = self._enter_exc_info
         if exc_value:
@@ -2180,7 +2186,7 @@ class TestDefinition(object):
                 finally:
                     self.parent.lock.release()
             else:
-                self.terminating = exc
+                self.test.terminating = exc
             raise
 
 class Module(TestDefinition):
