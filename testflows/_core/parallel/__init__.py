@@ -137,11 +137,11 @@ def join(*futures, cancel=None, test=None, raise_exception=True):
             if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
                 future.cancel()
             try:
-                exception = future.exception(timeout=1)
+                exception = future.exception(timeout=0.1)
                 if exception is not None:
                     exceptions.append(exception)
                 else:
-                    tests.append(future.result())
+                    tests.append(future.result(timeout=0.1))
             except TimeoutError:
                 futures.append(future)
                 continue
@@ -190,7 +190,7 @@ async def _async_join(*futures, cancel=None, test=None, raise_exception=True):
             if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
                 future.cancel()
             try:
-                await asyncio.wait_for(asyncio.shield(future), timeout=1)
+                await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
                 exception = future.exception()
                 if exception is not None:
                     exceptions.append(exception)

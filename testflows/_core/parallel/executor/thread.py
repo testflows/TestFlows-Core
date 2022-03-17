@@ -14,6 +14,7 @@
 # limitations under the License.
 # to the end flag
 import queue
+import random
 import weakref
 import threading
 import concurrent.futures.thread as _base
@@ -25,26 +26,29 @@ from ..asyncio import is_running_in_event_loop, wrap_future
 def _worker(executor_weakref, work_queue):
     try:
         while True:
-            work_item = work_queue.get(block=True)
             try:
-                if work_item is not None:
-                    work_item.run()
-                    del work_item
-                    continue
+                work_item = work_queue.get(block=True, timeout=random.random() % 0.2)
+                try:
+                    if work_item is not None:
+                        work_item.run()
+                        del work_item
+                        continue
+                finally:
+                    work_queue.task_done()
+            except queue.Empty:
+                pass
             finally:
-                work_queue.task_done()
-
-            executor = executor_weakref()
-            try:
-                if _base._shutdown or executor is None or executor._shutdown:
-                    if executor is not None:
-                        executor._shutdown = True
-                    work_queue.put(None)
-                    return
-            finally:
-                del executor
+                executor = executor_weakref()
+                try:
+                    if _base._shutdown or executor is None or executor._shutdown:
+                        if executor is not None:
+                            executor._shutdown = True
+                        work_queue.put(None)
+                        return
+                finally:
+                    del executor
     except BaseException:
-        _base.LOGGER.critical('Exception in thread worker', exc_info=True)
+        _base._base.LOGGER.critical('Exception in thread worker', exc_info=True)
 
 
 class ThreadPoolExecutor(_base.ThreadPoolExecutor):

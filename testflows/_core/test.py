@@ -620,6 +620,8 @@ class TestBase(object):
         else:
             self.io.close(flush=self.flags & REMOTE)
 
+        self.terminating = Skip("test has terminated", test=self.name)
+
         if not self.flags & SKIP:
             if self.flags & PAUSE_AFTER:
                 pause()
@@ -1623,8 +1625,8 @@ class TestDefinition(object):
             if not kwargs["cflags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
                 if (parent and parent.terminating is not None):
                     raise parent.terminating
-                if (top_test and top_test.terminating is not None):
-                    raise Skip("top test is terminating")
+            if (top_test and top_test.terminating is not None):
+                raise Skip("top test is terminating")
 
             self.test = test(name, tags=self.tags, description=self.description,
                 repeats=self.repeats, retries=self.retries, **kwargs)
