@@ -231,6 +231,7 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
             if WORKER_READY in self.buffer:
                 data = self.buffer.split(WORKER_READY, 1)[-1]
                 self.ready_future.set_result(True)
+                self.buffer = ''
 
         elif data:
             data = self.decoder.decode(data)

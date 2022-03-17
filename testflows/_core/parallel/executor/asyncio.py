@@ -161,43 +161,33 @@ class AsyncPoolExecutor(_base._base.Executor):
             args = fn, *args
             work_item = _AsyncWorkItem(future, ctx.run, args, kwargs)
 
-            idle_workers = self._adjust_task_count()
+            self._adjust_task_count(block=block)
 
-            if (idle_workers or block) and self._max_workers > 0:
-                if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
-                    raise RuntimeError("deadlock detected")
-                asyncio.run_coroutine_threadsafe(self._work_queue.put(work_item), loop=self._loop).result()
-
-        if (not block and not idle_workers) or self._max_workers < 1:
             if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
                 raise RuntimeError("deadlock detected")
-            asyncio.run_coroutine_threadsafe(work_item.run(), loop=self._loop).result()
+            asyncio.run_coroutine_threadsafe(self._work_queue.put(work_item), loop=self._loop).result()
 
         if is_running_in_event_loop():
             return asyncio.wrap_future(future)
 
         return future
 
-    def _adjust_task_count(self):
-        """Increase worker count up to max_workers if needed.
-        Returns `True` if worker is immediately available
-        to handle the work item or `False` otherwise.
+    def _adjust_task_count(self, block=True):
+        """Increase worker count up to max_workers if needed
+        when blocking otherwise no limits.
         """
         if len(self._tasks) - self._work_queue._unfinished_tasks > 0:
-            return True
+            return
 
         def weakref_cb(_, work_queue=self._work_queue):
             asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=self._loop).result()
 
         num_tasks = len(self._tasks)
-        if num_tasks < self._max_workers:
+        if num_tasks < self._max_workers or not block:
             task_name = "%s_%d" % (self._task_name_prefix or self, num_tasks)
             task = asyncio.run_coroutine_threadsafe(_worker(weakref.ref(self, weakref_cb), self._work_queue), loop=self._loop)
             self._tasks.add(task)
             _tasks_queues[task] = self._work_queue
-            return True
-
-        return False
 
     def __exit__(self, exc_type, exc_value, exc_tb):
         self.shutdown(wait=True)

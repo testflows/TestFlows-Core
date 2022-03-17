@@ -20,7 +20,7 @@ import atexit
 import inspect
 import traceback
 import threading
-
+import concurrent.futures
 import testflows.settings as settings
 
 from collections import namedtuple
@@ -30,11 +30,11 @@ from testflows._core.contrib import cloudpickle
 from testflows._core.contrib.aiomsg import Socket
 
 from .asyncio import asyncio, is_running_in_event_loop, CancelledError
-
+from .executor.thread import SharedThreadPoolExecutor
 
 Address = namedtuple("address", "hostname port", defaults=(None,))
 
-TimeoutError = asyncio.exceptions.TimeoutError
+TimeoutError = (asyncio.exceptions.TimeoutError, concurrent.futures._base.TimeoutError)
 
 
 class ServiceError(Exception):
@@ -92,6 +92,7 @@ class Service:
         self.serve_tasks = []
         self.reply_events = {}
         self.objects = {}
+        self.executor = SharedThreadPoolExecutor(1)
         self.open = False
         self.lock = asyncio.Lock(loop=self.loop)
 
@@ -236,6 +237,7 @@ class Service:
         """Async context manager enter.
         """
         async with self.lock:
+            self.executor.__enter__()
             await self.in_socket.bind(hostname=self.address.hostname, port=self.address.port)
             self.address = Address(*self.in_socket.bind_address)
             self.loop.create_task(self._serve_forever())
@@ -261,6 +263,7 @@ class Service:
 
                 await self.out_socket.close()
                 await self.in_socket.close()
+                self.executor.__exit__(None, None, None)
             finally:
                 self.open = False
 
@@ -315,7 +318,7 @@ class Service:
             elif fn == "__decref__":
                 r = self.__decref__(oid, obj_item)
             else:
-                r = await self.loop.run_in_executor(None, r)
+                r = await self.loop.run_in_executor(self.executor, r)
 
             if asyncio.iscoroutine(r):
                 r = await r
@@ -336,7 +339,6 @@ class Service:
             # process request
             oid, fn, args, kwargs = msg_body
             msg_type, r = await self._exec(oid, fn, args, kwargs)
-
             try:
                 await self.in_socket.send_pickle((msg_type, rid, r), identity=identity)
             except TypeError as e:
@@ -521,7 +523,7 @@ class BaseServiceObject:
                 return await c
 
             send = await wrap(_process_service._connect(address))
-            response = await wrap(send(uuid.uuid1().bytes, oid, fn, args, kwargs, resp=True, timeout=timeout))
+            response = await wrap(send(uuid.uuid1().hex, oid, fn, args, kwargs, resp=True, timeout=timeout))
 
             await asyncio.wait_for(wrap(response.wait()), timeout=timeout)
             reply_type, reply_body = response.message

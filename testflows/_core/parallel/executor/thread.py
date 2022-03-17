@@ -92,32 +92,26 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
             args = fn, *args
             work_item = _base._WorkItem(future, ctx.run, args, kwargs)
 
-            idle_workers = self._adjust_thread_count()
-
-            if (idle_workers or block) and self._max_workers > 0:
-                self._work_queue.put(work_item)
-
-        if (not block and not idle_workers) or self._max_workers < 1:
-            work_item.run()
+            self._adjust_thread_count(block=block)
+            self._work_queue.put(work_item)
 
         if is_running_in_event_loop():
             return wrap_future(future)
 
         return future
 
-    def _adjust_thread_count(self):
-        """Increase worker count up to max_workers if needed.
-        Return `True` if worker is immediately available to handle
-        the work item or `False` otherwise.
+    def _adjust_thread_count(self, block=True):
+        """Increase worker count up to max_workers if needed
+        when blocking otherwise no limits.
         """
         if len(self._threads) - self._work_queue.unfinished_tasks > 0:
-            return True
+            return
 
         def weakref_cb(_, work_queue=self._work_queue):
             work_queue.put(None)
 
         num_threads = len(self._threads)
-        if num_threads < self._max_workers:
+        if num_threads < self._max_workers or not block:
             thread_name = "%s_%d" % (self._thread_name_prefix or self, num_threads)
             thread = threading.Thread(name=thread_name,
                 target=_worker, args=(weakref.ref(self, weakref_cb),
@@ -125,9 +119,6 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
             thread.start()
             self._threads.add(thread)
             _base._threads_queues[thread] = self._work_queue
-            return True
-
-        return False
 
     def shutdown(self, wait=True):
         with self._shutdown_lock:
