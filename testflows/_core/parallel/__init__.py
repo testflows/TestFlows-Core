@@ -131,7 +131,7 @@ def join(*futures, cancel=None, test=None, raise_exception=True):
     while True:
         if not futures:
             break
-        future = futures.pop()
+        future = futures.pop(0)
 
         try:
             if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:

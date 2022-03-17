@@ -76,7 +76,8 @@ def _python_exit():
 atexit.register(_python_exit)
 
 
-WorkQueueType = ServiceObjectType("WorkQueue", auto_expose(queue.Queue()))
+WorkQueue = ServiceObjectType("WorkQueue", auto_expose(queue.Queue()))
+WorkQueue.Empty = queue.Empty
 
 class WorkerSettings:
     """Remote service object that is used to pass settings
@@ -231,6 +232,7 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
             if WORKER_READY in self.buffer:
                 data = self.buffer.split(WORKER_READY, 1)[-1]
                 self.ready_future.set_result(True)
+                self.buffer = ''
 
         elif data:
             data = self.decoder.decode(data)

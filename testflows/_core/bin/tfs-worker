@@ -16,7 +16,7 @@
 import sys
 
 from testflows._core.parallel.service import process_service
-from testflows._core.parallel.executor.process import WorkQueueType
+from testflows._core.parallel.executor.process import WorkQueue
 try:
     import testflows.settings as settings
 
@@ -43,9 +43,12 @@ def worker(args):
     process_service()
 
     try:
-        work_queue = WorkQueueType(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
+        work_queue = WorkQueue(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
         while True:
-            work_item = work_queue.get(block=True)
+            try:
+                work_item = work_queue.get(block=True, timeout=0.1)
+            except WorkQueue.Empty:
+                continue
             try:
                 if work_item is not None:
                     work_item.run()
