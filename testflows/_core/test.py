@@ -36,6 +36,7 @@ from .flags import REMOTE, PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABL
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
 from .flags import EOK, EFAIL, EERROR, ESKIP, ERESULT
 from .flags import CFLAGS, PAUSE_BEFORE, PAUSE_AFTER, PAUSE_ON_PASS, PAUSE_ON_FAIL
+from .flags import SETUP, CLEANUP
 from .testtype import TestType, TestSubType
 from .objects import get, Null, OK, Fail, Skip, Error, PassResults, FailResults, NonFailResults
 from .objects import Argument, Attribute, Requirement, ArgumentParser
@@ -1571,9 +1572,13 @@ class TestDefinition(object):
             if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given, TestSubType.Finally, TestSubType.Cleanup]:
                 kwargs["flags"] |= MANDATORY
 
-            # auto set TE flag for Finally steps
+            # auto set SETUP flag for Given steps
+            if kwargs.get("subtype") in [TestSubType.Background, TestSubType.Given]:
+                kwargs["flags"] |= SETUP
+
+            # auto set TE and CLEANUP flag for Finally steps
             if kwargs.get("subtype") in [TestSubType.Finally, TestSubType.Cleanup]:
-                kwargs["flags"] |= TE
+                kwargs["flags"] |= TE | CLEANUP
 
             # should not skip mandatory steps
             if kwargs["flags"] & MANDATORY:
@@ -1622,11 +1627,11 @@ class TestDefinition(object):
                 kwargs["start"] = The(transform_pattern(str(kwargs.get("start")))) if kwargs.get("start") else None
                 kwargs["end"] = The(transform_pattern(str(kwargs.get("end")))) if kwargs.get("end") else None
 
-            if not kwargs["cflags"] & MANDATORY or kwargs.get("subtype") in (TestSubType.Background, TestSubType.Given):
+            if not kwargs["cflags"] & CLEANUP:
                 if (parent and parent.terminating is not None):
                     raise parent.terminating
-            if (top_test and top_test.terminating is not None):
-                raise Skip("top test is terminating")
+                if (top_test and top_test.terminating is not None):
+                    raise Skip("top test is terminating")
 
             self.test = test(name, tags=self.tags, description=self.description,
                 repeats=self.repeats, retries=self.retries, **kwargs)
