@@ -14,20 +14,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import sys
+import testflows.settings as settings
 
 from testflows._core.parallel.service import process_service
 from testflows._core.parallel.executor.process import WorkQueue
-try:
-    import testflows.settings as settings
+from testflows._core.exceptions import exception
+from testflows._core.cli.text import danger, warning
+from testflows._core.cli.arg.exit import *
+from testflows._core.cli.arg.parser import ArgumentParser
+from testflows._core.parallel.executor.process import WORKER_READY
+from testflows._core.parallel.service import Address
 
-    from testflows._core.exceptions import exception
-    from testflows._core.cli.text import danger, warning
-    from testflows._core.cli.arg.exit import *
-    from testflows._core.cli.arg.parser import ArgumentParser
-    from testflows._core.parallel.executor.process import WORKER_READY
-    from testflows._core.parallel.service import Address
-except KeyboardInterrupt:
-    sys.exit(1)
 
 def worker_ready():
     """Signal that worker is ready.
@@ -39,28 +36,24 @@ def worker(args):
     """TestFlows process worker.
     """
     worker_ready()
-
     process_service()
 
-    try:
-        work_queue = WorkQueue(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
-        while True:
-            try:
-                work_item = work_queue.get(block=True, timeout=0.1)
-            except WorkQueue.Empty:
+    work_queue = WorkQueue(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
+    while True:
+        try:
+            work_item = work_queue.get(block=True, timeout=0.1)
+        except WorkQueue.Empty:
+            continue
+        try:
+            if work_item is not None:
+                work_item.run()
+                del work_item
                 continue
-            try:
-                if work_item is not None:
-                    work_item.run()
-                    del work_item
-                    continue
-                else:
-                    # exit worker
-                    break
-            finally:
-                work_queue.task_done()
-    except BaseException as e:
-        raise
+            else:
+                # exit worker
+                break
+        finally:
+            work_queue.task_done()
 
 
 parser = ArgumentParser(prog="tfs-worker", description="""Worker process that executes remote tests.""")

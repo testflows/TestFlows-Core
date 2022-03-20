@@ -63,3 +63,8 @@ class ArgumentError(TestFlowsError):
     """Argument error.
     """
     pass
+
+class TerminatedError(TestFlowsError):
+    """Terminated error.
+    """
+    pass

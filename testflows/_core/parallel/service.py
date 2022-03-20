@@ -392,11 +392,12 @@ def process_service(**kwargs):
                     asyncio.set_event_loop(loop)
                     try:
                         loop.run_forever()
-                    finally:                       
+                    finally:
                         tasks = [task for task in asyncio.all_tasks(loop=loop)]
                         for task in tasks:
                             task.cancel()
                         loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+                        loop.run_until_complete(loop.shutdown_asyncgens())
                         loop.close()
 
                 thread = threading.Thread(target=run_event_loop, daemon=True)
@@ -421,7 +422,7 @@ def _stop_process_service():
     """Stop global process service.
     """
     global _process_service
- 
+
     with _process_service_lock:
         if _process_service is not None:
             _process_service.__exit__(None, None, None)
@@ -544,7 +545,11 @@ class BaseServiceObject:
         """Synchronously execute function call on the remote service.
         """
         try:
-            return asyncio.run_coroutine_threadsafe(BaseServiceObject.__async_proxy_call__(oid, address, fn, args, kwargs, timeout=timeout), loop=_process_service.loop).result()
+            c = BaseServiceObject.__async_proxy_call__(oid, address, fn, args, kwargs, timeout=timeout)
+            try:
+                return asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop).result()
+            finally:
+                c.close()
         except AttributeError:
             if _process_service is None:
                 raise ServiceNotRunningError("service has not been started")

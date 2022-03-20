@@ -31,6 +31,7 @@ import testflows._core.contrib.schema as schema
 from .parallel.asyncio import asyncio
 from .templog import filename as templog_filename
 from .exceptions import DummyTestException, ResultException, TestIteration, DescriptionError, TestRerunIndividually
+from .exceptions import TerminatedError
 from .flags import Flags, SKIP, TE, FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED, MANDATORY, MANUAL, AUTO
 from .flags import REMOTE, PARALLEL, NO_PARALLEL, ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY
 from .flags import XOK, XFAIL, XNULL, XERROR, XRESULT
@@ -81,6 +82,21 @@ rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
 
 # global secrets registry
 settings.secrets_registry = Secrets()
+
+import signal
+
+_ctrl_c = 0
+
+def sigint_handler(signal, frame):
+    global _ctrl_c
+    _ctrl_c += 1
+
+    if _ctrl_c > 1:
+        raise KeyboardInterrupt()
+    if top():
+        top().terminate(result=Error, reason="KeyboardInterrupt")
+
+signal.signal(signal.SIGINT, sigint_handler)
 
 async def run_async_generator(generator, consume=False):
     """Run async generator.
@@ -362,6 +378,7 @@ class TestBase(object):
         self.futures = []
         self.executor = None
         self.terminating = None
+        self.subtests = {}
         self.first_fail = get(first_fail, None)
         self.test_to_end = get(test_to_end, None)
         self.parallel_pool_size = get(parallel_pool_size, None)
@@ -413,6 +430,31 @@ class TestBase(object):
     def make_tags(cls, tags):
         return {str(tag) for tag in set(get(tags, cls.tags))}
 
+    def terminate(self, result=Skip, message="terminated", reason=None):
+        """Terminate test.
+        """
+        with self.lock:
+            if self.terminating:
+                return
+            self.terminating = True
+            self.result = result(message, reason=reason, test=self.name)
+            for subtest in self.subtests.values():
+                subtest.terminate()
+
+    def add_subtest(self, subtest):
+        """Add subtest.
+        """
+        with self.lock:
+            if self.terminating:
+                raise TerminatedError("test is terminating")
+            self.subtests[str(subtest.id)] = subtest
+
+    def remove_subtest(self, subtest):
+        """Remove subtest.
+        """
+        with self.lock:
+            self.subtests.pop(str(subtest.id), None)
+
     def _enter(self):
         if self is not top():
             if self.flags & MANUAL and not self.flags & SKIP and self.type >= TestType.Test:
@@ -432,6 +474,9 @@ class TestBase(object):
             self.args = {}
 
         self.io.output.test_message()
+
+        if self.parent:
+            self.parent.add_subtest(self)
 
         if self.flags & PAUSE_BEFORE and not self.flags & SKIP:
             pause()
@@ -473,6 +518,9 @@ class TestBase(object):
         if isinstance(exc_value, ResultException):
             self.result = self.result(exc_value)
 
+        elif isinstance(exc_value, TerminatedError):
+            self.result = Error("terminated", test=self.name)
+
         elif isinstance(exc_value, AssertionError):
             exception(exc_type, exc_value, exc_traceback, test=self)
             self.result = self.result(Fail(exc_type.__name__ + "\n" + get_exception(exc_type, exc_value, exc_traceback), test=self.name))
@@ -493,6 +541,14 @@ class TestBase(object):
 
         try:
             parallel_exception = None
+
+            if self.parent:
+                self.parent.remove_subtest(self)
+
+            if exc_value is not None:
+                # terminate any unfinished subtests
+                self.terminate()
+            self.subtests ={}
 
             # join any left over parallel tests and save
             try:
@@ -542,6 +598,14 @@ class TestBase(object):
 
         try:
             parallel_exception = None
+
+            if self.parent:
+                self.parent.add_subtest(self)
+
+            if exc_value is not None:
+                # terminate any unfinished subtests
+                self.terminate()
+            self.subtests = {}
 
             # join any left over parallel tests and save
             try:
@@ -620,8 +684,6 @@ class TestBase(object):
             self.io.close(final=True)
         else:
             self.io.close(flush=self.flags & REMOTE)
-
-        self.terminating = Skip("test has terminated", test=self.name)
 
         if not self.flags & SKIP:
             if self.flags & PAUSE_AFTER:
@@ -1422,6 +1484,7 @@ class TestDefinition(object):
             if current_test:
                 current_test.futures.append(future)
             return future
+
         return callable()
 
     async def __aenter__(self):
@@ -1628,10 +1691,8 @@ class TestDefinition(object):
                 kwargs["end"] = The(transform_pattern(str(kwargs.get("end")))) if kwargs.get("end") else None
 
             if not kwargs["cflags"] & CLEANUP:
-                if (parent and parent.terminating is not None):
-                    raise parent.terminating
-                if (top_test and top_test.terminating is not None):
-                    raise Skip("top test is terminating")
+                if parent and parent.terminating:
+                    raise TerminatedError("test has been terminated")
 
             self.test = test(name, tags=self.tags, description=self.description,
                 repeats=self.repeats, retries=self.retries, **kwargs)
@@ -2100,8 +2161,6 @@ class TestDefinition(object):
     def __exit__(self, exc_type, exc_value, exc_traceback):
         """Synchronous text exit.
         """
-        if isinstance(exc_value, KeyboardInterrupt):
-            self.test.terminating = exc_value
         frame = inspect.currentframe().f_back
 
         if self._enter_exc_info:
@@ -2133,21 +2192,11 @@ class TestDefinition(object):
             return self.__exit_common(exc_type, exc_value, exc_traceback, test__exit__)
 
         except (Exception, KeyboardInterrupt) as exc:
-            if self.parent:
-                try:
-                    self.parent.lock.acquire()
-                    self.parent.terminating = exc
-                finally:
-                    self.parent.lock.release()
-            else:
-                self.test.terminating = exc
             raise
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         """Asynchronous test exit.
         """
-        if isinstance(exc_value, KeyboardInterrupt):
-            self.test.terminating = exc_value
         frame = inspect.currentframe().f_back
 
         if self._enter_exc_info:
@@ -2179,14 +2228,6 @@ class TestDefinition(object):
             return self.__exit_common(exc_type, exc_value, exc_traceback, test__exit__)
 
         except (Exception, KeyboardInterrupt) as exc:
-            if self.parent:
-                try:
-                    self.parent.lock.acquire()
-                    self.parent.terminating = exc
-                finally:
-                    self.parent.lock.release()
-            else:
-                self.test.terminating = exc
             raise
 
 class Module(TestDefinition):
