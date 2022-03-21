@@ -333,7 +333,7 @@ class TestBase(object):
         self.name = name
         if self.name is None:
             raise TypeError("name must be specified")
-        self.name = repr(self.name)[1:-1]
+        self.name = self.name
         self.child_count = 0
         self.start_time = time.time()
         self.test_time = None
@@ -433,9 +433,9 @@ class TestBase(object):
     def terminate(self, result=Skip, message="terminated", reason=None):
         """Terminate test.
         """
+        if self.terminating:
+            return
         with self.lock:
-            if self.terminating:
-                return
             self.terminating = True
             self.result = result(message, reason=reason, test=self.name)
             for subtest in self.subtests.values():
@@ -475,9 +475,6 @@ class TestBase(object):
 
         self.io.output.test_message()
 
-        if self.parent:
-            self.parent.add_subtest(self)
-
         if self.flags & PAUSE_BEFORE and not self.flags & SKIP:
             pause()
 
@@ -497,6 +494,9 @@ class TestBase(object):
                 if match(self.name, pattern):
                     if force_when(self):
                         raise force_result(reason=force_reason, test=self.name)
+
+        if self.parent:
+            self.parent.add_subtest(self)
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)

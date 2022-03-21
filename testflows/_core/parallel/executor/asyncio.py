@@ -199,10 +199,6 @@ class AsyncPoolExecutor(_base._base.Executor):
 
         return False
 
-    def __exit__(self, exc_type, exc_value, exc_tb):
-        self.shutdown(wait=exc_value is None)
-        return False
-
     def shutdown(self, wait=True):
         with self._shutdown_lock:
             if self._shutdown:

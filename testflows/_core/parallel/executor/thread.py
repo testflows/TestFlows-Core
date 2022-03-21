@@ -133,10 +133,6 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
 
         return False
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.shutdown(wait=exc_val is None)
-        return False
-
     def shutdown(self, wait=True):
         with self._shutdown_lock:
             if self._shutdown:
