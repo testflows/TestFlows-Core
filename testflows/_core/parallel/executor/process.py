@@ -16,6 +16,7 @@
 import os
 import sys
 import time
+import uuid
 import codecs
 import atexit
 import signal
@@ -37,7 +38,7 @@ from .asyncio import asyncio
 from .asyncio import GlobalAsyncPoolExecutor
 from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
-from .. import current, top, previous, _get_parallel_context
+from .. import current, top, previous, _get_parallel_context, join as parallel_join
 from ...objects import Result
 from ...exceptions import TerminatedError
 
@@ -268,6 +269,7 @@ class ProcessPoolExecutor(_base.Executor):
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
         self._process_name_prefix = f"{process_name_prefix}ProcessPoolExecutor-{os.getpid()}-{self._counter()}"
+        self._uid = str(uuid.uuid1())
 
     @property
     def open(self):
@@ -303,6 +305,8 @@ class ProcessPoolExecutor(_base.Executor):
             service = process_service()
 
             _raw_future = Future()
+            _raw_future._executor_uid = self._uid
+
             future = service.register(_raw_future, sync=True, awaited=False)
 
             current_test = service.register(current(), sync=True, awaited=False)
@@ -364,11 +368,7 @@ class ProcessPoolExecutor(_base.Executor):
 
         return False
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.shutdown(wait=exc_val is None)
-        return False
-
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, test=None):
         with self._shutdown_lock:
             if self._shutdown:
                 return
@@ -378,10 +378,16 @@ class ProcessPoolExecutor(_base.Executor):
                 self._raw_work_queue.put_nowait(None)
 
         if wait:
-            for proc in self._processes:
-                while is_running(proc.transport.get_pid()):
-                    time.sleep(0.1)
-            self._processes = set()
+            if test is None:
+                test = current()
+            try:
+                if test:
+                    parallel_join(test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+            finally:
+                for proc in self._processes:
+                    while is_running(proc.transport.get_pid()):
+                        time.sleep(0.1)
+                self._processes = set()
 
 
 class SharedProcessPoolExecutor(ProcessPoolExecutor):

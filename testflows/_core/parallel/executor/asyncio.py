@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # to the end flag
+import uuid
 import atexit
 import weakref
 import itertools
@@ -22,6 +23,7 @@ import concurrent.futures.thread as _base
 from .future import Future 
 from .. import _get_parallel_context
 from ..asyncio import is_running_in_event_loop, asyncio
+from .. import current, join as parallel_join
 
 _tasks_queues = weakref.WeakKeyDictionary()
 _shutdown = False
@@ -127,6 +129,7 @@ class AsyncPoolExecutor(_base._base.Executor):
         self._task_name_prefix = (task_name_prefix or
             ("AsyncPoolExecutor-%d" % self._counter()))
         self._async_loop_thread = None
+        self._uid = str(uuid.uuid1())
 
     @property
     def open(self):
@@ -157,6 +160,8 @@ class AsyncPoolExecutor(_base._base.Executor):
                 raise RuntimeError("cannot schedule new futures after interpreter shutdown")
 
             future = Future()
+            future._executor_uid = self._uid
+
             ctx = _get_parallel_context()
             args = fn, *args
             work_item = _AsyncWorkItem(future, ctx.run, args, kwargs)
@@ -199,7 +204,7 @@ class AsyncPoolExecutor(_base._base.Executor):
 
         return False
 
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, test=None):
         with self._shutdown_lock:
             if self._shutdown:
                 return
@@ -210,21 +215,27 @@ class AsyncPoolExecutor(_base._base.Executor):
                 self._work_queue.put(None), loop=self._loop).result()
 
         if wait:
-            exc = None
-            for task in self._tasks:
-                try:
-                    task.result()
-                except BaseException as e:
-                    exc = e
+            if test is None:
+                test = current()
             try:
-                if exc is not None:
-                    raise exc
+                if test:
+                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
             finally:
-                asyncio.run_coroutine_threadsafe(
-                        _loop_send_stop_event(self._loop_stop_event), loop=self._loop
-                    ).result()
-                if self._async_loop_thread is not None:
-                    self._async_loop_thread.join()
+                exc = None
+                for task in self._tasks:
+                    try:
+                        task.result()
+                    except BaseException as e:
+                        exc = e
+                try:
+                    if exc is not None:
+                        raise exc
+                finally:
+                    asyncio.run_coroutine_threadsafe(
+                            _loop_send_stop_event(self._loop_stop_event), loop=self._loop
+                        ).result()
+                    if self._async_loop_thread is not None:
+                        self._async_loop_thread.join()
 
 
 class SharedAsyncPoolExecutor(AsyncPoolExecutor):

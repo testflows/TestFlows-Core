@@ -322,7 +322,7 @@ class TestBase(object):
 
         if current() is None:
             if top() is not None:
-                raise RuntimeError("only one top level test is allowed")
+                raise TerminatedError("only one top level test is allowed")
             top(self)
             # flag to indicate if main test called init
             self._init= False
@@ -378,6 +378,7 @@ class TestBase(object):
         self.futures = []
         self.executor = None
         self.terminating = None
+        self.terminated = None
         self.subtests = {}
         self.first_fail = get(first_fail, None)
         self.test_to_end = get(test_to_end, None)
@@ -430,12 +431,14 @@ class TestBase(object):
     def make_tags(cls, tags):
         return {str(tag) for tag in set(get(tags, cls.tags))}
 
-    def terminate(self, result=Skip, message="terminated", reason=None):
+    def terminate(self, result=Skip, message=None, reason="terminated"):
         """Terminate test.
         """
         if self.terminating:
             return
         with self.lock:
+            if self.terminating:
+                return
             self.terminating = True
             self.result = result(message, reason=reason, test=self.name)
             for subtest in self.subtests.values():
@@ -445,8 +448,6 @@ class TestBase(object):
         """Add subtest.
         """
         with self.lock:
-            if self.terminating:
-                raise TerminatedError("test is terminating")
             self.subtests[str(subtest.id)] = subtest
 
     def remove_subtest(self, subtest):
@@ -519,7 +520,7 @@ class TestBase(object):
             self.result = self.result(exc_value)
 
         elif isinstance(exc_value, TerminatedError):
-            self.result = Error("terminated", test=self.name)
+            self.result = Skip(None, reason="terminated", test=self.name)
 
         elif isinstance(exc_value, AssertionError):
             exception(exc_type, exc_value, exc_traceback, test=self)
@@ -550,11 +551,12 @@ class TestBase(object):
                 self.terminate()
             self.subtests ={}
 
-            # join any left over parallel tests and save
-            try:
-                parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
-            except (Exception, KeyboardInterrupt) as exc:
-                parallel_exception = exc
+            # join any left over parallel tests and save parallel exception
+            if self.futures:
+                try:
+                    parallel_join(futures=self.futures, test=self, all=True)
+                except (Exception, KeyboardInterrupt) as exc:
+                    parallel_exception = exc
 
             # context cleanups
             if self.type >= TestType.Iteration:
@@ -609,7 +611,7 @@ class TestBase(object):
 
             # join any left over parallel tests and save
             try:
-                await parallel_join(*self.futures, cancel=(exc_value is not None), test=self)
+                await parallel_join(futures=self.futures, test=self, all=True)
             except (Exception, KeyboardInterrupt) as exc:
                 parallel_exception = exc
 
@@ -2194,6 +2196,10 @@ class TestDefinition(object):
         except (Exception, KeyboardInterrupt) as exc:
             raise
 
+        finally:
+            if self.test:
+                self.test.terminated = True
+
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         """Asynchronous test exit.
         """
@@ -2229,6 +2235,10 @@ class TestDefinition(object):
 
         except (Exception, KeyboardInterrupt) as exc:
             raise
+        
+        finally:
+            if self.test:
+                self.test.terminated = True
 
 class Module(TestDefinition):
     """Module definition."""

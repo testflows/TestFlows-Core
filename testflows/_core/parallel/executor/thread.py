@@ -13,6 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # to the end flag
+from unittest import TestLoader
+import uuid
 import queue
 import random
 import weakref
@@ -21,7 +23,8 @@ import concurrent.futures.thread as _base
 
 from .future import Future
 from .. import _get_parallel_context
-from ..asyncio import is_running_in_event_loop, wrap_future
+from ..asyncio import is_running_in_event_loop, wrap_future, asyncio
+from .. import current, join as parallel_join
 
 def _worker(executor_weakref, work_queue):
     try:
@@ -65,6 +68,7 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
         self._thread_name_prefix = f"{thread_name_prefix}ThreadPoolExecutor-{self._counter()}"
+        self._uid = str(uuid.uuid1())
 
     @property
     def open(self):
@@ -92,6 +96,8 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
                     "interpreter shutdown")
 
             future = Future()
+            future._executor_uid = self._uid
+
             ctx = _get_parallel_context()
             args = fn, *args
             work_item = _base._WorkItem(future, ctx.run, args, kwargs)
@@ -133,15 +139,21 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
 
         return False
 
-    def shutdown(self, wait=True):
+    def shutdown(self, wait=True, test=None):
         with self._shutdown_lock:
             if self._shutdown:
                 return
             self._shutdown = True
             self._work_queue.put(None)
         if wait:
-            for thread in self._threads:
-                thread.join()
+            if test is None:
+                test = current()
+            try:
+                if test:
+                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+            finally:
+                for thread in self._threads:
+                    thread.join()
 
 
 class SharedThreadPoolExecutor(ThreadPoolExecutor):

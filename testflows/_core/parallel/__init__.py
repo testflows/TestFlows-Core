@@ -105,114 +105,123 @@ def previous(value=None):
         context.previous.set(value)
     return context.previous.get()
 
-def join(*futures, cancel=None, test=None, raise_exception=True):
-    """Wait for parallel tests to complete. Returns a list of
-    completed tests. If any of the parallel tests raise an exception then
-    the first exception is raised.
+def join(*future, futures=None, test=None, filter=None, all=False, no_async=False):
+    """Wait for parallel test futures to complete.
+    Returns a list of completed tests.
+    
+    Terminates current test if any of the parallel
+    tests raise an exception.
 
-    If raise_exception is False then no exception is raised
-    and a (tests, exceptions) tuple is returned.
+    If no futures specified uses test.futures().
+    If test is not specified test is set to current().
 
-    :param cancel: cancel any pending parallel tests
-    :param test: current test
-    :param raise_exception: raise first exception, default: True.
+    :param *future: one or more futures (optional)
+    :param futures: list of futures (optional)
+    :param test: current test, default: current()
+    :param filter: filter function, default: None
+    :param all: wait and join all the tests, default: False
     """
-    if is_running_in_event_loop():
-        return _async_join(*futures, cancel=cancel, test=test, raise_exception=raise_exception)
+    if no_async is False and is_running_in_event_loop():
+        return _async_join(*future, futures=futures, test=test, filter=filter, all=all)
 
     if test is None:
         test = current()
-    top_test = top()
 
-    futures = list(futures) or test.futures
-    exceptions = []
+    futures = list(future) or futures or test.futures
     tests = []
+    exception = None
+    filtered_count = 0
 
     while True:
-        if not futures:
+        if not futures or filtered_count >= len(futures):
             break
+       
         future = None
         try:
             future = futures.pop(0)
+            if filter and not filter(future):
+                futures.append(future)
+                filtered_count += 1
+                continue
+            filtered_count = 0
             try:
-                if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
-                    future.cancel()
-                try:
-                    exception = future.exception(timeout=0.1)
-                    if exception is not None:
-                        exceptions.append(exception)
-                    else:
-                        tests.append(future.result(timeout=0.1))
-                except TimeoutError:
-                    futures.append(future)
-                    continue
-            except CancelledError:
-                pass
+                exc = future.exception(timeout=0.1)
+                if exc is not None:
+                    if exception is None:
+                        exception = exc
+                        test.terminate()
+                    if not all:
+                        raise exception
+                else:
+                    tests.append(future.result(timeout=0.1))
+            except TimeoutError:
+                futures.append(future)
+                continue
         except BaseException:
             if future is not None:
                 futures.append(future)
             raise
 
-    if raise_exception is False:
-        return tests, exceptions
-    else:
-        if exceptions:
-            raise exceptions[0]
-        return tests
+    if exception is not None:
+        raise exception
+    return tests
 
-async def _async_join(*futures, cancel=None, test=None, raise_exception=True):
-    """Wait for parallel async tests to complete. Returns a list of
-    completed tests. If any of the parallel tests raise an exception then
-    the first exception is raised.
+async def _async_join(*future, futures=None, test=None, filter=None, all=False):
+    """Wait for async parallel test futures to complete.
+    Returns a list of completed tests.
+    
+    Terminates current test if any of the parallel
+    tests raise an exception.
 
-    If raise_exception is False then no exception is raised
-    and a (tests, exceptions) tuple is returned.
+    If no futures specified uses test.futures().
+    If test is not specified test is set to current().
 
-    :param cancel: cancel any pending parallel tests
-    :param test: current test
-    :param raise_exception: raise first exception, default: True.
+    :param *future: one or more futures (optional)
+    :param futures: list of futures (optional)
+    :param test: current test, default: current()
+    :param filter: filter function, default: None
+    :param all: wait and join all the tests, default: False
     """
     if test is None:
         test = current()
-    top_test = top()
 
-    futures = list(futures) or test.futures
-    exceptions = []
+    futures = list(future) or futures or test.futures
     tests = []
+    exception = None
+    filtered_count = 0
 
     while True:
-        if not futures:
+        if not futures or filtered_count >= len(futures):
             break
+       
         future = None
         try:
-            future = futures.pop()
+            future = futures.pop(0)
+            if filter and not filter(future):
+                futures.append(future)
+                filtered_count += 1
+                continue
+            filtered_count = 0
+
             if isinstance(future, ConcurrentFuture):
                 future = asyncio.wrap_future(future)
-            if not isinstance(future, AsyncFuture):
-                continue
             try:
-                if cancel or len(exceptions) > 0 or test.terminating is not None or top_test.terminating is not None:
-                    future.cancel()
-                try:
-                    await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
-                    exception = future.exception()
-                    if exception is not None:
-                        exceptions.append(exception)
-                    else:
-                        tests.append(future.result())
-                except AsyncTimeoutError:
-                    futures.append(future)
-                    continue
-            except AsyncCancelledError:
-                pass
+                await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
+                exc = future.exception()
+                if exc is not None:
+                    if exception is None:
+                        exception = exc
+                        test.terminate()
+                else:
+                    tests.append(future.result())
+            except AsyncTimeoutError:
+                futures.append(future)
+                continue
         except BaseException:
             if future is not None:
                 futures.append(future)
             raise
 
-    if raise_exception is False:
-        return tests, exceptions
-    else:
-        if exceptions:
-            raise exceptions[0]
-        return tests
+    if exception is not None:
+        raise exception
+    return tests
