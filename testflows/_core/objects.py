@@ -65,6 +65,9 @@ class Result(TestObject, ResultException):
         self.values = get(values, list(self.values))
         return super(Result, self).__init__()
 
+    def __reduce__(self):
+        return (self.__class__, (self.message, self.reason, self.type, self.test, self.metrics, self.tickets, self.values))
+
     @property
     def value(self):
         return self.values[-1].value if self.values else None
