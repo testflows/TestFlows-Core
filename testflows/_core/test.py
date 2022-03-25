@@ -67,7 +67,7 @@ from .parallel import convert_result_to_concurrent_future
 from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
 from .parallel.executor.process import ProcessPoolExecutor, GlobalProcessPoolExecutor
-from .parallel.asyncio import is_running_in_event_loop, async_next
+from .parallel.asyncio import is_running_in_event_loop, async_next, wrap_future, OptionalFuture
 
 try:
     import testflows.database as database_module
@@ -180,7 +180,7 @@ class Context(object):
                                     asyncio.run_coroutine_threadsafe(_task(r), loop=loop))
                             else:
                                 with ThreadPoolExecutor() as executor:
-                                     await executor.submit(loop.run_until_complete, args=(_task(r),))
+                                    await wrap_future(executor.submit(loop.run_until_complete, args=(_task(r),)))
                     return _async_wrapper()
 
                 else:
@@ -1472,7 +1472,7 @@ class TestDefinition(object):
                 current_test.futures.append(future)
 
                 if is_async:
-                    return asyncio.wrap_future(future)
+                    return wrap_future(future, new_future=OptionalFuture())
                 return future
 
         if is_async:

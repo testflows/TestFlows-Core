@@ -110,9 +110,6 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         if (not block and not idle_workers) or self._max_workers < 1:
             work_item.run()
 
-        if is_running_in_event_loop():
-            return wrap_future(future)
-
         return future
 
     def _adjust_thread_count(self):

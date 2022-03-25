@@ -204,24 +204,26 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
                 continue
             filtered_count = 0
 
-            if isinstance(future, ConcurrentFuture):
-                future = asyncio.wrap_future(future)
-
             try:
-                tests.append(await asyncio.wait_for(asyncio.shield(future), timeout=0.1))
+                f = future
+                if isinstance(future, ConcurrentFuture):
+                    f = asyncio.wrap_future(future)
+                tests.append(await asyncio.wait_for(asyncio.shield(f), timeout=0.1))
             except AsyncTimeoutError:
                 futures.append(future)
                 continue
-            except BaseException as exc:
-                if test:
-                    test.terminate()
-                if not all:
-                    raise
-                if exception is None:
-                    exception = exc
-        except BaseException:
+        except BaseException as exc:
             if future is not None:
-                futures.append(future)
+                if future.done():
+                    if test:
+                        test.terminate()
+                    if not all:
+                        raise
+                    if exception is None:
+                        exception = exc
+                    continue
+                else:
+                    futures.append(future)
             raise
 
     if exception is not None:
