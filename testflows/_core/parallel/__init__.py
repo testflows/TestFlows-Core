@@ -21,7 +21,7 @@ from concurrent.futures import CancelledError
 from concurrent.futures import TimeoutError
 from concurrent.futures import Future as ConcurrentFuture
 
-from .asyncio import asyncio
+from .asyncio import asyncio, wrap_future, OptionalFuture
 from .asyncio import Future as AsyncFuture
 from .asyncio import is_running_in_event_loop
 from .asyncio import TimeoutError as AsyncTimeoutError
@@ -207,7 +207,7 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
             try:
                 f = future
                 if isinstance(future, ConcurrentFuture):
-                    f = asyncio.wrap_future(future)
+                    f = wrap_future(future, new_future=OptionalFuture())
                 tests.append(await asyncio.wait_for(asyncio.shield(f), timeout=0.1))
             except AsyncTimeoutError:
                 futures.append(future)
