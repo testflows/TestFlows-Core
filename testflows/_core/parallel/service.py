@@ -487,12 +487,18 @@ class BaseServiceObject:
 
         try:
             if is_running_in_event_loop():
-                if _process_service: 
+                async def no_errors(aws):
+                    try:
+                        await aws
+                    except (ServiceNotRunningError, ServiceObjectNotFoundError, CancelledError):
+                        pass
+
+                if _process_service:
                     if _process_service.loop is asyncio.get_running_loop():
                         if _process_service.address == address:  
                             _process_service.__decref__(oid)
                         else:
-                            _process_service.loop.create_task(BaseServiceObject.__async_proxy_call__(oid, address, "__decref__"))
+                            _process_service.loop.create_task(no_errors(BaseServiceObject.__async_proxy_call__(oid, address, "__decref__")))
                         return
 
             BaseServiceObject.__proxy_call__(
