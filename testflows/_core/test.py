@@ -1401,7 +1401,7 @@ class TestDefinition(object):
                     return _test
 
                 if asyncio.iscoroutinefunction(test.func):
-                    with AsyncPoolExecutor() as executor:
+                    with AsyncPoolExecutor(join_on_shutdown=False) as executor:
                         return executor.submit(_async_test_wrapper).result()
                 else:
                     return _test_wrapper()
@@ -1470,6 +1470,9 @@ class TestDefinition(object):
                     future = executor.submit(callable)
 
                 current_test.futures.append(future)
+
+                if is_async:
+                    return asyncio.wrap_future(future)
                 return future
 
         if is_async:
@@ -2436,7 +2439,7 @@ class TestDecorator(object):
                 current_test = current()
                 executor = current_test.executor if current_test else None
                 if not isinstance(executor, AsyncPoolExecutor):
-                     with AsyncPoolExecutor() as executor:
+                     with AsyncPoolExecutor(join_on_shutdown=False) as executor:
                         return executor.submit(_runner).result()
                 else:
                     executor = settings.global_async_pool or executor

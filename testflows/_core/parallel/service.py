@@ -146,7 +146,7 @@ class Service:
             _id = id(obj)
 
             if _id in self.objects:
-                del self.objects[id(obj)]
+                del self.objects[_id]
         
         if loop is None:
             return asyncio.run_coroutine_threadsafe(_async_unregister(), loop=self.loop).result()
@@ -438,7 +438,7 @@ class BaseServiceObject:
     _exposed = None
     _typename = None
 
-    def __init__(self, oid, address, _incref=True) -> None:
+    def __init__(self, oid, address, _incref=True):
         """Initialize service object.
         """
         self.oid = oid
@@ -467,7 +467,10 @@ class BaseServiceObject:
         if is_running_in_event_loop():
             if _process_service: 
                 if _process_service.loop is asyncio.get_running_loop():
-                    _process_service.__incref__(oid)
+                    if  _process_service.address == address:
+                        _process_service.__incref__(oid)
+                    else:
+                        _process_service.loop.create_task(BaseServiceObject.__async_proxy_call__(oid, address, "__incref__"))
                     return
 
         BaseServiceObject.__proxy_call__(oid, address, "__incref__")
@@ -485,8 +488,11 @@ class BaseServiceObject:
         try:
             if is_running_in_event_loop():
                 if _process_service: 
-                    if _process_service.loop is asyncio.get_running_loop():  
-                        _process_service.__decref__(oid)
+                    if _process_service.loop is asyncio.get_running_loop():
+                        if _process_service.address == address:  
+                            _process_service.__decref__(oid)
+                        else:
+                            _process_service.loop.create_task(BaseServiceObject.__async_proxy_call__(oid, address, "__decref__"))
                         return
 
             BaseServiceObject.__proxy_call__(

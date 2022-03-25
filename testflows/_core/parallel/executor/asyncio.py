@@ -115,7 +115,7 @@ class AsyncPoolExecutor(_base._base.Executor):
     _counter = itertools.count().__next__
 
     def __init__(self, max_workers=1024, task_name_prefix="",
-            loop=None, _check_max_workers=True):
+            loop=None, _check_max_workers=True, join_on_shutdown=True):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
@@ -130,6 +130,7 @@ class AsyncPoolExecutor(_base._base.Executor):
             ("AsyncPoolExecutor-%d" % self._counter()))
         self._async_loop_thread = None
         self._uid = str(uuid.uuid1())
+        self._join_on_shutdown = join_on_shutdown
 
     @property
     def open(self):
@@ -178,9 +179,6 @@ class AsyncPoolExecutor(_base._base.Executor):
                 raise RuntimeError("deadlock detected")
             asyncio.run_coroutine_threadsafe(work_item.run(), loop=self._loop).result()
 
-        if is_running_in_event_loop():
-            return asyncio.wrap_future(future)
-
         return future
 
     def _adjust_task_count(self):
@@ -219,7 +217,8 @@ class AsyncPoolExecutor(_base._base.Executor):
                 test = current()
             try:
                 if test:
-                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                    if self._join_on_shutdown:
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
             finally:
                 exc = None
                 for task in self._tasks:

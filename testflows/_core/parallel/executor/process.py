@@ -382,7 +382,7 @@ class ProcessPoolExecutor(_base.Executor):
                 test = current()
             try:
                 if test:
-                    parallel_join(test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
             finally:
                 for proc in self._processes:
                     while is_running(proc.transport.get_pid()):

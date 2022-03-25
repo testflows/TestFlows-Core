@@ -149,7 +149,8 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
                 if exc is not None:
                     if exception is None:
                         exception = exc
-                        test.terminate()
+                        if test:
+                            test.terminate()
                     if not all:
                         raise exception
                 else:
@@ -193,7 +194,7 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
     while True:
         if not futures or filtered_count >= len(futures):
             break
-       
+
         future = None
         try:
             future = futures.pop(0)
@@ -205,18 +206,19 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
 
             if isinstance(future, ConcurrentFuture):
                 future = asyncio.wrap_future(future)
+
             try:
-                await asyncio.wait_for(asyncio.shield(future), timeout=0.1)
-                exc = future.exception()
-                if exc is not None:
-                    if exception is None:
-                        exception = exc
-                        test.terminate()
-                else:
-                    tests.append(future.result())
+                tests.append(await asyncio.wait_for(asyncio.shield(future), timeout=0.1))
             except AsyncTimeoutError:
                 futures.append(future)
                 continue
+            except BaseException as exc:
+                if test:
+                    test.terminate()
+                if not all:
+                    raise
+                if exception is None:
+                    exception = exc
         except BaseException:
             if future is not None:
                 futures.append(future)
