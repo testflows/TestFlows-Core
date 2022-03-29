@@ -57,7 +57,7 @@ def _worker(executor_weakref, work_queue):
 class ThreadPoolExecutor(_base.ThreadPoolExecutor):
     """Thread pool executor.
     """
-    def __init__(self, max_workers=16, thread_name_prefix="", _check_max_workers=True):
+    def __init__(self, max_workers=16, thread_name_prefix="", _check_max_workers=True, join_on_shutdown=True):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
@@ -69,6 +69,7 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         self._shutdown_lock = threading.Lock()
         self._thread_name_prefix = f"{thread_name_prefix}ThreadPoolExecutor-{self._counter()}"
         self._uid = str(uuid.uuid1())
+        self._join_on_shutdown = join_on_shutdown
 
     @property
     def open(self):
@@ -147,7 +148,8 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
                 test = current()
             try:
                 if test:
-                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                    if self._join_on_shutdown:
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
             finally:
                 for thread in self._threads:
                     thread.join()
@@ -156,13 +158,14 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
 class SharedThreadPoolExecutor(ThreadPoolExecutor):
     """Shared thread pool executor.
     """
-    def __init__(self, max_workers, thread_name_prefix=""):
-        self.initargs = (max_workers, thread_name_prefix)
+    def __init__(self, max_workers, thread_name_prefix="", join_on_shutdown=True):
+        self.initargs = (max_workers, thread_name_prefix, join_on_shutdown)
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedThreadPoolExecutor, self).__init__(
-            max_workers=max_workers-1, thread_name_prefix=thread_name_prefix, _check_max_workers=False)
+            max_workers=max_workers-1, thread_name_prefix=thread_name_prefix,
+            _check_max_workers=False, join_on_shutdown=join_on_shutdown)
 
     def submit(self, fn, args=None, kwargs=None, block=False):
         return super(SharedThreadPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)

@@ -257,7 +257,7 @@ class ProcessPoolExecutor(_base.Executor):
     """
     _counter = itertools.count().__next__
 
-    def __init__(self, max_workers=16, process_name_prefix="", _check_max_workers=True):
+    def __init__(self, max_workers=16, process_name_prefix="", _check_max_workers=True, join_on_shutdown=True):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
@@ -270,6 +270,7 @@ class ProcessPoolExecutor(_base.Executor):
         self._shutdown_lock = threading.Lock()
         self._process_name_prefix = f"{process_name_prefix}ProcessPoolExecutor-{os.getpid()}-{self._counter()}"
         self._uid = str(uuid.uuid1())
+        self._join_on_shutdown = join_on_shutdown
 
     @property
     def open(self):
@@ -289,9 +290,6 @@ class ProcessPoolExecutor(_base.Executor):
             args = ()
         if kwargs is None:
             kwargs = {}
-
-        if current() and current().terminating:
-            raise TerminatedError("test is terminating")
 
         with self._shutdown_lock:
             if not self._open:
@@ -382,7 +380,8 @@ class ProcessPoolExecutor(_base.Executor):
                 test = current()
             try:
                 if test:
-                    parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                    if self._join_on_shutdown:
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
             finally:
                 for proc in self._processes:
                     while is_running(proc.transport.get_pid()):
@@ -393,11 +392,14 @@ class ProcessPoolExecutor(_base.Executor):
 class SharedProcessPoolExecutor(ProcessPoolExecutor):
     """Shared process pool executor.
     """
-    def __init__(self, max_workers, process_name_prefix=""):
+    def __init__(self, max_workers, process_name_prefix="", join_on_shutdown=True):
+        self.initargs = (max_workers, process_name_prefix, join_on_shutdown) 
+
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedProcessPoolExecutor, self).__init__(
-            max_workers=max_workers-1, process_name_prefix=process_name_prefix, _check_max_workers=False)
+            max_workers=max_workers-1, process_name_prefix=process_name_prefix, _check_max_workers=False,
+            join_on_shutdown=join_on_shutdown)
 
     def submit(self, fn, args=None, kwargs=None, block=False):
         return super(SharedProcessPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)

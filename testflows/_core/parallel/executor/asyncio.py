@@ -240,13 +240,14 @@ class AsyncPoolExecutor(_base._base.Executor):
 class SharedAsyncPoolExecutor(AsyncPoolExecutor):
     """Shared async pool executor.
     """
-    def __init__(self, max_workers, task_name_prefix=""):
-        self.initargs = (max_workers, task_name_prefix) 
+    def __init__(self, max_workers, task_name_prefix="", join_on_shutdown=True):
+        self.initargs = (max_workers, task_name_prefix, join_on_shutdown) 
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedAsyncPoolExecutor, self).__init__(
-            max_workers=max_workers-1, task_name_prefix=task_name_prefix, _check_max_workers=False)
+            max_workers=max_workers-1, task_name_prefix=task_name_prefix,
+            _check_max_workers=False, join_on_shutdown=join_on_shutdown)
 
     def submit(self, fn, args=None, kwargs=None, block=False):
         return super(SharedAsyncPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)

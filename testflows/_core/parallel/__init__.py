@@ -135,7 +135,7 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
     while True:
         if not futures or filtered_count >= len(futures):
             break
-       
+
         future = None
         try:
             future = futures.pop(0)
@@ -155,6 +155,8 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
                         raise exception
                 else:
                     tests.append(future.result(timeout=0.1))
+            except CancelledError:
+                continue
             except TimeoutError:
                 futures.append(future)
                 continue
@@ -209,6 +211,8 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
                 if isinstance(future, ConcurrentFuture):
                     f = wrap_future(future, new_future=OptionalFuture())
                 tests.append(await asyncio.wait_for(asyncio.shield(f), timeout=0.1))
+            except AsyncCancelledError:
+                continue
             except AsyncTimeoutError:
                 futures.append(future)
                 continue

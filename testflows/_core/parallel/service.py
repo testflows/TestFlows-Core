@@ -92,7 +92,7 @@ class Service:
         self.serve_tasks = []
         self.reply_events = {}
         self.objects = {}
-        self.executor = SharedThreadPoolExecutor(sys.maxsize)
+        self.executor = SharedThreadPoolExecutor(sys.maxsize, join_on_shutdown=False)
         self.open = False
         self.lock = asyncio.Lock(loop=self.loop)
 
@@ -209,13 +209,13 @@ class Service:
                 self.reply_events[rid] = event
                 return event
 
-        async with self.lock:
-            if not self.open:
-                raise ServiceNotRunningError("service is not running")
+        if not self.open:
+            raise ServiceNotRunningError("service is not running")
             
-            if address == self.address:
-                return local_send
+        if address == self.address:
+            return local_send
 
+        async with self.lock:
             if not address in self.connections:
                 event = asyncio.Event()
                 await self.out_socket.connect(address.hostname, address.port, event=event)

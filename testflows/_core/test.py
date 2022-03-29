@@ -179,7 +179,7 @@ class Context(object):
                                 await asyncio.wrap_future(
                                     asyncio.run_coroutine_threadsafe(_task(r), loop=loop))
                             else:
-                                with ThreadPoolExecutor() as executor:
+                                with ThreadPoolExecutor(join_on_shutdown=False) as executor:
                                     await wrap_future(executor.submit(loop.run_until_complete, args=(_task(r),)))
                     return _async_wrapper()
 
@@ -436,13 +436,15 @@ class TestBase(object):
         """
         if self.terminating:
             return
+
         with self.lock:
             if self.terminating:
                 return
             self.terminating = True
-            self.result = result(message, reason=reason, test=self.name)
-            for subtest in self.subtests.values():
-                subtest.terminate()
+
+        self.result = result(message, reason=reason, test=self.name)
+        for subtest in self.subtests.values():
+            subtest.terminate()
 
     def add_subtest(self, subtest):
         """Add subtest.
@@ -450,11 +452,13 @@ class TestBase(object):
         with self.lock:
             self.subtests[str(subtest.id)] = subtest
 
+        if self.terminating:
+            subtest.terminate()
+
     def remove_subtest(self, subtest):
         """Remove subtest.
         """
-        with self.lock:
-            self.subtests.pop(str(subtest.id), None)
+        self.subtests.pop(str(subtest.id), None)
 
     def _enter(self):
         if self is not top():
@@ -484,9 +488,9 @@ class TestBase(object):
 
         if top() is self:
             if self.parallel_pool_size:
-                settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=self.parallel_pool_size)
-                settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=self.parallel_pool_size)
-                settings.global_process_pool = GlobalProcessPoolExecutor(max_workers=self.parallel_pool_size)
+                settings.global_thread_pool = GlobalThreadPoolExecutor(max_workers=self.parallel_pool_size, join_on_shutdown=False)
+                settings.global_async_pool = GlobalAsyncPoolExecutor(max_workers=self.parallel_pool_size, join_on_shutdown=False)
+                settings.global_process_pool = GlobalProcessPoolExecutor(max_workers=self.parallel_pool_size, join_on_shutdown=False)
 
         for pattern, force_fail in (self.ffails or {}).items():
             force_result, force_reason, force_when = force_fail[0], force_fail[1], force_fail[2:]
@@ -1415,7 +1419,7 @@ class TestDefinition(object):
                 self.repeatable_func = test
                 async with self as _test:
                     if not asyncio.iscoroutinefunction(test.func):
-                        with ThreadPoolExecutor() as executor:
+                        with ThreadPoolExecutor(join_on_shutdown=False) as executor:
                             def _wrapper(test):
                                 return test(**self.kwargs["args"])
                             r = await asyncio.get_event_loop().run_in_executor(executor, _wrapper, (test,))
@@ -1449,11 +1453,11 @@ class TestDefinition(object):
 
                 if executor is None:
                     if is_async:
-                        executor = current_test.executor or AsyncPoolExecutor()
+                        executor = current_test.executor or AsyncPoolExecutor(join_on_shutdown=False)
                     elif is_remote:
-                        executor = current_test.executor or ProcessPoolExecutor()
+                        executor = current_test.executor or ProcessPoolExecutor(join_on_shutdown=False)
                     else:
-                        executor = current_test.executor or ThreadPoolExecutor()
+                        executor = current_test.executor or ThreadPoolExecutor(join_on_shutdown=False)
                     
                     if current_test.executor is None:
                         current_test.executor = executor
@@ -1537,8 +1541,8 @@ class TestDefinition(object):
 
             if parent:
                 kwargs["parent"] = parent
+                parent.lock.acquire()
                 try:
-                    parent.lock.acquire()
                     kwargs["id"] = parent.id + [parent.child_count]
                     parent.child_count += 1
                 finally:
@@ -1763,8 +1767,8 @@ class TestDefinition(object):
 
         if end.match(name):
             if parent:
+                parent.lock.acquire()
                 try:
-                    parent.lock.acquire()
                     parent.end = None
                     parent.skip = [The("/*")]
                 finally:
@@ -1780,8 +1784,8 @@ class TestDefinition(object):
         elif start.match(name, prefix=False):
             kwargs["start"] = None
             if parent:
+                parent.lock.acquire()
                 try:
-                    parent.lock.acquire()
                     parent.start = None
                 finally:
                     parent.lock.release()
@@ -2145,8 +2149,8 @@ class TestDefinition(object):
                 if TE not in self.test.flags:
                     raise result from None
                 else:
+                    self.parent.lock.acquire()
                     try:
-                        self.parent.lock.acquire()
                         if isinstance(self.parent.result, Error):
                             pass
                         elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
@@ -2424,7 +2428,7 @@ class TestDecorator(object):
 
         if is_running_in_event_loop():
             if not (asyncio.iscoroutinefunction(self.func) or inspect.isasyncgenfunction(self.func)):
-                with ThreadPoolExecutor() as executor:
+                with ThreadPoolExecutor(join_on_shutdown=False) as executor:
                     def _wrapper():
                         return self.__run__(**args)
                     r = asyncio.get_event_loop().run_in_executor(executor, _wrapper)
