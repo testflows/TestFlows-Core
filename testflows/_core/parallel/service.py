@@ -220,7 +220,7 @@ class Service:
                 event = asyncio.Event()
                 await self.out_socket.connect(address.hostname, address.port, event=event)
                 self.connections[address] = event
-        
+
         return send
    
     def __enter__(self):

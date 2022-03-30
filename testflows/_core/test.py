@@ -1395,14 +1395,14 @@ class TestDefinition(object):
                         r = test(**self.kwargs["args"])
                         if r is not None:
                             value("return", value=r)
-                    return _test
+                    return _test.result
 
                 async def _async_test_wrapper():
                     async with self as _test:
                         r = await test(**self.kwargs["args"])
                         if r is not None:
                             value("return", value=r)
-                    return _test
+                    return _test.result
 
                 if asyncio.iscoroutinefunction(test.func):
                     with AsyncPoolExecutor(join_on_shutdown=False) as executor:
@@ -1412,7 +1412,7 @@ class TestDefinition(object):
             else:
                 with self as _test:
                     pass
-                return _test
+                return _test.result
 
         async def async_callable():
             if test and isinstance(test, TestDecorator):
@@ -1427,11 +1427,11 @@ class TestDefinition(object):
                         r = await test(**self.kwargs["args"])
                     if r is not None:
                         value("return", value=r)
-                return _test
+                return _test.result
             else:
                 async with self as _test:
                     pass
-                return _test
+                return _test.result
 
         current_test = current()
         is_async = is_running_in_event_loop()
