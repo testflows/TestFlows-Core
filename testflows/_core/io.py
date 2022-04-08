@@ -28,7 +28,7 @@ from .objects import Tag, ExamplesRow
 from . import __version__
 from .parallel.service import BaseServiceObject
 
-tracer = tracer.getLogger(__name__)
+tracer = tracing.getLogger(__name__)
 
 def object_fields(obj, prefix):
     return {f"{prefix}{'_' if prefix else ''}{field}":getattr(obj, field) for field in obj._fields}
