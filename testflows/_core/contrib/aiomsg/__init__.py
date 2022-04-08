@@ -36,10 +36,12 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
         -p '*.py'
 
 """
-import socket
-import asyncio
 import uuid
 import json
+import socket
+import asyncio
+import logging
+
 from enum import Enum, auto
 from asyncio import CancelledError, StreamReader, StreamWriter
 from collections import UserDict
@@ -58,7 +60,6 @@ from typing import (
     Awaitable,
     Sequence,
 )
-import  testflows._core.tracing as tracing
 import  testflows._core.contrib.cloudpickle as cloudpickle
 
 from . import header
@@ -67,7 +68,7 @@ from . import version_utils
 
 __all__ = ["Socket", "SendMode", "DeliveryGuarantee"]
 
-logger = tracing.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 SEND_MODES = ["round_robin", "publish"]
 JSONCompatible = Union[str, int, float, bool, List, Dict, None]

@@ -5,11 +5,10 @@ aiomsg.msgproto
 These are messaging protocols
 
 """
-
-import testflows._core.tracing as tracing
+import logging
 from asyncio import StreamReader, StreamWriter
 
-logger = tracing.getLogger(__name__)
+logger = logging.getLogger(__name__)
 # disable logging
 
 _PREFIX_SIZE = 4
