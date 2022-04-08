@@ -52,3 +52,5 @@ global_process_pool = None
 service_timeout = 0.1
 #: secrets registry
 secrets_registry = None
+#: tracing
+trace = False

@@ -6,13 +6,11 @@ These are messaging protocols
 
 """
 
-import logging
+import testflows._core.tracing as tracing
 from asyncio import StreamReader, StreamWriter
 
-logger = logging.getLogger(__name__)
+logger = tracing.getLogger(__name__)
 # disable logging
-logger.propagate = False
-logger.disabled = True
 
 _PREFIX_SIZE = 4
 

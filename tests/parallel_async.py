@@ -59,10 +59,10 @@ async def async_test_in_async_test(self):
          assert await async_test() == "done"
 
     async with Scenario("run async test as Test(run=...)"):
-         assert (await Test(run=async_test)).result.value == "done"
+         assert (await Test(run=async_test)).value == "done"
 
     async with Scenario("run async test as Test(test=...)"):
-         assert (await Test(test=async_test)()).result.value == "done"
+         assert (await Test(test=async_test)()).value == "done"
 
     return "done"
 
@@ -81,20 +81,20 @@ async def in_async(self):
         assert (await join())[0] == "done"
 
     async with Scenario("run parallel non async test without specified executor"):
-        assert (await Test(run=non_async_test, parallel=True)).result.value == "done"
+        assert (await Test(run=non_async_test, parallel=True)).value == "done"
 
     async with Scenario("run parallel non async test with specified executor"):
         with Pool() as executor:
-            assert (await Test(run=non_async_test, parallel=True, executor=executor)).result.value == "done"
+            assert (await Test(run=non_async_test, parallel=True, executor=executor)).value == "done"
 
     async with Scenario("run parallel non async test with specified async executor"):
         with AsyncPool() as executor:
-            assert (await Test(run=non_async_test, parallel=True, executor=executor)).result.value == "done"
+            assert (await Test(run=non_async_test, parallel=True, executor=executor)).value == "done"
 
     async with Scenario("run parallel non async test when test has default executor set to async"):
         with AsyncPool() as executor:
             current().executor = executor
-            assert (await Test(run=non_async_test, parallel=True)).result.value == "done"
+            assert (await Test(run=non_async_test, parallel=True)).value == "done"
 
     async with Scenario("run non parallel async test"):
         assert (await async_test()) == "done"
@@ -107,7 +107,7 @@ async def in_async(self):
             assert (await async_step(delay=0.1)) == "done"
 
         for i in range(10):
-            assert (await Step(run=async_step, name=f"step {i}")).result.value == "done"
+            assert (await Step(run=async_step, name=f"step {i}")).value == "done"
 
     async with Scenario("run non parallel inline test with parallel async steps"):
         for i in range(10):
@@ -116,19 +116,19 @@ async def in_async(self):
 
     async with Scenario("run parallel async test without specified executor"):
         Scenario(test=async_test, parallel=True)()
-        assert (await join())[0].result.value == "done"
+        assert (await join())[0].value == "done"
 
     async with Scenario("run parallel async test with specified executor"):
         with AsyncPool() as async_pool:
             Scenario(test=async_test, parallel=True, executor=async_pool)()
-            assert (await join())[0].result.value == "done"
+            assert (await join())[0].value == "done"
         joined = await join()
         assert joined == [], error()
 
     async with Scenario("run parallel async test with specified thread executor"):
         with Pool() as pool:
             f = Scenario(test=async_test, parallel=True, executor=pool)()
-        assert (await f).result.value == "done"
+        assert (await f).value == "done"
 
 @TestFeature
 def in_thread(self):
@@ -136,10 +136,10 @@ def in_thread(self):
         assert async_test() == "done"
     
     with Scenario("run async test as Test(run=...)"):
-        assert Test(run=async_test).result.value == "done"
+        assert Test(run=async_test).value == "done"
     
     with Scenario("run async test as Test(test=...)()"):
-        assert Test(test=async_test)().result.value == "done"
+        assert Test(test=async_test)().value == "done"
     
     with Scenario("run async test using with"):
         try:
@@ -158,33 +158,33 @@ def in_thread(self):
         assert async_test_in_async_test() == "done"
     
     with Scenario("run parallel async test without specified executor"):
-        assert Test(run=async_test, parallel=True).result().result.value == "done"
+        assert Test(run=async_test, parallel=True).result().value == "done"
     
     with Scenario("run parallel async test with specified executor"):
         with AsyncPool() as async_pool:
-            assert Test(run=async_test, parallel=True, executor=async_pool).result().result.value == "done"
+            assert Test(run=async_test, parallel=True, executor=async_pool).result().value == "done"
     
     with Scenario("run parallel async test with specified executor of wrong type"):
         with Pool() as pool:
-            assert Test(run=async_test, parallel=True, executor=pool).result().result.value == "done"
+            assert Test(run=async_test, parallel=True, executor=pool).result().value == "done"
     
     with Scenario("run multiple parallel async test with specified executor"):
         with AsyncPool() as async_pool:
             t0 = Test(test=async_test, parallel=True, executor=async_pool, name="test0")(delay=1)
             t1 = Test(test=async_test, parallel=True, executor=async_pool, name="test1")(delay=1)
             t2 = Test(test=async_test, parallel=True, executor=async_pool, name="test2")(delay=1)
-            assert t0.result().result.value == "done"
-            assert t1.result().result.value == "done"
-            assert t2.result().result.value == "done"
+            assert t0.result().value == "done"
+            assert t1.result().value == "done"
+            assert t2.result().value == "done"
     
     with Scenario("run multiple parallel async test with specified executor with joins"):
         with AsyncPool() as async_pool:
             t0 = Test(test=async_test, parallel=True, executor=async_pool, name="test0")(delay=1)
-            assert join(t0)[0].result.value == "done"
+            assert join(t0)[0].value == "done"
             t1 = Test(test=async_test, parallel=True, executor=async_pool, name="test1")(delay=1)
             t2 = Test(test=async_test, parallel=True, executor=async_pool, name="test2")(delay=1)
             for r in join():
-                assert r.result.value == "done"
+                assert r.value == "done"
 
 with Module("regression"):
     Feature(run=in_thread, parallel=True)

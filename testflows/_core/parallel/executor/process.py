@@ -40,7 +40,6 @@ from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context, join as parallel_join
 from ...objects import Result
-from ...exceptions import TerminatedError
 
 _shutdown = False
 _worker_pids = {}
@@ -109,6 +108,7 @@ class WorkerSettings:
             ) if settings.global_async_pool is not None else None
         self.global_process_pool = self._set_service_object(settings.global_process_pool)
         self.secrets_registry = settings.secrets_registry
+        self.trace = settings.trace
 
     def _set_service_object(self, obj):
         if obj is None:
@@ -170,6 +170,8 @@ class _WorkItem(object):
             # set shared global process pool
             settings.global_process_pool = work_settings.global_process_pool
             settings.secrets_registry = work_settings.secrets_registry
+            # trace
+            settings.trace = work_settings.trace
 
         def runner(self):
             try:
@@ -347,6 +349,8 @@ class ProcessPoolExecutor(_base.Executor):
                 command.append("--debug")
             if settings.no_colors:
                 command.append("--no-colors")
+            if settings.trace:
+                command.append("--trace")
 
             loop = process_service().loop
 

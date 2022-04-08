@@ -25,6 +25,7 @@ import importlib
 from collections import namedtuple
 
 import testflows.settings as settings
+import testflows._core.tracing as tracing
 import testflows._core.contrib.yaml as yaml
 import testflows._core.contrib.schema as schema
 
@@ -44,7 +45,7 @@ from .objects import Argument, Attribute, Requirement, ArgumentParser
 from .objects import ExamplesTable, Specification
 from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
-from .constants import name_sep
+from .constants import name_sep, id_sep
 from .io import TestIO
 from .name import join, depth, match, absname, isabs
 from .funcs import exception, pause, result, value, input
@@ -68,6 +69,8 @@ from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecut
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
 from .parallel.executor.process import ProcessPoolExecutor, GlobalProcessPoolExecutor
 from .parallel.asyncio import is_running_in_event_loop, async_next, wrap_future, OptionalFuture
+
+tracer = tracing.getLogger(__name__)
 
 try:
     import testflows.database as database_module
@@ -340,6 +343,7 @@ class TestBase(object):
         self.parent = parent
         self.parent_type = parent_type
         self.id = get(id, [settings.test_id])
+        self.id_str = id_sep + id_sep.join(str(n) for n in self.id)
         self.node = get(node, self.node)
         self.map = get(map, list(self.map))
         self.type = get(type, self.type)
@@ -383,6 +387,7 @@ class TestBase(object):
         self.first_fail = get(first_fail, None)
         self.test_to_end = get(test_to_end, None)
         self.parallel_pool_size = get(parallel_pool_size, None)
+        self.tracer = tracing.EventAdapter(tracing.TestAdapter(tracer, self), None, source=str(self))
 
         if self.setup is not None:
             if isinstance(self.setup, (TestDecorator, TestDefinition)):
@@ -391,6 +396,9 @@ class TestBase(object):
                 self.setup = functools.partial(self.setup, self=self)
             else:
                 raise TypeError(f"'{self.setup}' is not a valid test type")
+
+    def __str__(self):
+        return f"Test(name={self.name},id={self.id_str})@0x{id(self):x}"
 
     @classmethod
     def make_name(cls, name, parent=None, args=None, format=True):
@@ -434,31 +442,79 @@ class TestBase(object):
     def terminate(self, result=Skip, message=None, reason="terminated"):
         """Terminate test.
         """
-        if self.terminating:
-            return
-
-        with self.lock:
+        with tracing.Event(self.tracer, "terminating") as event_tracer:
             if self.terminating:
                 return
-            self.terminating = True
 
-        self.result = result(message, reason=reason, test=self.name)
-        for subtest in self.subtests.values():
-            subtest.terminate()
+            with self.lock:
+                if self.terminating:
+                    return
+                if self.cflags & CLEANUP:
+                    return
+                self.terminating = True
+
+                self.result = result(message, reason=reason, test=self.name)
+
+                for subtest in self.subtests.values():
+                    event_tracer.debug(f"terminating {subtest}")
+                    subtest.terminate()
+                self.subtests = {}
 
     def add_subtest(self, subtest):
         """Add subtest.
         """
-        with self.lock:
-            self.subtests[str(subtest.id)] = subtest
+        with tracing.Event(self.tracer, f"addsubtest({subtest})") as event_tracer:
+            with self.lock:
+                event_tracer.debug("got lock")
+                self.subtests[str(subtest.id)] = subtest
+                event_tracer.debug(f"modified subtests dictionary")
 
-        if self.terminating:
-            subtest.terminate()
+            if self.terminating:
+                event_tracer.debug("terminating subtest")
+                subtest.terminate()
 
     def remove_subtest(self, subtest):
         """Remove subtest.
         """
-        self.subtests.pop(str(subtest.id), None)
+        with self.lock:
+            self.subtests.pop(str(subtest.id), None)
+
+    def child_id(self):
+        with self.lock:
+            try:
+                return self.id + [self.child_count]
+            finally:
+                self.child_count += 1
+
+    def clear_end_skip(self):
+        with self.lock:
+            self.end = None
+            self.skip = [The("/*")]
+
+    def clear_start(self):
+        with self.lock:
+            self.start = None
+
+    def set_result(self, test_result, flags):
+        if isinstance(test_result, Fail):
+            result = Fail(test=self.name, message=test_result.message)
+        else:
+            # convert Null into an Error
+            result = Error(test=self.name, message=test_result.message)
+        
+        with self.lock:
+            if isinstance(self.result, Error):
+                pass
+            elif isinstance(test_result, Error) and ERROR_NOT_COUNTED not in flags:
+                self.result = result
+            elif isinstance(test_result, Null) and NULL_NOT_COUNTED not in flags:
+                self.result = result
+            elif isinstance(self.result, Fail):
+                pass
+            elif isinstance(test_result, Fail) and FAIL_NOT_COUNTED not in flags:
+                self.result = result
+            else:
+                pass
 
     def _enter(self):
         if self is not top():
@@ -478,6 +534,7 @@ class TestBase(object):
                 })
             self.args = {}
 
+        self.tracer.debug(f"test start", extra={"event_action": tracing.Action.START})
         self.io.output.test_message()
 
         if self.flags & PAUSE_BEFORE and not self.flags & SKIP:
@@ -501,7 +558,8 @@ class TestBase(object):
                         raise force_result(reason=force_reason, test=self.name)
 
         if self.parent:
-            self.parent.add_subtest(self)
+            with tracing.Event(self.tracer, f"adding {self}({self.name}) as subtest of parent {self.parent}"):
+                self.parent.add_subtest(self)
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
@@ -553,7 +611,6 @@ class TestBase(object):
             if exc_value is not None:
                 # terminate any unfinished subtests
                 self.terminate()
-            self.subtests ={}
 
             # join any left over parallel tests and save parallel exception
             if self.futures:
@@ -690,6 +747,8 @@ class TestBase(object):
             self.io.close(final=True)
         else:
             self.io.close(flush=self.flags & REMOTE)
+        
+        self.tracer.debug("test exit", extra={"event_action": tracing.Action.END})
 
         if not self.flags & SKIP:
             if self.flags & PAUSE_AFTER:
@@ -947,6 +1006,11 @@ def cli_argparser(kwargs, argparser=None):
                             help=("force all tests to be test to end and continue "
                                   "the run even if one of the tests fails"))
 
+    parser.add_argument("--trace", dest="_trace", 
+                        action="store_true", default=None,
+                        help="enable low-level test program tracing for debugging "
+                             "using Python's logging module")
+
     if database_module:
         database_module.argparser(parser)
 
@@ -1058,6 +1122,9 @@ def parse_cli_args(kwargs, parser_schema):
 
         if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
+
+        settings.trace = get(args.pop("_trace", None), get(settings.trace, False))
+        tracing.configure_tracing()
 
         settings.no_colors = get(args.pop("_no_colors", None), get(settings.no_colors, False))
         settings.trim_results = get(args.pop("_trim_results", None), get(settings.trim_results, True))
@@ -1541,12 +1608,7 @@ class TestDefinition(object):
 
             if parent:
                 kwargs["parent"] = parent
-                parent.lock.acquire()
-                try:
-                    kwargs["id"] = parent.id + [parent.child_count]
-                    parent.child_count += 1
-                finally:
-                    parent.lock.release()
+                kwargs["id"] = parent.child_id()
                 kwargs["cflags"] = parent.cflags
                 # propagate manual flag if automatic test flag is not set
                 if not kwargs["flags"] & AUTO:
@@ -1767,12 +1829,7 @@ class TestDefinition(object):
 
         if end.match(name):
             if parent:
-                parent.lock.acquire()
-                try:
-                    parent.end = None
-                    parent.skip = [The("/*")]
-                finally:
-                    parent.lock.release()
+                parent.clear_end_skip()
 
     def _apply_start(self, name, parent, kwargs):
         start = kwargs.get("start")
@@ -1784,11 +1841,7 @@ class TestDefinition(object):
         elif start.match(name, prefix=False):
             kwargs["start"] = None
             if parent:
-                parent.lock.acquire()
-                try:
-                    parent.start = None
-                finally:
-                    parent.lock.release()
+                parent.clear_start()
 
     def _apply_repeats(self, name, repeats):
         if not repeats:
@@ -2149,22 +2202,8 @@ class TestDefinition(object):
                 if TE not in self.test.flags:
                     raise result from None
                 else:
-                    self.parent.lock.acquire()
-                    try:
-                        if isinstance(self.parent.result, Error):
-                            pass
-                        elif isinstance(self.test.result, Error) and ERROR_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        elif isinstance(self.test.result, Null) and NULL_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        elif isinstance(self.parent.result, Fail):
-                            pass
-                        elif isinstance(self.test.result, Fail) and FAIL_NOT_COUNTED not in self.test.flags:
-                            self.parent.result = result
-                        else:
-                            pass
-                    finally:
-                        self.parent.lock.release()
+                    self.parent.set_result(self.test.result, self.test.flags)
+
         return True
 
     def __exit__(self, exc_type, exc_value, exc_traceback):

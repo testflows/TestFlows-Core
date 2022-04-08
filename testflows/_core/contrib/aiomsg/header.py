@@ -1,5 +1,6 @@
-from uuid import UUID
 import re
+
+from uuid import UUID
 from typing import NamedTuple, Optional
 
 __all__ = ["HEADER"]

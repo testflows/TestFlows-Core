@@ -15,6 +15,7 @@
 # limitations under the License.
 import sys
 import testflows.settings as settings
+import testflows._core.tracing as tracing
 
 from testflows._core.parallel.service import process_service
 from testflows._core.parallel.executor.process import WorkQueue
@@ -25,6 +26,7 @@ from testflows._core.cli.arg.parser import ArgumentParser
 from testflows._core.parallel.executor.process import WORKER_READY
 from testflows._core.parallel.service import Address
 
+tracer = tracing.getLogger(__name__)
 
 def worker_ready():
     """Signal that worker is ready.
@@ -39,21 +41,25 @@ def worker(args):
     process_service()
 
     work_queue = WorkQueue(oid=int(args.oid), address=Address(args.hostname, int(args.port)))
+    tracer.debug("starting worker loop")
+
     while True:
-        try:
-            work_item = work_queue.get(block=True, timeout=0.1)
-        except WorkQueue.Empty:
-            continue
-        try:
-            if work_item is not None:
-                work_item.run()
-                del work_item
+        with tracing.Event(tracer, "waiting for work item") as event_tracer:
+            try:
+                work_item = work_queue.get(block=True, timeout=0.1)
+            except WorkQueue.Empty:
                 continue
-            else:
-                # exit worker
-                break
-        finally:
-            work_queue.task_done()
+            try:
+                event_tracer.debug(f"got work item {work_item}")
+                if work_item is not None:
+                    work_item.run()
+                    del work_item
+                    continue
+                else:
+                    # exit worker
+                    break
+            finally:
+                work_queue.task_done()
 
 
 parser = ArgumentParser(prog="tfs-worker", description="""Worker process that executes remote tests.""")
@@ -68,6 +74,10 @@ parser.add_argument("--port", type=int, metavar="port", required=True,
                     help="port of the remote service that provide work queue")
 parser.add_argument("--oid", type=str, metavar="id", required=True,
                     help="object id of the work queue on the remote service")
+parser.add_argument("--trace", dest="trace", 
+                    action="store_true", default=None,
+                    help="enable low-level test program tracing for debugging "
+                         "using Python's logging module")
 
 parser.set_defaults(func=worker)
 
@@ -88,6 +98,11 @@ try:
 
     if unknown:
         raise ExitWithError(f"unknown argument {unknown}")
+
+    if args.trace:
+        settings.trace = True
+
+    tracing.configure_tracing(main=False)
 
     args.func(args)
 

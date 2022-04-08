@@ -18,6 +18,7 @@ import threading
 from multiprocessing.dummy import Pool
 
 import testflows.settings as settings
+import testflows._core.tracing as tracing
 
 from .compress import compress
 from .constants import id_sep, end_of_message
@@ -26,6 +27,8 @@ from .message import Message, MessageObjectType, dumps
 from .objects import Tag, ExamplesRow
 from . import __version__
 from .parallel.service import BaseServiceObject
+
+tracer = tracer.getLogger(__name__)
 
 def object_fields(obj, prefix):
     return {f"{prefix}{'_' if prefix else ''}{field}":getattr(obj, field) for field in obj._fields}
@@ -51,7 +54,7 @@ class TestOutput(object):
         self.prefix = {
             "test_type": str(self.test.type),
             "test_subtype": str(self.test.subtype) if self.test.subtype is not None else None,
-            "test_id": id_sep + id_sep.join(str(n) for n in self.test.id),
+            "test_id": self.test.id_str,
             "test_name": self.test.name,
             "test_flags": int(self.test.flags),
             "test_cflags": int(self.test.cflags),
@@ -90,7 +93,9 @@ class TestOutput(object):
                 if "result_message" in message:
                     message["result_message"] = settings.secrets_registry.filter(message["result_message"])
 
-        msg.update(message)       
+        msg.update(message)
+        self.test.tracer.debug("test message", extra={"test_message":msg})
+
         msg = dumps(msg)
 
         self.msg_hash = settings.hash_func(msg.encode("utf-8")).hexdigest()[:settings.hash_length]
