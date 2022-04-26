@@ -16,6 +16,7 @@ import os
 import sys
 import glob
 import atexit
+import signal
 import threading
 
 import testflows.settings as settings
@@ -33,6 +34,8 @@ from .transform.log.pipeline import FailsLogPipeline
 from .transform.log.pipeline import ManualLogPipeline
 from .transform.log.pipeline import QuietLogPipeline
 from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
+from .parallel import top
+from .objects import Error
 
 _handlers = []
 
@@ -41,6 +44,17 @@ def _at_exit():
         handler.join()
 
 atexit.register(_at_exit)
+
+_ctrl_c = 0
+
+def sigint_handler(signal, frame):
+    global _ctrl_c
+    _ctrl_c += 1
+
+    if _ctrl_c > 1:
+        raise KeyboardInterrupt()
+    if top():
+        top().terminate(result=Error, reason="KeyboardInterrupt")
 
 def cleanup():
     """Clean up old temporary log files.
@@ -200,6 +214,7 @@ def start_database_handler():
 def init():
     """Initialization before we run the first test.
     """
+    signal.signal(signal.SIGINT, sigint_handler)
     cleanup()
     start_output_handler()
     start_database_handler()

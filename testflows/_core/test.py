@@ -86,21 +86,6 @@ rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
 # global secrets registry
 settings.secrets_registry = Secrets()
 
-import signal
-
-_ctrl_c = 0
-
-def sigint_handler(signal, frame):
-    global _ctrl_c
-    _ctrl_c += 1
-
-    if _ctrl_c > 1:
-        raise KeyboardInterrupt()
-    if top():
-        top().terminate(result=Error, reason="KeyboardInterrupt")
-
-signal.signal(signal.SIGINT, sigint_handler)
-
 async def run_async_generator(generator, consume=False):
     """Run async generator.
     """
