@@ -23,6 +23,7 @@ from collections import namedtuple
 from testflows._core.exceptions import exception
 from testflows._core.compress import CompressedFile
 from testflows._core.objects import Repeat, Retry
+from testflows._core.tracing import logging
 
 import testflows._core.contrib.rsa as rsa
 
@@ -204,3 +205,12 @@ def onoff(value):
     raise ArgumentTypeError(f"'{value}' is invalid")
 
 onoff.metavar = str(set(["yes", "1", "on", "no", "0", "off"])).replace(" ","").replace("'","")
+
+def trace_level(value):
+    if value.lower() in ["debug", "info", "warning", "error", "critical"]:
+        return getattr(logging, value.upper())
+    else:
+        raise ArgumentTypeError(f"'{value}' is invalid")
+
+trace_level.choices = ["debug", "info", "warning", "error", "critical"]
+trace_level.metavar = str(set(trace_level.choices)).replace(" ","").replace("'","")

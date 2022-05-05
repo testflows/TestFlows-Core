@@ -39,8 +39,10 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
 import uuid
 import json
 import socket
+import random
 import asyncio
-import logging
+
+import testflows._core.tracing as tracing
 
 from enum import Enum, auto
 from asyncio import CancelledError, StreamReader, StreamWriter
@@ -68,7 +70,7 @@ from . import version_utils
 
 __all__ = ["Socket", "SendMode", "DeliveryGuarantee"]
 
-logger = logging.getLogger(__name__)
+tracer = tracing.getLogger(__name__)
 
 SEND_MODES = ["round_robin", "publish"]
 JSONCompatible = Union[str, int, float, bool, List, Dict, None]
@@ -125,8 +127,9 @@ class Søcket:
         receiver_channel: Optional[str] = None,
         identity: Optional[bytes] = None,
         loop=None,
-        reconnection_delay: Callable[[], float] = lambda: 0.1,
-        pickler = cloudpickle
+        reconnection_delay: Callable[[], float] = lambda: (random.random() % 0.1) + 0.2,
+        pickler = cloudpickle,
+        recv_queue_maxsize=0
     ):
         """
         :param reconnection_delay: In large microservices
@@ -153,7 +156,7 @@ class Søcket:
         self.loop = loop or asyncio.get_event_loop()
         self.pickler = pickler
 
-        self._queue_recv = asyncio.Queue(maxsize=65536, loop=self.loop)
+        self._queue_recv = asyncio.Queue(maxsize=recv_queue_maxsize, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
         self._user_send_queue = asyncio.Queue(loop=self.loop)
 
@@ -165,16 +168,21 @@ class Søcket:
         self.waiting_for_acks: Dict[uuid.UUID, asyncio.Handle] = {}
         self.reconnection_delay = reconnection_delay
 
-        logger.debug("Starting the sender task.")
+        self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
+
+        self.tracer.debug("Starting the sender task.")
         # Note this task is started before any connections have been made.
         self.sender_task = self.loop.create_task(self._sender_main())
-        self.connect_with_retry_task = None
+        self.connect_with_retry_tasks = []
         if send_mode is SendMode.PUBLISH:
             self.sender_handler = self._sender_publish
         elif send_mode is SendMode.ROUNDROBIN:
             self.sender_handler = self._sender_robin
         else:  # pragma: no cover
             raise Exception("Unknown send mode.")
+
+    def __str__(self):
+        return f"Socket(identity={self.idstr()},address={self.bind_address})"
 
     def idstr(self) -> str:
         return self.identity.hex()
@@ -220,17 +228,23 @@ class Søcket:
             details.
         """
         self.check_socket_type()
-        logger.info(f"Binding socket {self.idstr()} to {hostname}:{port}")
-        self.server = await asyncio.start_server(
-            self._connection,
-            hostname,
-            port,
-            ssl=ssl_context,
-            reuse_address=True,
-            **kwargs,
-        )
-        logger.info("Server started.")
-        return self
+
+        try:
+            with tracing.Event(self.tracer, name=f"bind(hostname={hostname},port={port},ssl_context={ssl_context},kwargs={kwargs})") as event_tracer:
+                event_tracer.info(f"Binding socket to {hostname}:{port}")
+                self.server = await asyncio.start_server(
+                    self._connection,
+                    hostname,
+                    port,
+                    ssl=ssl_context,
+                    reuse_address=True,
+                    **kwargs,
+                )
+                event_tracer.info("Server started.")
+                return self
+        finally:
+            # re-initialize tracer to contain full bind address
+            self.tracer = tracing.EventAdapter(tracer, None, source=str(self), event_id=self.tracer.extra.get("event_id"))
 
     async def connect(
         self,
@@ -246,51 +260,62 @@ class Søcket:
             """Called each time a new connection is attempted. This
             suspend while the connection is up."""
             writer = None
-            try:
-                logger.debug("Attempting to open connection")
-                reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(
-                        hostname, port, loop=self.loop, ssl=ssl_context
-                    ),
-                    timeout=connect_timeout,
-                )
-                logger.info(f"Socket {self.idstr()} connected.")
-                await self._connection(reader, writer, event=event)
-            except asyncio.TimeoutError:
-                # Make timeouts look like socket connection errors
-                raise OSError
-            finally:
-                logger.info(f"Socket {self.idstr()} disconnected.")
-                # NOTE: the writer is closed inside _connection.
+
+            with tracing.Event(self.tracer,
+                    name=f"connect(hostname={hostname},port={port},"
+                    "ssl_context={ssl_context},connect_timeout={connect_timeout})@new_connection") as event_tracer:
+                try:
+                    event_tracer.debug("Attempting to open connection")
+                    reader, writer = await asyncio.wait_for(
+                        asyncio.open_connection(
+                            hostname, port, loop=self.loop, ssl=ssl_context
+                        ),
+                        timeout=connect_timeout,
+                    )
+                    event_tracer.info(f"Connected")
+                    await self._connection(reader, writer, event=event)
+                except asyncio.TimeoutError:
+                    # Make timeouts look like socket connection errors
+                    raise OSError
+                finally:
+                    event_tracer.info(f"Disconnected")
+                    # NOTE: the writer is closed inside _connection.
+                    pass
 
         async def connect_with_retry(event: asyncio.Event):
             """This is a long-running task that is intended to run
             for the life of the Socket object. It will continually
             try to connect."""
-            logger.info(f"Socket {self.idstr()} connecting to {hostname}:{port}")
-            try:
-                while not self.closed:
-                    try:
-                        await new_connection(event)
-                        if self.closed:
-                            break
-                    except CancelledError:
-                        break
-                    except OSError as e:
-                        if self.closed:
-                            break
-                        else:
-                            logger.warning("Connection error, reconnecting...")
-                            async def _reconnection_delay():
-                                await asyncio.sleep(self.reconnection_delay())
-                            await self.loop.create_task(_reconnection_delay)
-                            continue
-                    except Exception:
-                        logger.exception("Unexpected error")
-            except Exception:
-                logger.exception("Unexpected error")
+            async def _reconnection_delay():
+                await asyncio.sleep(self.reconnection_delay())
 
-        self.connect_with_retry_task = self.loop.create_task(connect_with_retry(event))
+            with tracing.Event(self.tracer,
+                    name=f"connect(hostname={hostname},port={port},"
+                    "ssl_context={ssl_context},connect_timeout={connect_timeout})@connect_with_retry") as event_tracer:
+                try:
+                    while not self.closed:
+                        try:
+                            await new_connection(event)
+                            if self.closed:
+                                break
+                        except CancelledError:
+                            break
+                        except OSError as e:
+                            if self.closed:
+                                break
+                            else:
+                                event_tracer.warning("Connection error, reconnecting...")
+                                try:
+                                    await self.loop.create_task(_reconnection_delay())
+                                except CancelledError:
+                                    break
+                                continue
+                        except Exception as e:
+                            event_tracer.exception(f"Unexpected error {e}")
+                except Exception as e:
+                    event_tracer.exception(f"Unexpected error {e}")
+
+        self.connect_with_retry_tasks.append(self.loop.create_task(connect_with_retry(event)))
         return self
 
     async def messages(self) -> AsyncGenerator[bytes, None]:
@@ -337,186 +362,190 @@ class Søcket:
 
     async def _connection(self, reader: StreamReader, writer: StreamWriter, event: Optional[asyncio.Event]=None):
         """Each new connection will create a task with this coroutine."""
-        logger.debug("Creating new connection")
+        with tracing.Event(self.tracer, name=f"_connection()") as event_tracer:
+            event_tracer.debug("Creating new connection")
 
-        # Swap identities
-        logger.debug(f"Sending my identity {self.idstr()}")
-        await msgproto.send_msg(writer, self.identity)
-        identity = await msgproto.read_msg(reader)
-        if not identity:
-            return
+            # Swap identities
+            event_tracer.debug(f"Sending my identity {self.idstr()}")
+            await msgproto.send_msg(writer, self.identity)
+            identity = await msgproto.read_msg(reader)
+            if not identity:
+                return
 
-        logger.debug(f"Received identity {identity.hex()}")
-        if identity in self._connections:
-            logger.error(
-                f"Socket with identity {identity.hex()} is already "
-                f"connected. This connection will not be created."
+            event_tracer.debug(f"Received identity {identity.hex()}")
+            if identity in self._connections:
+                event_tracer.error(
+                    f"Socket with identity {identity.hex()} is already "
+                    f"connected. This connection will not be created."
+                )
+                return
+
+            # Create the connection object. These objects are kept in a
+            # collection that is used for message distribution.
+            connection = Connection(
+                identity=identity, reader=reader, writer=writer, recv_event=self.raw_recv
             )
-            return
-
-        # Create the connection object. These objects are kept in a
-        # collection that is used for message distribution.
-        connection = Connection(
-            identity=identity, reader=reader, writer=writer, recv_event=self.raw_recv
-        )
-        if len(self._connections) == 0:
-            logger.warning("First connection made")
-            self.at_least_one_connection.set()
-        self._connections[connection.identity] = connection
-        
-        # Set connection event and identity of the server to
-        # which we have established the connection 
-        if event is not None:
-            event.identity = connection.identity
-            event.set()
-
-        try:
-            await connection.run()
-        except asyncio.CancelledError:
-            logger.info(f"Connection {identity.hex()} cancelled.")
-        except Exception:
-            logger.exception(f"Unhandled exception inside _connection")
-            raise
-        finally:
-            logger.debug("connection closed")
-            if connection.identity in self._connections:
-                del self._connections[connection.identity]
+            if len(self._connections) == 0:
+                event_tracer.warning("First connection made")
+                self.at_least_one_connection.set()
+            self._connections[connection.identity] = connection
+            
+            # Set connection event and identity of the server to
+            # which we have established the connection 
+            if event is not None:
+                event.identity = connection.identity
+                event.set()
 
             try:
-                await version_utils.stream_close(writer)
-            except BaseException:
-                logger.exception(f"Exception while trying to close writer stream")
+                await connection.run()
+            except asyncio.CancelledError:
+                event_tracer.error(f"Connection {identity.hex()} cancelled.")
+            except Exception:
+                event_tracer.exception(f"Unhandled exception inside _connection")
+                raise
+            finally:
+                event_tracer.debug("connection closed")
+                if connection.identity in self._connections:
+                    del self._connections[connection.identity]
 
-            if not self._connections:
-                logger.warning("No connections!")
-                self.at_least_one_connection.clear()
+                try:
+                    await version_utils.stream_close(writer)
+                except BaseException:
+                    event_tracer.exception(f"Exception while trying to close writer stream")
+
+                if not self._connections:
+                    event_tracer.warning("No connections!")
+                    self.at_least_one_connection.clear()
 
     async def _close(self):
-        logger.info(f"Closing {self.idstr()}")
-        self.closed = True
+        with tracing.Event(self.tracer, name=f"_close()") as event_tracer:
+            event_tracer.info(f"Closing {self.idstr()}")
+            self.closed = True
 
-        if self.connect_with_retry_task:
-            self.connect_with_retry_task.cancel()
-            try:
-                await self.connect_with_retry_task
-            except CancelledError:
-                pass
+            if self.connect_with_retry_tasks:
+                for connect_with_retry_task in self.connect_with_retry_tasks:
+                    connect_with_retry_task.cancel()
+                await asyncio.gather(*self.connect_with_retry_tasks, return_exceptions=True)
 
-        # REP dict, close all events waiting to fire
-        for msg_id, handle in self.waiting_for_acks.items():
-            logger.debug(f"Cancelling pending resend event for msg_id {msg_id}")
-            handle.cancel()
+            # REP dict, close all events waiting to fire
+            for msg_id, handle in self.waiting_for_acks.items():
+                event_tracer.debug(f"Cancelling pending resend event for msg_id {msg_id}")
+                handle.cancel()
 
-        if self.server:
-            # Stop new connections from being accepted.
-            self.server.close()
-            await self.server.wait_closed()
+            if self.server:
+                # Stop new connections from being accepted.
+                self.server.close()
+                await self.server.wait_closed()
 
-        self.sender_task.cancel()
-        await self.sender_task
+            self.sender_task.cancel()
+            await self.sender_task
 
-        await asyncio.gather(
-            *(c.close() for c in self._connections.values()), return_exceptions=True
-        )
+            await asyncio.gather(
+                *(c.close() for c in self._connections.values()), return_exceptions=True
+            )
 
-        for task in self._tasks:
-            task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
+            for task in self._tasks:
+                task.cancel()
+            await asyncio.gather(*self._tasks, return_exceptions=True)
 
-        logger.info(f"Closed {self.idstr()}")
+            event_tracer.info(f"Closed {self.idstr()}")
 
     async def close(self, timeout=10):
-        try:
-            await asyncio.wait_for(self._close(), timeout)
-            assert self.sender_task.done()
-        except asyncio.TimeoutError:
-            logger.exception("Timed out during close:")
+        with tracing.Event(self.tracer, name=f"close(timeout={timeout})") as event_tracer:
+            try:
+                await asyncio.wait_for(self._close(), timeout)
+                assert self.sender_task.done()
+            except asyncio.TimeoutError:
+                event_tracer.exception("Timed out during close:")
 
     def raw_recv(self, identity: bytes, message: bytes):
         """Called when *any* active connection receives a message."""
-        logger.debug(f"In raw_recv, identity: {identity.hex()} message: {message}")
-        parts = header.parse_header(message)
-        logger.debug(f"{parts}")
-        if not parts.has_header:
-            # Simple case. No request-reply handling, just pass it onto the
-            # application as-is.
-            logger.debug(
-                f"Incoming message has no header, supply as-is: {message[:64]}"
-            )
-            self._queue_recv.put_nowait((identity, message))
-            return
+        with tracing.Event(self.tracer, name=f"raw_recv(identity={identity.hex()},message={message})") as event_tracer:
+            parts = header.parse_header(message)
+            event_tracer.debug(f"{parts}")
+            if not parts.has_header:
+                # Simple case. No request-reply handling, just pass it onto the
+                # application as-is.
+                event_tracer.debug(
+                    f"Incoming message has no header, supply as-is: {message}"
+                )
+                self._queue_recv.put_nowait((identity, message))
+                return
 
-        ######################################################################
-        # The incoming message has a header.
-        #
-        # There are two cases. Let's deal with case 1 first: the received
-        # message is a NEW message (with a header). We must send a reply
-        # back, and pass on the received data to the application.
-        # There is a small catch. We must send the reply back to the
-        # specific connection that sent us this request. No biggie, we
-        # have a method for that.
-        if parts.msg_type == "REQ":
-            reply_parts = header.MessageParts(
-                msg_id=parts.msg_id, msg_type="REP", payload=b""
-            )
-
-            # Make the received data available to the application.
-            logger.debug(f"Writing payload to app: {parts.payload}")
-            self._queue_recv.put_nowait((identity, parts.payload))
-            logger.debug("after self._queue_recv")
-
-            # Send acknowledgement of receipt back to the sender
-
-            def notify_rep():
-                logger.debug(f"Got an REQ, sending back an REP msg_id: {parts.msg_id}")
-                self._user_send_queue.put_nowait(
-                    # BECAUSE the identity is specified here, we are sure to
-                    # send the reply to the specific connection we got the REQ
-                    # from.
-                    (identity, header.make_message(reply_parts))
+            ######################################################################
+            # The incoming message has a header.
+            #
+            # There are two cases. Let's deal with case 1 first: the received
+            # message is a NEW message (with a header). We must send a reply
+            # back, and pass on the received data to the application.
+            # There is a small catch. We must send the reply back to the
+            # specific connection that sent us this request. No biggie, we
+            # have a method for that.
+            if parts.msg_type == "REQ":
+                reply_parts = header.MessageParts(
+                    msg_id=parts.msg_id, msg_type="REP", payload=b""
                 )
 
-            # By deferring this slightly, we hope that the parts.payload
-            # will be made available to the application before the REP is
-            # sent. Otherwise, there's a race condition where we send the
-            # REP *before* parts.payload has been given to the app, and the
-            # app shuts down before being able to do anything with
-            # parts.payload
-            self.loop.call_later(0.02, notify_rep)  # 20 ms
-            return
+                # Make the received data available to the application.
+                event_tracer.debug(f"Writing payload for msg_id: {parts.msg_id} to app: {parts.payload}")
+                self._queue_recv.put_nowait((identity, parts.payload))
+                event_tracer.debug(f"after self._queue_recv for msg_id: {parts.msg_id}")
 
-        # Now we get to the second case. the message we're received here is
-        # a REPLY to a previously sent message. A good thing! All we do is
-        # a little bookkeeping to remove the message id from the "waiting for
-        # acks" dict, and as before, give the received data to the application.
-        logger.debug(f"Got an REP: {parts}")
-        assert parts.msg_type == "REP"  # Nothing else should be possible.
-        handle: asyncio.Handle = self.waiting_for_acks.pop(parts.msg_id, None)
-        logger.debug(f"Looked up call_later handle for {parts.msg_id}: {handle}")
-        if handle:
-            logger.debug(f"Cancelling handle...")
-            handle.cancel()
-            # Nothing further to do. The REP does not go back to the application.
-        ######################################################################
+                # Send acknowledgement of receipt back to the sender
+
+                def notify_rep():
+                    event_tracer.debug(f"Got an REQ, sending back an REP msg_id: {parts.msg_id}")
+                    self._user_send_queue.put_nowait(
+                        # BECAUSE the identity is specified here, we are sure to
+                        # send the reply to the specific connection we got the REQ
+                        # from.
+                        (identity, header.make_message(reply_parts))
+                    )
+
+                # By deferring this slightly, we hope that the parts.payload
+                # will be made available to the application before the REP is
+                # sent. Otherwise, there's a race condition where we send the
+                # REP *before* parts.payload has been given to the app, and the
+                # app shuts down before being able to do anything with
+                # parts.payload
+                self.loop.call_later(0.02, notify_rep)  # 20 ms
+                return
+
+            # Now we get to the second case. the message we're received here is
+            # a REPLY to a previously sent message. A good thing! All we do is
+            # a little bookkeeping to remove the message id from the "waiting for
+            # acks" dict, and as before, give the received data to the application.
+            event_tracer.debug(f"Got an REP for msg_id: {parts.msg_id} with parts: {parts}")
+            assert parts.msg_type == "REP"  # Nothing else should be possible.
+            handle: asyncio.Handle = self.waiting_for_acks.pop(parts.msg_id, None)
+            event_tracer.debug(f"Looked up call_later handle for msg_id: {parts.msg_id} handle: {handle}")
+            if handle:
+                event_tracer.debug(f"Cancelling handle...for msg_id: {parts.msg_id}")
+                handle.cancel()
+                # Nothing further to do. The REP does not go back to the application.
+            ######################################################################
 
     async def recv_identity(self) -> Tuple[bytes, bytes]:
-        # Some connection sent us some data
-        identity, message = await self._queue_recv.get()
-        logger.debug(f"Received message from {identity.hex()}: {message}")
+        with tracing.Event(self.tracer, name=f"recv_identity()") as event_tracer:
+            # Some connection sent us some data
+            identity, message = await self._queue_recv.get()
+            event_tracer.debug(f"Received message from {identity.hex()}: {message}")
 
-        return identity, message
+            return identity, message
 
     def recv_identity_nowait(self) -> Tuple[bytes, bytes]:
-        # receive immediately avaiable data
-        identity, message = self._queue_recv.get_nowait()
-        logger.debug(f"Received message from {identity.hex()}: {message}")
+        with tracing.Event(self.tracer, name=f"recv_identity_nowait()") as event_tracer:
+            # receive immediately avaiable data
+            identity, message = self._queue_recv.get_nowait()
+            event_tracer.debug(f"Received message from {identity.hex()}: {message}")
 
-        return identity, message
+            return identity, message
 
     async def recv(self) -> bytes:
-        # Just drop the identity
-        _, message = await self.recv_identity()
-        return message
+        with tracing.Event(self.tracer, name=f"recv()"):
+            # Just drop the identity
+            _, message = await self.recv_identity()
+            return message
 
     async def recv_string(self, **kwargs) -> str:
         """Automatically decode messages into strings.
@@ -533,15 +562,17 @@ class Søcket:
         Which will substitute unicode-invalid bytes with hexadecimal values
         formatted like ``\\xNN``.
         """
-        return (await self.recv()).decode(**kwargs)
+        with tracing.Event(self.tracer, name=f"recv_string(kwargs={kwargs})"):
+            return (await self.recv()).decode(**kwargs)
 
     async def recv_json(self, **kwargs) -> JSONCompatible:
         """Automatically deserialize messages in JSON format
 
         The ``kwargs`` are passed to the ``json.loads()`` method.
         """
-        data = await self.recv()
-        return json.loads(data, **kwargs)
+        with tracing.Event(self.tracer, name=f"recv_json(kwargs={kwargs})"):
+            data = await self.recv()
+            return json.loads(data, **kwargs)
 
     async def recv_pickle(self, pickler=None, **kwargs) -> Any:
         """Automatically deserialize messages in Pickle format
@@ -549,70 +580,74 @@ class Søcket:
         The ``kwargs`` are passed to the ``json.loads()`` method.
         By default uses cloudpickle as the default ``pickler`` module.
         """
-        if pickler is None:
-            pickler = self.pickler
+        with tracing.Event(self.tracer, name=f"recv_pickle(pickler={pickler},kwargs={kwargs})"):
+            if pickler is None:
+                pickler = self.pickler
 
-        data = await self.recv()
-        return pickler.loads(data, **kwargs)
+            data = await self.recv()
+            return pickler.loads(data, **kwargs)
 
-    async def send(self, data: bytes, identity: Optional[bytes] = None, retries=None):
-        logger.debug(f"Adding message to user queue: {data[:20]}")
-        original_data = data
-        if (
-            identity or self.send_mode is SendMode.ROUNDROBIN
-        ) and self.delivery_guarantee is DeliveryGuarantee.AT_LEAST_ONCE:
-            # Enable receipt acknowledgement
-            #####################################################################
-            parts = header.MessageParts(
-                msg_id=uuid.uuid4(), msg_type="REQ", payload=data
-            )
-            rich_data = header.make_message(parts)
-            # TODO: Might want to add a retry counter here somewhere, to keep
-            #  track of repeated failures to send a specific message.
+    async def send(self, data: bytes, identity: Optional[bytes] = None, retries=None, rid=None, msg_id=None):
+        if msg_id is None:
+            msg_id=uuid.uuid4()
 
-            def resend(retries):
-                if retries == 0:
-                    logger.info(
-                        f"No more retries to send. Dropping [{original_data[:20]}...]"
-                    )
-                    return
-
-                if identity:
-                    logger.debug(
-                        f"Scheduling the resend to identity:{identity.hex()} for data {original_data}"
-                    )
-                self._tasks.add(
-                    self.loop.create_task(self.send(original_data, identity))
+        with tracing.Event(self.tracer, name=f"send(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})") as event_tracer:
+            original_data = data
+            if (
+                identity or self.send_mode is SendMode.ROUNDROBIN
+            ) and self.delivery_guarantee is DeliveryGuarantee.AT_LEAST_ONCE:
+                # Enable receipt acknowledgement
+                parts = header.MessageParts(
+                    msg_id=msg_id, msg_type="REQ", payload=data
                 )
-                # After deleting this here, a new one will be created when
-                # we re-enter ``async def send()``
-                logger.debug(f"Removing the acks entry")
-                del self.waiting_for_acks[parts.msg_id]
+                rich_data = header.make_message(parts)
+                # TODO: Might want to add a retry counter here somewhere, to keep
+                #  track of repeated failures to send a specific message.
 
-            handle: asyncio.Handle = self.loop.call_later(
-                5.0, resend, 5 if retries is None else retries - 1
-            )
-            # In self.raw_recv(), this handle will be cancelled if the other
-            # side sends back an acknowledgement of receipt (REP)
-            logger.debug("Creating future resend acks entry")
-            self.waiting_for_acks[parts.msg_id] = handle
-            data = rich_data  # In the send further down, send the rich one.
-            #####################################################################
-        else:
-            pass
+                def resend(retries):
+                    with tracing.Event(self.tracer, name=f"resend(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})") as event_tracer:
+                        if retries == 0:
+                            event_tracer.error(
+                                f"No more retries to send. Dropping [{original_data}]"
+                            )
+                            return
 
-        await self._user_send_queue.put((identity, data))
+                        if identity:
+                            event_tracer.debug(
+                                f"Scheduling the resend to identity:{identity.hex()} for data {original_data}"
+                            )
+                        self._tasks.add(
+                            self.loop.create_task(self.send(original_data, identity, rid=rid, msg_id=msg_id))
+                        )
+                        # After deleting this here, a new one will be created when
+                        # we re-enter ``async def send()``
+                        event_tracer.debug(f"Removing the acks entry")
+                        del self.waiting_for_acks[parts.msg_id]
+
+                handle: asyncio.Handle = self.loop.call_later(
+                    5.0, resend, 5 if retries is None else retries - 1
+                )
+                # In self.raw_recv(), this handle will be cancelled if the other
+                # side sends back an acknowledgement of receipt (REP)
+                event_tracer.debug("Creating future resend acks entry")
+                self.waiting_for_acks[parts.msg_id] = handle
+                data = rich_data  # In the send further down, send the rich one.
+            else:
+                pass
+
+            await self._user_send_queue.put((identity, data))
 
     async def send_string(self, data: str, identity: Optional[bytes] = None, **kwargs):
         """Automatically convert the string to bytes when sending.
 
         The ``kwargs`` are passed to the internal ``data.encode()`` method. """
-        await self.send(data.encode(**kwargs), identity)
+        with tracing.Event(self.tracer, name=f"send_string(identity={identity.hex()},data={data},kwargs={kwargs})"):
+            await self.send(data.encode(**kwargs), identity)
 
     async def send_json(
         self, obj: JSONCompatible, identity: Optional[bytes] = None, **kwargs
     ):
-        """Automatically serialise the given ``obj`` to a JSON representation
+        """Automatically serialize the given ``obj`` to a JSON representation
         when sending.
 
         The ``kwargs`` are passed to the ``json.dumps()`` method. In particular,
@@ -641,36 +676,38 @@ class Søcket:
         how to use the ``object_hook`` parameter in the ``json.loads()``
         method.
         """
-        await self.send_string(json.dumps(obj, **kwargs), identity)
+        with tracing.Event(self.tracer, name=f"send_json(identity={identity.hex()},obj={obj},kwargs={kwargs})"):
+            await self.send_string(json.dumps(obj, **kwargs), identity)
 
     async def send_pickle(
-        self, obj: Any, identity: Optional[bytes] = None, pickler=None, **kwargs
+        self, obj: Any, identity: Optional[bytes] = None, pickler=None, rid=None, **kwargs
     ):
-        """Automatically serialise the given ``obj`` to Pickle representation.
+        """Automatically serialize the given ``obj`` to Pickle representation.
 
         The ``kwargs`` are passed to the ``pickler.dumps()`` method.
         By default uses ``cloudpickle`` as the default ``pickler`` module.
         """
         if pickler is None:
             pickler = self.pickler
-
-        await self.send(pickler.dumps(obj, **kwargs), identity)
+        with tracing.Event(self.tracer, name=f"send_pickle(identity={identity.hex()},rid={rid},obj={obj},pickler={pickler},kwargs={kwargs})"):
+            await self.send(pickler.dumps(obj, **kwargs), identity, rid=rid)
 
     def _sender_publish(self, message: bytes):
-        logger.debug(f"Sending message via publish")
-        # TODO: implement grouping by named channels
-        if not self._connections:
-            raise NoConnectionsAvailableError
+        with tracing.Event(self.tracer, name=f"_send_publish(message={message})") as event_tracer:
+            event_tracer.debug(f"Sending message via publish")
+            # TODO: implement grouping by named channels
+            if not self._connections:
+                raise NoConnectionsAvailableError
 
-        for identity, c in self._connections.items():
-            logger.debug(f"Sending to connection: {identity.hex()}")
-            try:
-                c.writer_queue.put_nowait(message)
-                logger.debug("Placed message on connection writer queue.")
-            except asyncio.QueueFull:
-                logger.error(
-                    f"Dropped msg to Connection {identity.hex()}, its write queue is full."
-                )
+            for identity, c in self._connections.items():
+                event_tracer.debug(f"Sending to connection: {identity.hex()}")
+                try:
+                    c.writer_queue.put_nowait(message)
+                    event_tracer.debug("Placed message on connection writer queue.")
+                except asyncio.QueueFull:
+                    event_tracer.error(
+                        f"Dropped msg to Connection {identity.hex()}, its write queue is full."
+                    )
 
     def _sender_robin(self, message: bytes):
         """
@@ -679,80 +716,83 @@ class Søcket:
         - NoConnectionsAvailableError
 
         """
-        logger.debug(f"Sending message via round_robin")
-        queues_full = set()
-        while True:
-            identity = next(self._connections)
-            logger.debug(f"Got connection: {identity.hex()}")
-            if identity in queues_full:
-                logger.warning(f"All send queues are full. Dropping message.")
-                return
-            try:
-                connection = self._connections[identity]
-                connection.writer_queue.put_nowait(message)
-                logger.debug(f"Added message to connection send queue.")
-                return
-            except asyncio.QueueFull:
-                logger.warning(
-                    "Cannot send to Connection blah, its write queue is full! "
-                    "Trying a different peer..."
-                )
-                queues_full.add(identity)
+        with tracing.Event(self.tracer, name=f"_send_robin(message={message})") as event_tracer:
+            event_tracer.debug(f"Sending message via round_robin")
+            queues_full = set()
+            while True:
+                identity = next(self._connections)
+                event_tracer.debug(f"Got connection: {identity.hex()}")
+                if identity in queues_full:
+                    event_tracer.warning(f"All send queues are full. Dropping message.")
+                    return
+                try:
+                    connection = self._connections[identity]
+                    connection.writer_queue.put_nowait(message)
+                    event_tracer.debug(f"Added message to connection send queue.")
+                    return
+                except asyncio.QueueFull:
+                    event_tracer.warning(
+                        "Cannot send to Connection blah, its write queue is full! "
+                        "Trying a different peer..."
+                    )
+                    queues_full.add(identity)
 
     def _sender_identity(self, message: bytes, identity: bytes):
         """Send directly to a peer with a distinct identity"""
-        logger.debug(
-            f"Sending message via identity {identity.hex()}: {message[:20]}..."
-        )
-        c = self._connections.get(identity)
-        if not c:
-            logger.error(
-                f"Peer {identity.hex()} is not connected. Message will be dropped."
+        with tracing.Event(self.tracer, name=f"_sender_identity(identity={identity.hex()},message={message})") as event_tracer:
+            event_tracer.debug(
+                f"Sending message, identity: {identity.hex()} message: {message}"
             )
-            return
-
-        try:
-            c.writer_queue.put_nowait(message)
-            logger.debug("Placed message on connection writer queue.")
-        except asyncio.QueueFull:
-            logger.error("Dropped msg to Connection blah, its write " "queue is full.")
-
-    async def _sender_main(self):
-        while True:
-            q_task: asyncio.Task = self.loop.create_task(self._user_send_queue.get())
-            w_task: asyncio.Task = self.loop.create_task(
-                self.at_least_one_connection.wait()
-            )
-            try:
-                await asyncio.wait([w_task, q_task], return_when=asyncio.ALL_COMPLETED)
-            except asyncio.CancelledError:
-                q_task.cancel()
-                w_task.cancel()
+            c = self._connections.get(identity)
+            if not c:
+                event_tracer.error(
+                    f"Peer {identity.hex()} is not connected. Message {message} will be dropped."
+                )
                 return
 
-            identity, data = q_task.result()
-            logger.debug(f"Got data to send: {data[:64]}")
             try:
-                if identity is not None:
-                    self._sender_identity(data, identity)
-                else:
-                    try:
-                        logger.debug(f"Sending msg via handler: {data[:64]}")
-                        self.sender_handler(message=data)
-                    except NoConnectionsAvailableError:
-                        logger.error("No connections available")
-                        self.at_least_one_connection.clear()
+                c.writer_queue.put_nowait(message)
+                event_tracer.debug("Placed message on connection writer queue.")
+            except asyncio.QueueFull:
+                event_tracer.error("Dropped msg to Connection blah, its write " "queue is full.")
+
+    async def _sender_main(self):
+        with tracing.Event(self.tracer, name=f"_sender_main()") as event_tracer:
+            while True:
+                q_task: asyncio.Task = self.loop.create_task(self._user_send_queue.get())
+                w_task: asyncio.Task = self.loop.create_task(
+                    self.at_least_one_connection.wait()
+                )
+                try:
+                    await asyncio.wait([w_task, q_task], return_when=asyncio.ALL_COMPLETED)
+                except asyncio.CancelledError:
+                    q_task.cancel()
+                    w_task.cancel()
+                    return
+
+                identity, data = q_task.result()
+                event_tracer.debug(f"Got data to send, identity: {identity.hex()} data: {data}")
+                try:
+                    if identity is not None:
+                        self._sender_identity(data, identity)
+                    else:
                         try:
-                            # Put it back onto the queue
-                            self._user_send_queue.put_nowait((identity, data))
-                        except asyncio.QueueFull:
-                            logger.error(
-                                "Send queue full when trying to recover "
-                                "from no connections being available. "
-                                "Dropping data!"
-                            )
-            except Exception as e:
-                logger.exception(f"Unexpected error when sending a message: {e}")
+                            event_tracer.debug(f"Sending msg via handler: {data}")
+                            self.sender_handler(message=data)
+                        except NoConnectionsAvailableError:
+                            event_tracer.error("No connections available")
+                            self.at_least_one_connection.clear()
+                            try:
+                                # Put it back onto the queue
+                                self._user_send_queue.put_nowait((identity, data))
+                            except asyncio.QueueFull:
+                                event_tracer.error(
+                                    "Send queue full when trying to recover "
+                                    "from no connections being available. "
+                                    "Dropping data!"
+                                )
+                except Exception as e:
+                    event_tracer.exception(f"Unexpected error when sending a message: {e}")
 
     def check_socket_type(self):
         assert (
@@ -794,64 +834,79 @@ class Connection:
         self.heartbeat_timeout = 15
         self.heartbeat_message = b"aiomsg-heartbeat"
 
+        self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
+
+    def __str__(self):
+        return f"Connection(identity={self.identity.hex()})"
+
     def warn_dropping_data(self):  # pragma: no cover
-        if self.writer_queue.qsize():
-            logger.warning(
-                f"Closing connection {self.identity.hex()} but there is "
-                f"still data in the writer queue: {self.writer_queue.qsize()}\n"
-                f"These messages will be lost."
-            )
+        with tracing.Event(self.tracer, name=f"warn_dropping_data()") as event_tracer:
+            if self.writer_queue.qsize():
+                event_tracer.warning(
+                    f"Closing connection {self.identity.hex()} but there is "
+                    f"still data in the writer queue: {self.writer_queue.qsize()}\n"
+                    f"These messages will be lost."
+                )
 
     async def close(self):
-        self.warn_dropping_data()
-        # Kill the reader task
-        self.reader_task.cancel()
-        self.writer_task.cancel()
-        await asyncio.gather(self.reader_task, self.writer_task)
-        self.reader_task = None
-        self.writer_task = None
+        with tracing.Event(self.tracer, name=f"close()") as event_tracer:
+            self.warn_dropping_data()
+            # Kill the reader task
+            self.reader_task.cancel()
+            self.writer_task.cancel()
+            await asyncio.gather(self.reader_task, self.writer_task, return_exceptions=True)
+            self.reader_task = None
+            self.writer_task = None
+            # Close connection
+            if self.writer.can_write_eof():
+                self.writer.write_eof()
+            event_tracer.info("closing connection writer")
+            self.writer.close()
+            await self.writer.wait_closed()
 
     async def _recv(self):
-        while True:
-            try:
-                logger.debug("Waiting for messages in connection")
-                message = await asyncio.wait_for(
-                    msgproto.read_msg(self.reader), timeout=self.heartbeat_timeout
-                )
-                logger.debug(f"Got message in connection: {message}")
-            except asyncio.TimeoutError:
-                logger.warning("Heartbeat failed. Closing connection.")
-                self.writer_queue.put_nowait(None)
-                return
-                # raise HeartBeatFailed
-            except asyncio.CancelledError:
-                return
+        with tracing.Event(self.tracer, name=f"_recv()") as event_tracer:
+            while True:
+                try:
+                    event_tracer.debug("Waiting for messages in connection")
+                    message = await asyncio.wait_for(
+                        msgproto.read_msg(self.reader), timeout=self.heartbeat_timeout
+                    )
+                    event_tracer.debug(f"Got message in connection: {message}")
+                except asyncio.TimeoutError:
+                    event_tracer.warning("Heartbeat failed. Closing connection.")
+                    self.writer_queue.put_nowait(None)
+                    return
+                    # raise HeartBeatFailed
+                except asyncio.CancelledError:
+                    return
 
-            if not message:
-                logger.debug("Connection closed (recv)")
-                self.writer_queue.put_nowait(None)
-                return
+                if not message:
+                    event_tracer.debug("Connection closed (recv)")
+                    self.writer_queue.put_nowait(None)
+                    return
 
-            if message == self.heartbeat_message:
-                logger.debug("Heartbeat received")
-                continue
+                if message == self.heartbeat_message:
+                    event_tracer.debug("Heartbeat received")
+                    continue
 
-            try:
-                logger.debug(
-                    f"Received message on connection {self.identity.hex()}: {message}"
-                )
-                self.reader_event(self.identity, message)
-            except asyncio.QueueFull:
-                logger.error(
-                    # TODO: fix message
-                    "Data lost on connection blah because the recv "
-                    "queue is full!"
-                )
-            except Exception as e:
-                logger.exception(f"Unhandled error in _recv: {e}")
+                try:
+                    event_tracer.debug(
+                        f"Received message on connection {self.identity.hex()}: {message}"
+                    )
+                    self.reader_event(self.identity, message)
+                except asyncio.QueueFull:
+                    event_tracer.error(
+                        # TODO: fix message
+                        "Data lost on connection blah because the recv "
+                        "queue is full!"
+                    )
+                except Exception as e:
+                    event_tracer.exception(f"Unhandled error in _recv: {e}")
 
     async def send_wait(self, message: bytes):
-        await msgproto.send_msg(self.writer, message)
+        with tracing.Event(self.tracer, name=f"send_wait(message={message})"):
+            await msgproto.send_msg(self.writer, message)
 
     @staticmethod
     async def _send(
@@ -862,70 +917,71 @@ class Connection:
         heartbeat_message: bytes,
         reader_task: asyncio.Task,
     ):
-        while True:
-            try:
+        with tracing.Event(tracer, name=f"_send(identity={identity.hex()},heartbeat_interval={heartbeat_interval})") as event_tracer:
+            while True:
                 try:
-                    message = await asyncio.wait_for(
-                        writer_queue.get(), timeout=heartbeat_interval
-                    )
-                except asyncio.TimeoutError:
-                    logger.debug("Sending a heartbeat")
-                    message = heartbeat_message
-                except asyncio.CancelledError:
-                    break
-                else:
-                    writer_queue.task_done()
+                    try:
+                        message = await asyncio.wait_for(
+                            writer_queue.get(), timeout=heartbeat_interval
+                        )
+                    except asyncio.TimeoutError:
+                        event_tracer.debug("Sending a heartbeat")
+                        message = heartbeat_message
+                    except asyncio.CancelledError:
+                        break
+                    else:
+                        writer_queue.task_done()
 
-                if not message:
-                    logger.info("Connection closed (send)")
-                    reader_task.cancel()
-                    break
+                    if not message:
+                        event_tracer.info("Connection closed (send)")
+                        reader_task.cancel()
+                        break
 
-                logger.debug(
-                    f"Got message from connection writer queue. {message[:64]}"
-                )
-                try:
-                    await send_wait(message)
-                    logger.debug("Sent message")
-                except OSError as e:
-                    logger.error(
-                        f"Connection {identity.hex()} aborted, dropping "
-                        f"message: {message[:50]}...{message[-50:]}\n"
-                        f"error: {e}"
+                    event_tracer.debug(
+                        f"Got message from connection writer queue. {message}"
                     )
-                    break
-                except asyncio.CancelledError:
-                    # Try to still send this message.
-                    # await msgproto.send_msg(self.writer, message)
-                    break
-            except Exception as e:
-                logger.error(f"Unhandled error: {e}")
+                    try:
+                        await send_wait(message)
+                        event_tracer.debug("Sent message")
+                    except OSError as e:
+                        event_tracer.error(
+                            f"Connection {identity.hex()} aborted, dropping "
+                            f"message: {message[:50]}...{message[-50:]}\n"
+                            f"error: {e}"
+                        )
+                        break
+                    except asyncio.CancelledError:
+                        # Try to still send this message.
+                        # await msgproto.send_msg(self.writer, message)
+                        break
+                except Exception as e:
+                    event_tracer.error(f"Unhandled error: {e}")
 
     async def run(self):
-        logger.info(f"Connection {self.identity.hex()} running.")
-        self.reader_task = self.loop.create_task(self._recv())
-        self.writer_task = self.loop.create_task(
-            self._send(
-                self.identity,
-                self.send_wait,
-                self.writer_queue,
-                self.heartbeat_interval,
-                self.heartbeat_message,
-                self.reader_task,
+        with tracing.Event(self.tracer, name=f"run()") as event_tracer:
+            event_tracer.info(f"Connection {self.identity.hex()} running.")
+            self.reader_task = self.loop.create_task(self._recv())
+            self.writer_task = self.loop.create_task(
+                self._send(
+                    self.identity,
+                    self.send_wait,
+                    self.writer_queue,
+                    self.heartbeat_interval,
+                    self.heartbeat_message,
+                    self.reader_task,
+                )
             )
-        )
 
-        try:
-            await asyncio.wait(
-                [self.reader_task, self.writer_task], return_when=asyncio.ALL_COMPLETED
-            )
-        except asyncio.CancelledError:
-            self.reader_task.cancel()
-            self.writer_task.cancel()
-            group = asyncio.gather(self.reader_task, self.writer_task)
-            await group
-            self.warn_dropping_data()
-        logger.info(f"Connection {self.identity.hex()} no longer active.")
+            try:
+                await asyncio.wait(
+                    [self.reader_task, self.writer_task], return_when=asyncio.ALL_COMPLETED
+                )
+            except asyncio.CancelledError:
+                self.reader_task.cancel()
+                self.writer_task.cancel()
+                await asyncio.gather(self.reader_task, self.writer_task, return_exceptions=True)
+                self.warn_dropping_data()
+            event_tracer.info(f"Connection {self.identity.hex()} no longer active.")
 
 # provide alternative socket class name
 Socket = Søcket

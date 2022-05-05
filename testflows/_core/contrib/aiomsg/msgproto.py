@@ -5,11 +5,11 @@ aiomsg.msgproto
 These are messaging protocols
 
 """
-import logging
+import testflows._core.tracing as tracing
+
 from asyncio import StreamReader, StreamWriter
 
-logger = logging.getLogger(__name__)
-# disable logging
+tracer = tracing.getLogger(__name__)
 
 _PREFIX_SIZE = 4
 
@@ -20,15 +20,19 @@ async def read_msg(reader: StreamReader) -> bytes:
         size_bytes = await reader.readexactly(_PREFIX_SIZE)
         size = int.from_bytes(size_bytes, byteorder="big")
         data = await reader.readexactly(size)
-        logger.debug(f'Got data from socket: "{data[:64]}"')
+        tracer.debug(f'Got data from socket: "{data[:64]}"')
         return data
     except (EOFError, OSError) as e:
-        logger.info(f"Connection lost: {e}")
+        tracer.exception(f"Connection lost: {e}")
         return b""
 
 
 async def send_msg(writer: StreamWriter, data: bytes):
     writer.write(len(data).to_bytes(4, byteorder="big"))
     writer.write(data)
-    logger.debug(f'Wrote data to the socket: "{data[:64]}"')
-    await writer.drain()
+    tracer.debug(f'Wrote data to the socket: "{data[:64]}"')
+    try:
+        await writer.drain()
+    except OSError as e:
+        tracer.exception(f'Connection lost: {e} while sending "{data}"')
+        raise

@@ -28,8 +28,7 @@ import multiprocessing.managers
 
 import testflows.settings as settings
 
-from queue import Queue
-
+from queue import Queue, Empty as EmptyQueue
 from logging import *
 
 def uid():
@@ -143,14 +142,94 @@ class RecordFilter(logging.Filter):
 class Manager(multiprocessing.managers.SyncManager):
     pass
 
+class BufferedQueueHandler(logging.handlers.QueueHandler):
+    """Buffered queue handler that batches 
+    records to improve throughput over remote queues.
+    """
+    def __init__(self, queue, flush_interval=1, flush_level=logging.CRITICAL):
+        """
+        Initialise an instance, using the passed queue.
+        """
+        self.buffer = []
+        self.flush_level = flush_level
+        self.flush_interval = flush_interval
+        self.flush_time = time.time()
+        super(BufferedQueueHandler, self).__init__(queue=queue)
+
+    def flush(self):
+        """
+        Flush records buffer.
+        """
+        self.acquire()
+        try:
+            self.flush_time = time.time()
+            if self.buffer:
+                self.queue.put_nowait(self.buffer)
+                self.buffer = []
+        finally:
+            self.release()
+            
+    def close(self):
+        """
+        Close the handler.
+
+        This version just flushes and chains to the parent class' close().
+        """
+        try:
+            self.flush()
+        finally:
+            return super(BufferedQueueHandler, self).close()
+
+    def enqueue(self, record):
+        """
+        Enqueue a record.
+
+        The base implementation uses put_nowait. You may want to override
+        this method if you want to use blocking, timeouts or custom queue
+        implementations.
+        """
+        self.buffer.append(record)
+        if ((time.time() - self.flush_time >= self.flush_interval) or
+            (record.levelno >= self.flush_level)):
+            self.flush()
+
+class BufferedQueueListener(logging.handlers.QueueListener):
+    """Buffered queue listener that can be paired
+    with BufferedQueueHandler to process batched records.
+    """
+    def _monitor(self):
+        """
+        Monitor the queue for records, and ask the handler
+        to deal with them.
+
+        This method runs on a separate, internal thread.
+        The thread will terminate if it sees a sentinel object in the queue.
+        """
+        q = self.queue
+        has_task_done = hasattr(q, 'task_done')
+        while True:
+            try:
+                records = self.dequeue(True)
+                if records is self._sentinel:
+                    if has_task_done:
+                        q.task_done()
+                    break
+                for record in records:
+                    self.handle(record)
+                if has_task_done:
+                    q.task_done()
+            except EmptyQueue:
+                break
+
 def configure_tracing(main=True, tracer=None):
     """Configure tracing logger.
-    """
-    if not settings.trace:
-        return
-    
+    """   
     if tracer is None:
         tracer = getLogger("testflows")
+
+    if not settings.trace:
+        tracer.setLevel(logging.CRITICAL + 1)
+        return
 
     if main:
         queue = Queue()  
@@ -167,7 +246,7 @@ def configure_tracing(main=True, tracer=None):
 
     queue = manager.trace_queue()
 
-    queue_handler = logging.handlers.QueueHandler(queue)
+    queue_handler = BufferedQueueHandler(queue)
     queue_handler.addFilter(RecordFilter())
 
     tracer.addHandler(queue_handler)
@@ -175,15 +254,16 @@ def configure_tracing(main=True, tracer=None):
     if main:
         file_handler = logging.FileHandler("trace.log", mode="w", encoding="utf-8")
         file_handler.setFormatter(JSONFormatter(indent=None))
-        queue_listener_handler = logging.handlers.QueueListener(queue, file_handler) 
+        queue_listener_handler = BufferedQueueListener(queue, file_handler) 
         queue_listener_handler.start()
 
         def _atexit():
             queue_listener_handler.stop()
+            queue_handler.close()
             manager.shutdown()
         
         atexit.register(_atexit)
 
-    tracer.setLevel(logging.DEBUG)
+    tracer.setLevel(settings.trace)
 
     return tracer

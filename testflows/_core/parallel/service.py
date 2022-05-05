@@ -90,8 +90,7 @@ class Service:
         self.in_socket = Socket(loop=self.loop)
         self.out_socket = Socket(loop=self.loop)
         self.address = address if address is not None else Address("127.0.0.1", 0)
-        self.connections = {}
-        self.request_tasks = []
+        self.identity = self.in_socket.identity
         self.serve_tasks = []
         self.reply_events = {}
         self.objects = {}
@@ -102,7 +101,7 @@ class Service:
         self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
 
     def __str__(self):
-        return f"Service(pid={os.getpid()},name={self.name},address={self.address})@0x{id(self):x}"
+        return f"Service(pid={os.getpid()},name={self.name},identity={self.identity.hex()},address={self.address},in_socket={self.in_socket},out_socket={self.out_socket})@0x{id(self):x}"
 
     def register(self, obj, sync=None, expose=None, awaited=True):
         """Register object with the service to be by remote services.
@@ -129,8 +128,8 @@ class Service:
 
             try:
                 if sync:
-                    return ServiceObject(obj, address=self.address, expose=expose)
-                return AsyncServiceObject(obj, address=self.address, expose=expose)
+                    return ServiceObject(obj, identity=self.identity, address=self.address, expose=expose)
+                return AsyncServiceObject(obj, identity=self.identity, address=self.address, expose=expose)
             finally:
                 event_tracer.debug("registration complete", extra={"event_action": tracing.Action.END})
 
@@ -174,11 +173,11 @@ class Service:
         else:
             return _async_unregister()
 
-    async def _connect(self, rid, address):
+    async def _connect(self, rid, identity, address, timeout=None):
         """Connect to the remote service that provides
         access to the remote object.
         """
-        event_tracer = tracing.EventAdapter(self.tracer, name=f"_connect(rid={rid},address={address})")      
+        event_tracer = tracing.EventAdapter(self.tracer, name=f"_connect(rid={rid},identity={identity.hex()},address={address})")      
         event_tracer.debug("connecting", extra={"event_action": tracing.Action.START})
 
         try:
@@ -205,20 +204,17 @@ class Service:
                     event_tracer.debug(f"complete", extra={"event_action": tracing.Action.END})
 
             async def send(rid, oid, fn, args, kwargs, resp=True, timeout=None):
-                """Send sevice object request to remote service.
+                """Send service object request to remote service.
                 """
                 try:
                     with tracing.Event(event_tracer,
                                        name=f"send(oid=0x{oid:x},fn={fn},args={args},kwargs={kwargs},"
                                         f"resp={resp},timeout={timeout})") as send_tracer:
-                        send_tracer.debug("wating for connection")
-                        await asyncio.wait_for(self.connections[address].wait(), timeout=timeout)
-                        send_tracer.debug("got connection")
                         try:
                             try:
                                 await asyncio.wait_for(self.out_socket.send_pickle(
                                         obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
-                                        identity=self.connections[address].identity
+                                        identity=identity
                                     ), timeout=timeout)
                                 send_tracer.debug("sent request")
                             except TypeError:
@@ -246,7 +242,7 @@ class Service:
                                 send_tracer.debug("trying again to send after TypeError")
                                 await asyncio.wait_for(self.out_socket.send_pickle(
                                         obj=(self.MsgTypes.REQUEST, rid, (oid, fn, args, kwargs)),
-                                        identity=self.connections[address].identity
+                                        identity=identity
                                     ), timeout=timeout)
                                 send_tracer.debug("sent request after TypeError")
 
@@ -272,11 +268,15 @@ class Service:
 
             async with self.lock:
                 event_tracer.debug("got service lock")
-                if not address in self.connections:
-                    event_tracer.debug(f"connecting to {address}")
+                if not identity in self.out_socket._connections:
+                    event_tracer.debug(f"connecting to identity={identity.hex()},address={address}")
                     event = asyncio.Event()
                     await self.out_socket.connect(address.hostname, address.port, event=event)
-                    self.connections[address] = event
+                    event_tracer.debug("wating for connection")
+                    await asyncio.wait_for(event.wait(), timeout=timeout)
+                    event_tracer.debug("got connection")
+                    if not identity in self.out_socket._connections:
+                        raise RuntimeError(f"connecting to address={address} didn't result in connection to identity={identity.hex()}")
 
             event_tracer.debug("using non-local send")
             return send
@@ -316,14 +316,14 @@ class Service:
     async def __aexit__(self, exc_type, exc_value, exc_tb):
         """Async context manager exit.
         """
+        self.init_tracer.info(f"closing {self} with sockets {self.out_socket} and {self.in_socket}")
+
         with tracing.Event(self.init_tracer, name="__aexit__") as event_tracer:
             async with self.lock:
                 event_tracer.debug("got lock")
                 try:
                     self.objects = {}
-                    while self.request_tasks:
-                        task = self.request_tasks.pop()
-                        await task
+                   
                     while self.serve_tasks:
                         task = self.serve_tasks.pop()
                         task.cancel()
@@ -331,7 +331,7 @@ class Service:
                             await task
                         except asyncio.CancelledError:
                             pass
-
+                   
                     await self.out_socket.close()
                     await self.in_socket.close()
                     self.executor.__exit__(None, None, None)
@@ -425,7 +425,7 @@ class Service:
     async def _process_message(self, identity, message):
         """Process received message.
         """
-        with tracing.Event(self.tracer, f"_process_message(identity={identity})") as event_tracer:
+        with tracing.Event(self.tracer, f"_process_message(identity={identity.hex()}),message={message}") as event_tracer:
             msg_type, rid, msg_body = cloudpickle.loads(message)
 
             if msg_type == self.MsgTypes.REQUEST:
@@ -549,10 +549,11 @@ class BaseServiceObject:
     _exposed = None
     _typename = None
 
-    def __init__(self, oid, address, _incref=True):
+    def __init__(self, oid, identity, address, _incref=True):
         """Initialize service object.
         """
         self.oid = oid
+        self.identity = identity
         self.address = address
         self._tracer = tracing.EventAdapter(tracer, None, source=str(self))
 
@@ -567,7 +568,7 @@ class BaseServiceObject:
             )
 
     def __str__(self):
-        return f"{self.__class__.__name__}(oid=0x{self.oid:x},address={self.address})@0x{id(self):x}"
+        return f"{self.__class__.__name__}(oid=0x{self.oid:x},identity={self.identity.hex()},address={self.address})@0x{id(self):x}"
 
     def __repr__(self):
         return str(self)
@@ -638,16 +639,18 @@ class BaseServiceObject:
         """
         return other.oid == self.oid and other.address == self.address 
 
-    async def __async_proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
+    async def __async_proxy_call__(self, fn, args=None, kwargs=None, timeout=60, rid=None):
         """Execute function call on the remote service.
         """
         oid = self.oid
         address = self.address
+        identity = self.identity
 
         if rid is None:
             rid = uuid.uuid1().hex
 
-        with tracing.Event(self._tracer, f"__async_proxy_call__(rid={rid},oid=0x{oid:x},address={address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
+        with tracing.Event(self._tracer, f"__async_proxy_call__(rid={rid},oid=0x{oid:x},identity={identity.hex()}"
+                                          ",address={address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
             if args is None:
                 args = tuple()
             if kwargs is None:
@@ -661,7 +664,7 @@ class BaseServiceObject:
                         return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
                     return await c
 
-                send = await wrap(_process_service._connect(rid, address))
+                send = await wrap(_process_service._connect(rid, identity, address))
                 response = await wrap(send(rid, oid, fn, args, kwargs, resp=True, timeout=timeout))
 
                 await asyncio.wait_for(wrap(response.wait()), timeout=timeout)
@@ -678,16 +681,18 @@ class BaseServiceObject:
 
             return reply_body
 
-    def __proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
+    def __proxy_call__(self, fn, args=None, kwargs=None, timeout=60, rid=None):
         """Synchronously execute function call on the remote service.
         """
         oid = self.oid
+        identity = self.identity
         address = self.address
 
         if rid is None:
             rid = uuid.uuid1().hex
 
-        with tracing.Event(self._tracer, f"__proxy_call__(rid={rid},oid=0x{self.oid:x},address={self.address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
+        with tracing.Event(self._tracer, f"__proxy_call__(rid={rid},oid=0x{self.oid:x},identity={identity.hex()},"
+                                          "address={self.address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
             try:
                 c = self.__async_proxy_call__(fn, args, kwargs, timeout=timeout, rid=rid)
                 try:
@@ -703,7 +708,7 @@ class BaseServiceObject:
         """Make service object serializable.
         """
         self._incref()
-        return (RebuildServiceObject, (self._typename, self._exposed, self.oid, self.address, False))
+        return (RebuildServiceObject, (self._typename, self._exposed, self.oid, self.identity, self.address, False))
 
 
 class AsyncBaseServiceObject(BaseServiceObject):
@@ -713,19 +718,19 @@ class AsyncBaseServiceObject(BaseServiceObject):
         """Make service object serializable.
         """
         self._incref()
-        return (RebuildAsyncServiceObject, (self._typename, self._exposed, self.oid, self.address, False))
+        return (RebuildAsyncServiceObject, (self._typename, self._exposed, self.oid, self.identity, self.address, False))
 
 
-def RebuildServiceObject(typename, exposed, oid, address, _incref=True):
+def RebuildServiceObject(typename, exposed, oid, identity, address, _incref=True):
     """Rebuild service object during unpickling.
     """
-    return ServiceObjectType(typename, exposed)(oid=oid, address=address, _incref=_incref)
+    return ServiceObjectType(typename, exposed)(oid=oid, identity=identity, address=address, _incref=_incref)
 
 
-def RebuildAsyncServiceObject(typename, exposed, oid, address, _incref=True):
+def RebuildAsyncServiceObject(typename, exposed, oid, identity, address, _incref=True):
     """Rebuild async service object during unpickling.
     """
-    return ServiceObjectType(typename, exposed, asynced=True)(oid=oid, address=address, _incref=_incref)
+    return ServiceObjectType(typename, exposed, asynced=True)(oid=oid, identity=identity, address=address, _incref=_incref)
 
 
 def make_exposed_defs(exposed, asynced):
@@ -795,13 +800,15 @@ def auto_expose(obj):
     return ExposedMethodsAndProperties(tuple(methods), tuple(properties))
 
 
-def AsyncServiceObject(obj, address, expose=None, _incref=True):
+def AsyncServiceObject(obj, identity, address, expose=None, _incref=True):
     """Make async service object.
     """
-    return ServiceObjectType(f"{str(obj)}", expose or auto_expose(obj), asynced=True)(oid=id(obj), address=address, _incref=_incref)
+    return ServiceObjectType(f"{str(obj)}", expose or auto_expose(obj), asynced=True)(
+        oid=id(obj), identity=identity, address=address, _incref=_incref)
 
 
-def ServiceObject(obj, address, expose=None, _incref=True):
+def ServiceObject(obj, identity, address, expose=None, _incref=True):
     """Make service object.
     """
-    return ServiceObjectType(f"{str(obj)}", expose or auto_expose(obj))(oid=id(obj), address=address, _incref=_incref)
+    return ServiceObjectType(f"{str(obj)}", expose or auto_expose(obj))(
+        oid=id(obj), identity=identity, address=address, _incref=_incref)

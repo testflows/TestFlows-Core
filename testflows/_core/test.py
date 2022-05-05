@@ -57,7 +57,7 @@ from .cli.arg.type import key_value as key_value_type, repeat as repeat_type
 from .cli.arg.type import tags_filter as tags_filter_type, retry as retry_type
 from .cli.arg.type import logfile as logfile_type, rsa_private_key_pem_file as rsa_private_key_pem_file_type
 from .cli.arg.type import file as file_type
-from .cli.arg.type import onoff as onoff_type, NoneValue, count as count_type
+from .cli.arg.type import onoff as onoff_type, NoneValue, count as count_type, trace_level as trace_level_type
 from .cli.text import danger, warning
 from .exceptions import exception as get_exception
 from .filters import The
@@ -382,6 +382,9 @@ class TestBase(object):
             else:
                 raise TypeError(f"'{self.setup}' is not a valid test type")
 
+    def __reduce__(self):
+        raise TypeError("not serializable")
+
     def __str__(self):
         return f"Test(name={self.name},id={self.id_str})@0x{id(self):x}"
 
@@ -448,10 +451,10 @@ class TestBase(object):
     def add_subtest(self, subtest):
         """Add subtest.
         """
-        with tracing.Event(self.tracer, f"addsubtest({subtest})") as event_tracer:
+        with tracing.Event(self.tracer, f"add_subtest({subtest})") as event_tracer:
             with self.lock:
                 event_tracer.debug("got lock")
-                self.subtests[str(subtest.id)] = subtest
+                self.subtests[subtest.id_str] = subtest
                 event_tracer.debug(f"modified subtests dictionary")
 
             if self.terminating:
@@ -462,7 +465,7 @@ class TestBase(object):
         """Remove subtest.
         """
         with self.lock:
-            self.subtests.pop(str(subtest.id), None)
+            self.subtests.pop(subtest.id_str, None)
 
     def child_id(self):
         with self.lock:
@@ -648,7 +651,7 @@ class TestBase(object):
             parallel_exception = None
 
             if self.parent:
-                self.parent.add_subtest(self)
+                self.parent.remove_subtest(self)
 
             if exc_value is not None:
                 # terminate any unfinished subtests
@@ -992,9 +995,10 @@ def cli_argparser(kwargs, argparser=None):
                                   "the run even if one of the tests fails"))
 
     parser.add_argument("--trace", dest="_trace", 
-                        action="store_true", default=None,
+                        type=trace_level_type, default=None,
+                        metavar=trace_level_type.metavar,
                         help="enable low-level test program tracing for debugging "
-                             "using Python's logging module")
+                             "using Python's logging module at the specified level.")
 
     if database_module:
         database_module.argparser(parser)

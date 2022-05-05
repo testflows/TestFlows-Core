@@ -40,6 +40,7 @@ from ..asyncio import is_running_in_event_loop, wrap_future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context, join as parallel_join
 from ...objects import Result
+from ...tracing import logging
 
 _shutdown = False
 _worker_pids = {}
@@ -341,6 +342,7 @@ class ProcessPoolExecutor(_base.Executor):
         if num_procs < self._max_workers:
             command = ["tfs-worker",
                 "--oid", str(self._work_queue.oid),
+                "--identity", str(self._work_queue.identity.hex()),
                 "--hostname", str(self._work_queue.address.hostname),
                 "--port", str(self._work_queue.address.port)
             ]
@@ -351,6 +353,7 @@ class ProcessPoolExecutor(_base.Executor):
                 command.append("--no-colors")
             if settings.trace:
                 command.append("--trace")
+                command.append(f"{logging.getLevelName(settings.trace).lower()}")
 
             loop = process_service().loop
 
