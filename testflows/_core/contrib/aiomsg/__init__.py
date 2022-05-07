@@ -535,7 +535,7 @@ class Søcket:
 
     def recv_identity_nowait(self) -> Tuple[bytes, bytes]:
         with tracing.Event(self.tracer, name=f"recv_identity_nowait()") as event_tracer:
-            # receive immediately avaiable data
+            # receive immediately available data
             identity, message = self._queue_recv.get_nowait()
             event_tracer.debug(f"Received message from {identity.hex()}: {message}")
 
