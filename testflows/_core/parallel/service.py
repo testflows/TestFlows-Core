@@ -271,10 +271,12 @@ class Service:
                 if not identity in self.out_socket._connections:
                     event_tracer.debug(f"connecting to identity={identity.hex()},address={address}")
                     event = asyncio.Event()
+
                     await self.out_socket.connect(address.hostname, address.port, event=event)
                     event_tracer.debug("wating for connection")
                     await asyncio.wait_for(event.wait(), timeout=timeout)
                     event_tracer.debug("got connection")
+
                     if not identity in self.out_socket._connections:
                         raise RuntimeError(f"connecting to address={address} didn't result in connection to identity={identity.hex()}")
 
@@ -324,17 +326,17 @@ class Service:
                 try:
                     self.objects = {}
                    
-                    while self.serve_tasks:
-                        task = self.serve_tasks.pop()
+                    for task in self.serve_tasks:
                         task.cancel()
+                    await asyncio.gather(*self.serve_tasks, return_exceptions=True)
+
+                    try:
                         try:
-                            await task
-                        except asyncio.CancelledError:
-                            pass
-                   
-                    await self.out_socket.close()
-                    await self.in_socket.close()
-                    self.executor.__exit__(None, None, None)
+                            await self.out_socket.close()
+                        finally:
+                            await self.in_socket.close()
+                    finally:
+                        self.executor.__exit__(None, None, None)
                 finally:
                     self.open = False
 
@@ -505,9 +507,11 @@ def process_service(**kwargs):
                         tasks = [task for task in asyncio.all_tasks(loop=loop)]
                         for task in tasks:
                             task.cancel()
-                        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
-                        loop.run_until_complete(loop.shutdown_asyncgens())
-                        loop.close()
+                        try:
+                            loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+                            loop.run_until_complete(loop.shutdown_asyncgens())
+                        finally:
+                            loop.close()
 
                 thread = threading.Thread(target=run_event_loop, daemon=True)
 
@@ -639,7 +643,7 @@ class BaseServiceObject:
         """
         return other.oid == self.oid and other.address == self.address 
 
-    async def __async_proxy_call__(self, fn, args=None, kwargs=None, timeout=60, rid=None):
+    async def __async_proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
         """Execute function call on the remote service.
         """
         oid = self.oid
@@ -681,7 +685,7 @@ class BaseServiceObject:
 
             return reply_body
 
-    def __proxy_call__(self, fn, args=None, kwargs=None, timeout=60, rid=None):
+    def __proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
         """Synchronously execute function call on the remote service.
         """
         oid = self.oid
