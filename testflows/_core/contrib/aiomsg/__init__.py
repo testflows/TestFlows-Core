@@ -66,7 +66,6 @@ import  testflows._core.contrib.cloudpickle as cloudpickle
 
 from . import header
 from . import msgproto
-from . import version_utils
 
 __all__ = ["Socket", "SendMode", "DeliveryGuarantee"]
 
@@ -409,7 +408,12 @@ class Søcket:
                     del self._connections[connection.identity]
 
                 try:
-                    await version_utils.stream_close(writer)
+                    try:
+                        if writer.can_write_eof():
+                            writer.write_eof()
+                    finally:
+                        writer.close()
+                        await writer.wait_closed()
                 except BaseException:
                     event_tracer.exception(f"Exception while trying to close writer stream")
 
@@ -858,11 +862,13 @@ class Connection:
             self.reader_task = None
             self.writer_task = None
             # Close connection
-            if self.writer.can_write_eof():
-                self.writer.write_eof()
-            event_tracer.info("closing connection writer")
-            self.writer.close()
-            await self.writer.wait_closed()
+            try:
+                if self.writer.can_write_eof():
+                    self.writer.write_eof()
+            finally:
+                event_tracer.info("closing connection writer")
+                self.writer.close()
+                await self.writer.wait_closed()
 
     async def _recv(self):
         with tracing.Event(self.tracer, name=f"_recv()") as event_tracer:
