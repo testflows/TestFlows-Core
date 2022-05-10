@@ -118,7 +118,7 @@ class MarkdownFormatter:
     def format_summary(self, data):
         counts = data["counts"]
 
-        def total(attribute, skip_keys=["step", "iteration"]):
+        def total(attribute, skip_keys=["step", "iteration", "retry"]):
             count = 0
             for key in counts.keys():
                 if key in skip_keys:
