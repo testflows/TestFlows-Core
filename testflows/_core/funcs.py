@@ -241,7 +241,7 @@ def cleanup(func, *args, test=None, context=None, **kwargs):
 def ok(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = OK(test=test.name, message=message, reason=reason)
+    test.result = test.result(OK(test=test.name, message=message, reason=reason))
     raise test.result
 
 def fail(message=None, reason=None, test=None, type=None):
@@ -254,49 +254,49 @@ def fail(message=None, reason=None, test=None, type=None):
         with type(message):
            fail(reason=reason)
 
-    test.result = Fail(test=test.name, message=message, reason=reason)
+    test.result = test.result(Fail(test=test.name, message=message, reason=reason))
     raise test.result
 
 def skip(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Skip(test=test.name, message=message, reason=reason)
+    test.result = test.result(Skip(test=test.name, message=message, reason=reason))
     raise test.result
 
 def err(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Error(test=test.name, message=message, reason=reason)
+    test.result = test.result(Error(test=test.name, message=message, reason=reason))
     raise test.result
 
 def null(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = Null(test=test.name, message=message, reason=reason)
+    test.result = test.result(Null(test=test.name, message=message, reason=reason))
     raise test.result
 
 def xok(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XOK(test=test.name, message=message, reason=reason)
+    test.result = test.result(XOK(test=test.name, message=message, reason=reason))
     raise test.result
 
 def xfail(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XFail(test=test.name, message=message, reason=reason)
+    test.result = test.result(XFail(test=test.name, message=message, reason=reason))
     raise test.result
 
 def xerr(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XError(test=test.name, message=message, reason=reason)
+    test.result = test.result(XError(test=test.name, message=message, reason=reason))
     raise test.result
 
 def xnull(message=None, reason=None, test=None):
     if test is None:
         test = current()
-    test.result = XNull(test=test.name, message=message, reason=reason)
+    test.result = test.result(XNull(test=test.name, message=message, reason=reason))
     raise test.result
 
 def pause(message=None, test=None):

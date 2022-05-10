@@ -441,7 +441,7 @@ class TestBase(object):
                     return
                 self.terminating = True
 
-                self.result = result(message, reason=reason, test=self.name)
+                self.result = self.result(result(message, reason=reason, test=self.name))
 
                 for subtest in self.subtests.values():
                     event_tracer.debug(f"terminating {subtest}")
@@ -570,7 +570,7 @@ class TestBase(object):
             self.result = self.result(exc_value)
 
         elif isinstance(exc_value, TerminatedError):
-            self.result = Skip(None, reason="terminated", test=self.name)
+            self.result = self.result(Skip(None, reason="terminated", test=self.name))
 
         elif isinstance(exc_value, AssertionError):
             exception(exc_type, exc_value, exc_traceback, test=self)

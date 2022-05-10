@@ -107,17 +107,19 @@ class XResult(Result):
 
 class OK(Result):
     type = Result.Type.OK
+
     def xout(self, reason):
-        return XOK(test=self.test, message=self.message, reason=reason)
+        return self(XOK(test=self.test, message=self.message, reason=reason))
 
 class XOK(XResult):
     type = Result.Type.XOK
-    pass
+
 
 class Fail(Result):
     type = Result.Type.Fail
+
     def xout(self, reason):
-        return XFail(test=self.test, message=self.message, reason=reason)
+        return self(XFail(test=self.test, message=self.message, reason=reason))
 
     def __bool__(self):
         return False
@@ -132,7 +134,7 @@ class Error(Result):
     type = Result.Type.Error
 
     def xout(self, reason):
-        return XError(test=self.test, message=self.message, reason=reason)
+        return self(XError(test=self.test, message=self.message, reason=reason))
 
     def __bool__(self):
         return False
@@ -144,7 +146,7 @@ class Null(Result):
     type = Result.Type.Null
 
     def xout(self, reason):
-        return XNull(test=self.test, message=self.message, reason=reason)
+        return self(XNull(test=self.test, message=self.message, reason=reason))
 
     def __bool__(self):
         return False
