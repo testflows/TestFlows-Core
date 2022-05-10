@@ -343,7 +343,7 @@ class TestBase(object):
         self.examples = get(examples, get(self.examples, ExamplesTable()))
         if not isinstance(self.examples, ExamplesTable):
             self.examples = ExamplesTable(*self.examples)
-        self.result = Null(test=self.name)
+        self.result = Null(test=self.name, start_time=self.start_time)
         if flags is not None:
             self.flags = Flags(flags)
         self.cflags = Flags(cflags)
@@ -494,13 +494,13 @@ class TestBase(object):
             if isinstance(self.result, Error):
                 pass
             elif isinstance(test_result, Error) and ERROR_NOT_COUNTED not in flags:
-                self.result = result
+                self.result = self.result(result)
             elif isinstance(test_result, Null) and NULL_NOT_COUNTED not in flags:
-                self.result = result
+                self.result = self.result(result)
             elif isinstance(self.result, Fail):
                 pass
             elif isinstance(test_result, Fail) and FAIL_NOT_COUNTED not in flags:
-                self.result = result
+                self.result = self.result(result)
             else:
                 pass
 
@@ -729,6 +729,7 @@ class TestBase(object):
 
         self.io.output.result(self.result)
         self.test_time = time.time() - self.start_time
+        self.result.test_time = self.test_time
 
         if top() is self:
             self.io.output.stop()

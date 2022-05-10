@@ -30,7 +30,7 @@ import testflows._core.contrib.rsa as rsa
 
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
-    _defaults = (None,) * 4
+    _defaults = (None,) * 6
     metrics = []
     tickets = []
     values = []
@@ -50,7 +50,7 @@ class Result(TestObject, ResultException):
         def __repr__(self):
             return f"Result.Type.{self._name_}"
 
-    def __init__(self, message=None, reason=None, type=None, test=None, metrics=None, tickets=None, values=None):
+    def __init__(self, message=None, reason=None, type=None, test=None, metrics=None, tickets=None, values=None, start_time=None, test_time=None):
         from .funcs import current
         self.test = test if test is not None else current().name
         if not isinstance(self.test, str):
@@ -63,10 +63,12 @@ class Result(TestObject, ResultException):
         self.metrics = get(metrics, list(self.metrics))
         self.tickets = get(tickets, list(self.tickets))
         self.values = get(values, list(self.values))
+        self.start_time = start_time
+        self.test_time = test_time
         return super(Result, self).__init__()
 
     def __reduce__(self):
-        return (self.__class__, (self.message, self.reason, self.type, self.test, self.metrics, self.tickets, self.values))
+        return (self.__class__, (self.message, self.reason, self.type, self.test, self.metrics, self.tickets, self.values, self.start_time, self.test_time))
 
     @property
     def value(self):
@@ -79,6 +81,8 @@ class Result(TestObject, ResultException):
         obj.metrics = self.metrics
         obj.tickets = self.tickets
         obj.values = self.values
+        obj.start_time = self.start_time
+        obj.test_time = self.test_time
         return obj
 
     def xout(self, reason=None):
