@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 __author__ = "Vitaliy Zakaznikov"
-__version__ = "1.8.__VERSION__"
+__version__ = "1.9.__VERSION__"
 __repository__ = "__REPOSITORY__"
 __commit__ = "__COMMIT__"
 __branch__ = "__BRANCH__"
