@@ -128,6 +128,7 @@ async def in_async(self):
     async with Scenario("run parallel async test with specified thread executor"):
         with Pool() as pool:
             f = Scenario(test=async_test, parallel=True, executor=pool)()
+            await join()
         assert (await f).value == "done"
 
 @TestFeature

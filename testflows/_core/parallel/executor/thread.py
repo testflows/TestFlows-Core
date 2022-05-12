@@ -149,7 +149,7 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
             try:
                 if test:
                     if self._join_on_shutdown:
-                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid, cancel_pending=True)
             finally:
                 for thread in self._threads:
                     thread.join()

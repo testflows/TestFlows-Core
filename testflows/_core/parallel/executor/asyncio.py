@@ -61,24 +61,25 @@ class _AsyncWorkItem(_base._WorkItem):
 
 async def _worker(executor_weakref, work_queue):
     while True:
-        work_item = await work_queue.get()
         try:
-            if work_item is not None:
-                await work_item.run()
-                del work_item
-                continue
+            work_item = await work_queue.get()
+            try:
+                if work_item is not None:
+                    await work_item.run()
+                    del work_item
+                    continue
+            finally:
+                work_queue.task_done()
         finally:
-            work_queue.task_done()
-
-        executor = executor_weakref()
-        try:
-            if _shutdown or executor is None or executor._shutdown:
-                if executor is not None:
-                    executor._shutdown = True
-                await work_queue.put(None)
-                return
-        finally:
-            del executor
+            executor = executor_weakref()
+            try:
+                if _shutdown or executor is None or executor._shutdown:
+                    if executor is not None:
+                        executor._shutdown = True
+                    await work_queue.put(None)
+                    return
+            finally:
+                del executor
 
 
 async def _loop_send_stop_event(stop_event):
@@ -218,7 +219,7 @@ class AsyncPoolExecutor(_base._base.Executor):
             try:
                 if test:
                     if self._join_on_shutdown:
-                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid, cancel_pending=True)
             finally:
                 exc = None
                 for task in self._tasks:

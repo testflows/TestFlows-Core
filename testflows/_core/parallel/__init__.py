@@ -105,7 +105,7 @@ def previous(value=None):
         context.previous.set(value)
     return context.previous.get()
 
-def join(*future, futures=None, test=None, filter=None, all=False, no_async=False):
+def join(*future, futures=None, test=None, filter=None, all=False, no_async=False, cancel_pending=False):
     """Wait for parallel test futures to complete.
     Returns a list of completed tests.
     
@@ -120,9 +120,11 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
     :param test: current test, default: current()
     :param filter: filter function, default: None
     :param all: wait and join all the tests, default: False
+    :param no_async: force non async join while running in event loop
+    :param cancel_pending: cancel any pending futures
     """
     if no_async is False and is_running_in_event_loop():
-        return _async_join(*future, futures=futures, test=test, filter=filter, all=all)
+        return _async_join(*future, futures=futures, test=test, filter=filter, all=all, cancel_pending=cancel_pending)
 
     if test is None:
         test = current()
@@ -139,11 +141,17 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
         future = None
         try:
             future = futures.pop(0)
+
             if filter and not filter(future):
                 futures.append(future)
                 filtered_count += 1
                 continue
+
             filtered_count = 0
+
+            if cancel_pending:
+                if future.cancel():
+                    continue
             try:
                 exc = future.exception(timeout=0.1)
                 if exc is not None:
@@ -169,7 +177,7 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
         raise exception
     return tests
 
-async def _async_join(*future, futures=None, test=None, filter=None, all=False):
+async def _async_join(*future, futures=None, test=None, filter=None, all=False, cancel_pending=False):
     """Wait for async parallel test futures to complete.
     Returns a list of completed tests.
     
@@ -184,6 +192,7 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
     :param test: current test, default: current()
     :param filter: filter function, default: None
     :param all: wait and join all the tests, default: False
+    :param cancel_pending: cancel any pending futures
     """
     if test is None:
         test = current()
@@ -200,16 +209,23 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False):
         future = None
         try:
             future = futures.pop(0)
+
             if filter and not filter(future):
                 futures.append(future)
                 filtered_count += 1
                 continue
+
             filtered_count = 0
 
             try:
                 f = future
                 if isinstance(future, ConcurrentFuture):
                     f = wrap_future(future, new_future=OptionalFuture())
+
+                if cancel_pending:
+                    if future.cancel():
+                        continue
+
                 tests.append(await asyncio.wait_for(asyncio.shield(f), timeout=0.1))
             except AsyncCancelledError:
                 continue

@@ -388,7 +388,7 @@ class ProcessPoolExecutor(_base.Executor):
             try:
                 if test:
                     if self._join_on_shutdown:
-                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid)
+                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid, cancel_pending=True)
             finally:
                 for proc in self._processes:
                     while is_running(proc.transport.get_pid()):
