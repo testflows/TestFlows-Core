@@ -77,6 +77,8 @@ JSONCompatible = Union[str, int, float, bool, List, Dict, None]
 class NoConnectionsAvailableError(Exception):
     pass
 
+class DisconnectError(ConnectionError):
+    pass
 
 class SendMode(Enum):
     PUBLISH = auto()
@@ -169,7 +171,8 @@ class Søcket:
 
         self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
 
-        self.tracer.debug("Starting the sender task.")
+        self.tracer.debug("Starting the sender task")
+
         # Note this task is started before any connections have been made.
         self.sender_task = self.loop.create_task(self._sender_main())
         self.connect_with_retry_tasks = []
@@ -178,7 +181,7 @@ class Søcket:
         elif send_mode is SendMode.ROUNDROBIN:
             self.sender_handler = self._sender_robin
         else:  # pragma: no cover
-            raise Exception("Unknown send mode.")
+            raise Exception("Unknown send mode")
 
     def __str__(self):
         return f"Socket(identity={self.idstr()},address={self.bind_address})"
@@ -239,7 +242,7 @@ class Søcket:
                     reuse_address=True,
                     **kwargs,
                 )
-                event_tracer.info("Server started.")
+                event_tracer.info("Server started")
                 return self
         finally:
             # re-initialize tracer to contain full bind address
@@ -272,7 +275,7 @@ class Søcket:
                         timeout=connect_timeout,
                     )
                     event_tracer.info(f"Connected")
-                    await self._connection(reader, writer, event=event)
+                    await self._connection(reader, writer, event=event, client_connection=False)
                 except asyncio.TimeoutError:
                     # Make timeouts look like socket connection errors
                     raise OSError
@@ -298,6 +301,9 @@ class Søcket:
                             if self.closed:
                                 break
                         except CancelledError:
+                            break
+                        except DisconnectError:
+                            event_tracer.info("Connection host sent disconnect message, closing connection")
                             break
                         except OSError as e:
                             if self.closed:
@@ -359,7 +365,7 @@ class Søcket:
         while True:
             yield await self.recv_identity()
 
-    async def _connection(self, reader: StreamReader, writer: StreamWriter, event: Optional[asyncio.Event]=None):
+    async def _connection(self, reader: StreamReader, writer: StreamWriter, event: Optional[asyncio.Event]=None, client_connection=True):
         """Each new connection will create a task with this coroutine."""
         with tracing.Event(self.tracer, name=f"_connection()") as event_tracer:
             event_tracer.debug("Creating new connection")
@@ -382,7 +388,7 @@ class Søcket:
             # Create the connection object. These objects are kept in a
             # collection that is used for message distribution.
             connection = Connection(
-                identity=identity, reader=reader, writer=writer, recv_event=self.raw_recv
+                identity=identity, reader=reader, writer=writer, recv_event=self.raw_recv, client_connection=client_connection
             )
             if len(self._connections) == 0:
                 event_tracer.warning("First connection made")
@@ -398,7 +404,11 @@ class Søcket:
             try:
                 await connection.run()
             except asyncio.CancelledError:
-                event_tracer.error(f"Connection {identity.hex()} cancelled.")
+                event_tracer.error(f"Connection {identity.hex()} cancelled")
+            except DisconnectError:
+                event_tracer.info(f"Connection {identity.hex()} signaled disconnect")
+                if not client_connection:
+                    raise
             except Exception:
                 event_tracer.exception(f"Unhandled exception inside _connection")
                 raise
@@ -425,6 +435,16 @@ class Søcket:
         with tracing.Event(self.tracer, name=f"_close()") as event_tracer:
             event_tracer.info(f"Closing {self.idstr()}")
             self.closed = True
+
+            # send disconnect message to all connected hosts
+            for identity, c in self._connections.items():
+                if not c.client_connection:
+                    continue
+                event_tracer.debug(f"Sending disconnect message to {identity.hex()}")
+                try:
+                    await c.send_wait(c.disconnect_message)
+                except Exception as e:
+                    event_tracer.exception(f"Exception while sending disconnect message to {identity.hex()}: {e}")
 
             if self.connect_with_retry_tasks:
                 for connect_with_retry_task in self.connect_with_retry_tasks:
@@ -707,10 +727,10 @@ class Søcket:
                 event_tracer.debug(f"Sending to connection: {identity.hex()}")
                 try:
                     c.writer_queue.put_nowait(message)
-                    event_tracer.debug("Placed message on connection writer queue.")
+                    event_tracer.debug("Placed message on connection writer queue")
                 except asyncio.QueueFull:
                     event_tracer.error(
-                        f"Dropped msg to Connection {identity.hex()}, its write queue is full."
+                        f"Dropped msg to Connection {identity.hex()}, its write queue is full"
                     )
 
     def _sender_robin(self, message: bytes):
@@ -727,12 +747,12 @@ class Søcket:
                 identity = next(self._connections)
                 event_tracer.debug(f"Got connection: {identity.hex()}")
                 if identity in queues_full:
-                    event_tracer.warning(f"All send queues are full. Dropping message.")
+                    event_tracer.warning(f"All send queues are full, dropping message")
                     return
                 try:
                     connection = self._connections[identity]
                     connection.writer_queue.put_nowait(message)
-                    event_tracer.debug(f"Added message to connection send queue.")
+                    event_tracer.debug(f"Added message to connection send queue")
                     return
                 except asyncio.QueueFull:
                     event_tracer.warning(
@@ -750,15 +770,15 @@ class Søcket:
             c = self._connections.get(identity)
             if not c:
                 event_tracer.error(
-                    f"Peer {identity.hex()} is not connected. Message {message} will be dropped."
+                    f"Peer {identity.hex()} is not connected. Message {message} will be dropped"
                 )
                 return
 
             try:
                 c.writer_queue.put_nowait(message)
-                event_tracer.debug("Placed message on connection writer queue.")
+                event_tracer.debug(f"Placed message on connection {identity.hex()} writer queue")
             except asyncio.QueueFull:
-                event_tracer.error("Dropped msg to Connection blah, its write " "queue is full.")
+                event_tracer.error(f"Dropped message on connection {identity.hex()}, its write queue is full")
 
     async def _sender_main(self):
         with tracing.Event(self.tracer, name=f"_sender_main()") as event_tracer:
@@ -810,10 +830,6 @@ class Søcket:
         await self.close()
 
 
-class HeartBeatFailed(ConnectionError):
-    pass
-
-
 class Connection:
     def __init__(
         self,
@@ -821,8 +837,9 @@ class Connection:
         reader: StreamReader,
         writer: StreamWriter,
         recv_event: Callable[[bytes, bytes], None],
+        client_connection,
         loop=None,
-        writer_queue_maxsize=0,
+        writer_queue_maxsize=0
     ):
         self.loop = loop or asyncio.get_event_loop()
         self.identity = identity
@@ -830,6 +847,7 @@ class Connection:
         self.writer = writer
         self.writer_queue = asyncio.Queue(maxsize=writer_queue_maxsize)
         self.reader_event = recv_event
+        self.client_connection = client_connection
 
         self.reader_task: Optional[asyncio.Task] = None
         self.writer_task: Optional[asyncio.Task] = None
@@ -837,6 +855,7 @@ class Connection:
         self.heartbeat_interval = 5
         self.heartbeat_timeout = 15
         self.heartbeat_message = b"aiomsg-heartbeat"
+        self.disconnect_message = b"aiomsg-disconnect"
 
         self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
 
@@ -879,11 +898,12 @@ class Connection:
                         msgproto.read_msg(self.reader), timeout=self.heartbeat_timeout
                     )
                     event_tracer.debug(f"Got message in connection: {message}")
+
                 except asyncio.TimeoutError:
-                    event_tracer.warning("Heartbeat failed. Closing connection.")
+                    event_tracer.warning("Heartbeat failed, closing connection")
                     self.writer_queue.put_nowait(None)
                     return
-                    # raise HeartBeatFailed
+
                 except asyncio.CancelledError:
                     return
 
@@ -896,6 +916,10 @@ class Connection:
                     event_tracer.debug("Heartbeat received")
                     continue
 
+                if message == self.disconnect_message:
+                    event_tracer.info("Disconnect received")
+                    raise DisconnectError()
+
                 try:
                     event_tracer.debug(
                         f"Received message on connection {self.identity.hex()}: {message}"
@@ -903,8 +927,7 @@ class Connection:
                     self.reader_event(self.identity, message)
                 except asyncio.QueueFull:
                     event_tracer.error(
-                        # TODO: fix message
-                        "Data lost on connection blah because the recv "
+                        f"Data lost on connection {self.identity.hex()} because the recv "
                         "queue is full!"
                     )
                 except Exception as e:
@@ -965,7 +988,8 @@ class Connection:
 
     async def run(self):
         with tracing.Event(self.tracer, name=f"run()") as event_tracer:
-            event_tracer.info(f"Connection {self.identity.hex()} running.")
+            event_tracer.info(f"Connection {self.identity.hex()} running")
+
             self.reader_task = self.loop.create_task(self._recv())
             self.writer_task = self.loop.create_task(
                 self._send(
@@ -979,15 +1003,24 @@ class Connection:
             )
 
             try:
-                await asyncio.wait(
-                    [self.reader_task, self.writer_task], return_when=asyncio.ALL_COMPLETED
+                done, pending = await asyncio.wait(
+                    [self.reader_task, self.writer_task], return_when=asyncio.FIRST_EXCEPTION
                 )
+                for task in pending:
+                    task.cancel()
+                await asyncio.gather(*pending, return_exceptions=True)
+                self.warn_dropping_data()
+                for task in done:
+                    task.result()
             except asyncio.CancelledError:
                 self.reader_task.cancel()
                 self.writer_task.cancel()
                 await asyncio.gather(self.reader_task, self.writer_task, return_exceptions=True)
                 self.warn_dropping_data()
-            event_tracer.info(f"Connection {self.identity.hex()} no longer active.")
+            except DisconnectError:
+                raise
+            finally:
+                event_tracer.info(f"Connection {self.identity.hex()} no longer active")
 
 # provide alternative socket class name
 Socket = Søcket
