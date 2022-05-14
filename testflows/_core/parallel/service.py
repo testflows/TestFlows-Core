@@ -30,7 +30,7 @@ from multiprocessing.util import Finalize, is_exiting
 from testflows._core.contrib import cloudpickle
 from testflows._core.contrib.aiomsg import Socket
 
-from .asyncio import asyncio, is_running_in_event_loop, CancelledError
+from .asyncio import asyncio, is_running_in_event_loop, OptionalFuture, CancelledError
 from .asyncio import TimeoutError as AsyncTimeoutError
 from .executor.thread import SharedThreadPoolExecutor
 
@@ -92,7 +92,7 @@ class Service:
         self.address = address if address is not None else Address("127.0.0.1", 0)
         self.identity = self.in_socket.identity
         self.serve_tasks = []
-        self.reply_events = {}
+        self.reply_futures = {}
         self.objects = {}
         self.executor = SharedThreadPoolExecutor(sys.maxsize, join_on_shutdown=False)
         self.open = False
@@ -181,35 +181,34 @@ class Service:
         event_tracer.debug("connecting", extra={"event_action": tracing.Action.START})
 
         try:
-            async def local_send(rid, oid, fn, args, kwargs, resp=True, timeout=None):
+            async def local_send(rid, oid, fn, args, kwargs, reply=True, timeout=None):
                 """Send service object request to the local service.
                 """
                 try:
                     with tracing.Event(event_tracer,
                                     name=f"local_send(oid=0x{oid:x},fn={fn},args={args},kwargs={kwargs},"
-                                        f"resp={resp},timeout={timeout})") as local_send_tracer:
+                                        f"reply={reply},timeout={timeout})") as local_send_tracer:
                         try:
                             msg_type, msg_body = await self._exec(oid, fn, args, kwargs)
 
-                            if resp:
-                                event = asyncio.Event()
-                                event.message = msg_type, msg_body
-                                event.set()
-                                return event
+                            if reply:
+                                future = OptionalFuture()
+                                future.set_result((msg_type, msg_body))
+                                return future
                         except BaseException as exc:
                             raise
                         else:
-                            local_send_tracer.debug("resp={msg_body}")
+                            local_send_tracer.debug("reply={msg_body}")
                 finally:
                     event_tracer.debug(f"complete", extra={"event_action": tracing.Action.END})
 
-            async def send(rid, oid, fn, args, kwargs, resp=True, timeout=None):
+            async def send(rid, oid, fn, args, kwargs, reply=True, timeout=None):
                 """Send service object request to remote service.
                 """
                 try:
                     with tracing.Event(event_tracer,
                                        name=f"send(oid=0x{oid:x},fn={fn},args={args},kwargs={kwargs},"
-                                        f"resp={resp},timeout={timeout})") as send_tracer:
+                                        f"reply={reply},timeout={timeout})") as send_tracer:
                         try:
                             try:
                                 await asyncio.wait_for(self.out_socket.send_pickle(
@@ -246,13 +245,13 @@ class Service:
                                     ), timeout=timeout)
                                 send_tracer.debug("sent request after TypeError")
 
-                            if resp:
-                                event = asyncio.Event()
-                                self.reply_events[rid] = event
-                                send_tracer.debug(f"send returning resp event")
-                                return event
+                            if reply:
+                                future = OptionalFuture()
+                                self.reply_futures[rid] = future
+                                send_tracer.debug(f"returning reply future")
+                                return future
                             else:
-                                event_tracer.debug(f"send without resp complete")
+                                event_tracer.debug(f"send without reply complete")
 
                         except BaseException as exc:
                             raise 
@@ -270,11 +269,20 @@ class Service:
                 event_tracer.debug("got service lock")
                 if not identity in self.out_socket._connections:
                     event_tracer.debug(f"connecting to identity={identity.hex()},address={address}")
-                    event = asyncio.Event()
+                    future = OptionalFuture()
 
-                    await self.out_socket.connect(address.hostname, address.port, event=event)
+                    await self.out_socket.connect(
+                        address.hostname,
+                        address.port,
+                        future=future,
+                        expected_identity=identity,
+                        reconnection_delay=Socket.exponential_backoff(min_delay=0.1, max_delay=2),
+                        timeout=timeout,
+                        permanent=False
+                        )
+
                     event_tracer.debug("wating for connection")
-                    await asyncio.wait_for(event.wait(), timeout=timeout)
+                    await asyncio.wait_for(future, timeout=timeout)
                     event_tracer.debug("got connection")
 
                     if not identity in self.out_socket._connections:
@@ -443,9 +451,8 @@ class Service:
             else:
                 with tracing.Event(event_tracer, f"reply:rid={rid},message={msg_body}"):
                     # process reply
-                    reply_event = self.reply_events.pop(rid)
-                    reply_event.message = msg_type, msg_body
-                    reply_event.set()
+                    reply_future = self.reply_futures.pop(rid)
+                    reply_future.set_result((msg_type, msg_body))
 
     async def _serve_forever(self):
         """Start service until coroutine is cancelled.
@@ -669,10 +676,9 @@ class BaseServiceObject:
                     return await c
 
                 send = await wrap(_process_service._connect(rid, identity, address))
-                response = await wrap(send(rid, oid, fn, args, kwargs, resp=True, timeout=timeout))
+                reply = await wrap(send(rid, oid, fn, args, kwargs, reply=True, timeout=timeout))
 
-                await asyncio.wait_for(wrap(response.wait()), timeout=timeout)
-                reply_type, reply_body = response.message
+                reply_type, reply_body = await asyncio.wait_for(wrap(reply), timeout=timeout)
 
                 if reply_type == Service.MsgTypes.REPLY_EXCEPTION:
                     if isinstance(reply_body, (SystemExit, KeyboardInterrupt)):

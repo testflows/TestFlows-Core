@@ -36,8 +36,10 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
         -p '*.py'
 
 """
+import math
 import uuid
 import json
+import time
 import socket
 import random
 import asyncio
@@ -78,6 +80,11 @@ class NoConnectionsAvailableError(Exception):
     pass
 
 class DisconnectError(ConnectionError):
+    """Disconnect message received from the connected host."""
+    pass
+
+class IdentityError(ConnectionError):
+    """Identity of the connected host did not match the expected."""
     pass
 
 class SendMode(Enum):
@@ -128,7 +135,7 @@ class Søcket:
         receiver_channel: Optional[str] = None,
         identity: Optional[bytes] = None,
         loop=None,
-        reconnection_delay: Callable[[], float] = lambda: (random.random() % 0.1) + 0.2,
+        reconnection_delay: Callable[[], float] = lambda count: (random.random() % 0.1) + 0.2,
         pickler = cloudpickle,
         recv_queue_maxsize=0
     ):
@@ -182,6 +189,15 @@ class Søcket:
             self.sender_handler = self._sender_robin
         else:  # pragma: no cover
             raise Exception("Unknown send mode")
+
+    @staticmethod
+    def exponential_backoff(min_delay=0.1, max_delay=1):
+        """Exponential backoff delay function that can be used
+        to set reconnection_delay function.
+
+        :return: reconnection_delay function that takes retry count 
+        """
+        return lambda count: min(max_delay, max(min_delay, math.exp(0.1 * count) - 1))
 
     def __str__(self):
         return f"Socket(identity={self.idstr()},address={self.bind_address})"
@@ -254,20 +270,33 @@ class Søcket:
         port: int = 25000,
         ssl_context=None,
         connect_timeout: float = 1.0,
-        event: asyncio.Event = None
+        future: Optional[asyncio.Future] = None,
+        reconnection_delay=None,
+        timeout=None,
+        permanent=True,
+        expected_identity=None
     ):
+        retry_count = 0
+        retry_start_time = 0
+
+        if reconnection_delay is None:
+            reconnection_delay = self.reconnection_delay
+  
         self.check_socket_type()
 
-        async def new_connection(event: asyncio.Event):
+        async def new_connection(future: Optional[asyncio.Future]):
             """Called each time a new connection is attempted. This
             suspend while the connection is up."""
+            nonlocal retry_count, retry_start_time
+            retry_count += 1
+            retry_start_time = time.time()
             writer = None
 
             with tracing.Event(self.tracer,
                     name=f"connect(hostname={hostname},port={port},"
                     "ssl_context={ssl_context},connect_timeout={connect_timeout})@new_connection") as event_tracer:
                 try:
-                    event_tracer.debug("Attempting to open connection")
+                    event_tracer.warning(f"Attempting to open connection {hostname}:{port}")
                     reader, writer = await asyncio.wait_for(
                         asyncio.open_connection(
                             hostname, port, loop=self.loop, ssl=ssl_context
@@ -275,7 +304,10 @@ class Søcket:
                         timeout=connect_timeout,
                     )
                     event_tracer.info(f"Connected")
-                    await self._connection(reader, writer, event=event, client_connection=False)
+                    # reset retry count
+                    retry_count = 0
+                    retry_start_time = 0
+                    await self._connection(reader, writer, future=future, client_connection=False, expected_identity=expected_identity)
                 except asyncio.TimeoutError:
                     # Make timeouts look like socket connection errors
                     raise OSError
@@ -284,12 +316,12 @@ class Søcket:
                     # NOTE: the writer is closed inside _connection.
                     pass
 
-        async def connect_with_retry(event: asyncio.Event):
+        async def connect_with_retry(future: Optional[asyncio.Future]):
             """This is a long-running task that is intended to run
             for the life of the Socket object. It will continually
             try to connect."""
             async def _reconnection_delay():
-                await asyncio.sleep(self.reconnection_delay())
+                await asyncio.sleep(reconnection_delay(retry_count))
 
             with tracing.Event(self.tracer,
                     name=f"connect(hostname={hostname},port={port},"
@@ -297,30 +329,43 @@ class Søcket:
                 try:
                     while not self.closed:
                         try:
-                            await new_connection(event)
+                            if not permanent and timeout and (time.time() - retry_start_time >= timeout):
+                                event_tracer.info(f"Connection retries timeout after {timeout} sec, closing connection...")
+                                if future is not None:
+                                    future.set_exception(TimeoutError(f"Connection retries timeout after {timeout} sec"))
+                                break
+                            await new_connection(future)
                             if self.closed:
                                 break
                         except CancelledError:
                             break
-                        except DisconnectError:
-                            event_tracer.info("Connection host sent disconnect message, closing connection")
+                        except IdentityError as e:
+                            if future is not None:
+                                future.set_exception(e)
                             break
                         except OSError as e:
                             if self.closed:
                                 break
                             else:
-                                event_tracer.warning("Connection error, reconnecting...")
+                                if isinstance(e, DisconnectError):
+                                    if not permanent:
+                                        event_tracer.info("Connection host sent disconnect message, closing connection...")
+                                        break
+                                event_tracer.warning(f"Connection error {e}, reconnecting...")
                                 try:
                                     await self.loop.create_task(_reconnection_delay())
                                 except CancelledError:
                                     break
                                 continue
                         except Exception as e:
-                            event_tracer.exception(f"Unexpected error {e}")
+                            event_tracer.exception(f"Unexpected error {e}, reconnecting...")
                 except Exception as e:
-                    event_tracer.exception(f"Unexpected error {e}")
+                    event_tracer.exception(f"Unexpected error {e}, closing connection...")
+                finally:
+                    event_tracer.info(f"Connection to {hostname}:{port}, closed")
 
-        self.connect_with_retry_tasks.append(self.loop.create_task(connect_with_retry(event)))
+        self.connect_with_retry_tasks.append(self.loop.create_task(connect_with_retry(future)))
+
         return self
 
     async def messages(self) -> AsyncGenerator[bytes, None]:
@@ -365,7 +410,7 @@ class Søcket:
         while True:
             yield await self.recv_identity()
 
-    async def _connection(self, reader: StreamReader, writer: StreamWriter, event: Optional[asyncio.Event]=None, client_connection=True):
+    async def _connection(self, reader: StreamReader, writer: StreamWriter, future: Optional[asyncio.Future]=None, client_connection: bool=True, expected_identity: bytes=None):
         """Each new connection will create a task with this coroutine."""
         with tracing.Event(self.tracer, name=f"_connection()") as event_tracer:
             event_tracer.debug("Creating new connection")
@@ -378,6 +423,10 @@ class Søcket:
                 return
 
             event_tracer.debug(f"Received identity {identity.hex()}")
+            
+            if expected_identity and identity != expected_identity:
+                raise IdentityError(f"expected identity {expected_identity.hex()} did not match {identity.hex()}")
+            
             if identity in self._connections:
                 event_tracer.error(
                     f"Socket with identity {identity.hex()} is already "
@@ -395,11 +444,10 @@ class Søcket:
                 self.at_least_one_connection.set()
             self._connections[connection.identity] = connection
             
-            # Set connection event and identity of the server to
+            # Set connection future and identity of the server to
             # which we have established the connection 
-            if event is not None:
-                event.identity = connection.identity
-                event.set()
+            if future is not None:
+                future.set_result(connection.identity)
 
             try:
                 await connection.run()
