@@ -32,6 +32,11 @@ try:
 except:
     database_handler = None
 
+try:
+    from testflows.enterprise._core.cli.handler import Handler as enterprise_handler
+except:
+    enterprise_handler = None
+
 from testflows._core import __version__, __license__
 
 class ArgumentParser(ArgumentParserBase):
@@ -69,3 +74,6 @@ show_handler.add_command(commands)
 
 if database_handler:
     database_handler.add_command(commands)
+
+if enterprise_handler:
+    enterprise_handler.add_command(commands)
