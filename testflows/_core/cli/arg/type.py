@@ -31,11 +31,12 @@ KeyValue = namedtuple("KeyValue", "key value")
 NoneValue = "__none__"
 
 class FileType(object):
-    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
+    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, safe=False):
         self._mode = mode
         self._bufsize = bufsize
         self._encoding = encoding
         self._errors = errors
+        self._safe = safe
 
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
@@ -54,6 +55,9 @@ class FileType(object):
 
         # all other arguments are used as file names
         try:
+            if self._safe and os.path.exists(string):
+                raise FileExistsError(f"File '{string}' already exists, please delete it first.")
+
             return open(string, self._mode, self._bufsize, self._encoding,
                         self._errors)
         except OSError as e:

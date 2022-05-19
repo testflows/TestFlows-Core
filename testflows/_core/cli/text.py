@@ -14,21 +14,50 @@
 # limitations under the License.
 from testflows._core.cli.colors import color
 
-def primary(text, eol="\n"):
-    return color(text + eol, "white", attrs=["bold"])
+def primary(text, eol="\n", bold=True, dim=False):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "white", attrs=attrs)
 
-def secondary(text, eol="\n"):
-    return color(text + eol, "white", attrs=["dim"])
+def secondary(text, eol="\n", bold=False, dim=True):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "white", attrs=attrs)
 
-def danger(text, eol="\n"):
-    return color(text + eol, "red", attrs=["bold"])
+def danger(text, eol="\n", bold=True, dim=False):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "red", attrs=attrs)
 
-def success(text, eol="\n"):
-    return color(text + eol, "green", attrs=["bold"])
+def success(text, eol="\n", bold=True, dim=False):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "green", attrs=attrs)
 
-def warning(text, eol="\n"):
-    return color(text + eol, "yellow", attrs=["bold"])
+def warning(text, eol="\n", bold=True, dim=False):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "yellow", attrs=attrs)
 
-def info(text, eol="\n"):
-    return color(text + eol, "blue", attrs=["bold"])
-
+def info(text, eol="\n", bold=True, dim=False):
+    attrs = []
+    if bold:
+        attrs.append("bold")
+    if dim:
+        attrs.append("dim")
+    return color(text + eol, "blue", attrs=attrs)
