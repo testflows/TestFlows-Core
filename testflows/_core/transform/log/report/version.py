@@ -35,7 +35,7 @@ def transform(stop, divider="\n"):
 
         if stop.is_set():
             if started is not None and version is not None:
-                line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}\n",
-                    "white", attrs=["dim"])
+                line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}",
+                    "white", attrs=["dim"]) + "\n"
 
         line = yield line

@@ -113,11 +113,11 @@ class LogFileType(object):
                               if arg is not None])
         return '%s(%s)' % (type(self).__name__, args_str)
 
-def path(p, special=None):
+def path(p, special=""):
     if p in special or []:
         return p
-    if not os.path.exists(p):
-        raise ArgumentTypeError(f"path does not exist: '{p}'")
+    if not os.path.exists(os.path.abspath(p)):
+        raise ArgumentTypeError(f"path does not exist: '{os.path.abspath(p)}'")
     return p
 
 def file(*args, **kwargs):
