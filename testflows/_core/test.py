@@ -2676,12 +2676,6 @@ class TestModule(TestDecorator):
 class TestBackground(TestDecorator):
     type = Background
 
-    def __init__(self, func):
-        func.test = getattr(func, "test", BackgroundTest)
-        if not issubclass(func.test, BackgroundTest):
-            raise TypeError(f"{func.test} not a subclass of BackgroundTest")
-        return super(TestBackground, self).__init__(func)
-
 def ordered(tests):
     """Return ordered list of tests.
     """

@@ -671,8 +671,9 @@ class BaseServiceObject:
                 async def wrap(c):
                     """Wrap coroutine that is running in another event loop.
                     """
-                    if asyncio.get_event_loop() is not _process_service.loop:
-                        return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
+                    if asyncio.coroutines.iscoroutine(c):
+                        if asyncio.get_event_loop() is not _process_service.loop:
+                            return await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop))
                     return await c
 
                 send = await wrap(_process_service._connect(rid, identity, address))

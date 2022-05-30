@@ -42,7 +42,8 @@ async def async_service(self):
         assert o1 == o1_1, error()
 
     async with Scenario("check using sevice object attribute"):
-        r = await o1.x
+        r = o1.x
+        r = await r
         assert r == 2, error()
 
     async with Scenario("check using service object methods"):
@@ -57,8 +58,8 @@ async def async_service(self):
         r1 = When(test=access_attribute, parallel=True)(o=o1)
         r2 = When(test=access_attribute, parallel=True)(o=o1)
 
-        v1 = (await r1).result.value
-        v2 = (await r2).result.value
+        v1 = (await r1).value
+        v2 = (await r2).value
 
         assert v1 == '2', error()
         assert v2 == '2', error()
@@ -108,8 +109,8 @@ def sync_service(self):
         r1 = When(test=sync_access_attribute, parallel=True)(o=o1)
         r2 = When(test=sync_access_attribute, parallel=True)(o=o1)
 
-        v1 = r1.result().result.value
-        v2 = r2.result().result.value
+        v1 = r1.result().value
+        v2 = r2.result().value
 
         assert v1 == '2', error()
         assert v2 == '2', error()
