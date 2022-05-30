@@ -33,7 +33,6 @@ from testflows._core.transform.log.pipeline import ResultsLogPipeline
 from testflows._core.transform.log.short import format_test, format_result
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
 from testflows._core.utils.string import title as make_title
-from testflows._core.transform.log.report.totals import Counts
 from testflows._core.objects import Requirement
 
 logo = '<img class="logo" src="data:image/png;base64,%(data)s" alt="logo"/>'

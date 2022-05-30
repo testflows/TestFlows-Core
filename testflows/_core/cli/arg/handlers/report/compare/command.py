@@ -276,7 +276,7 @@ class Handler(HandlerBase):
     def counts(self, tests, results):
         results_counts = {}
         for log, result in results.items():
-            results_counts[log] = Counts("tests", *([0] * 10))
+            results_counts[log] = Counts("tests", *([0] * 11))
             _counts = results_counts[log]
             _counts.reference = result["reference"]
 
