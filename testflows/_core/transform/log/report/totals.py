@@ -14,7 +14,7 @@
 # limitations under the License.
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, NESTED_RETRY
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.message import Message
 from testflows._core.utils.timefuncs import strftimedelta
@@ -37,11 +37,14 @@ def color_result(result, text):
          return color(text, "red", attrs=["bold"])
     elif result == "Null":
         return color(text, "magenta", attrs=["bold"])
+    # Retried
+    elif result == "Retried":
+        return color(text, "cyan", attrs=["bold"])
     else:
         raise ValueError(f"unknown result {result}")
 
 class Counts(object):
-    def __init__(self, name, units, ok, fail, skip, error, null, xok, xfail, xerror, xnull):
+    def __init__(self, name, units, ok, fail, skip, error, null, xok, xfail, xerror, xnull, retried):
         self.name = name
         self.units = units
         self.ok = ok
@@ -53,6 +56,7 @@ class Counts(object):
         self.xfail = xfail
         self.xerror = xerror
         self.xnull = xnull
+        self.retried = retried
 
     def __bool__(self):
         return self.units > 0
@@ -81,6 +85,8 @@ class Counts(object):
             counts["XError"] = self.xerror
         if self.xnull > 0:
             counts["XNull"] = self.xnull
+        if self.retried > 0:
+            counts["Retried"] = self.retried
         return data
 
     def __str__(self):
@@ -105,6 +111,8 @@ class Counts(object):
             r.append(color_result("XError", f"{self.xerror} xerror"))
         if self.xnull > 0:
             r.append(color_result("XNull", f"{self.xnull} xnull"))
+        if self.retried > 0:
+            r.append(color_result("Retried", f"{self.retried} retried"))
         if r:
             s += color(" (", "white", attrs=["bold"])
             s += color(", ", "white", attrs=["bold"]).join(r)
@@ -114,6 +122,7 @@ class Counts(object):
 
 def format_test(msg, counts):
     flags = Flags(msg["test_flags"])
+
     if flags & SKIP and settings.show_skipped is False:
         return
 
@@ -168,12 +177,19 @@ def format_test(msg, counts):
             counts["test"].units += 1
 
 def format_result(msg, counts):
-    if Flags(msg["test_flags"]) & SKIP and settings.show_skipped is False:
+    flags = Flags(msg["test_flags"])
+    cflags = Flags(msg["test_cflags"])
+
+    if flags & SKIP and settings.show_skipped is False:
         return
 
     _name = msg["result_type"].lower()
     test_type = getattr(TestType, msg["test_type"])
     test_subtype = getattr(TestSubType, str(msg["test_subtype"]), 0)
+
+    if cflags & NESTED_RETRY:
+        if _name in ["fail", "error", "null"]:
+            _name = "retried"
 
     if test_subtype == TestSubType.Example:
         setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
@@ -229,27 +245,27 @@ formatters = {
 
 def all_counts():
     return {
-        "module": Counts("modules", *([0] * 10)),
-        "book": Counts("books", *([0] * 10)),
-        "suite": Counts("suites", *([0] * 10)),
-        "feature": Counts("features", *([0] * 10)),
-        "chapter": Counts("chapters", *([0] * 10)),
-        "test": Counts("tests", *([0] * 10)),
-        "outline": Counts("outlines", *([0] * 10)),
-        "iteration": Counts("iterations", *([0] * 10)),
-        "retry": Counts("retries", *([0] * 10)),
-        "paragraph": Counts("paragraphs", *([0] * 10)),
-        "step": Counts("steps", *([0] * 10)),
-        "scenario": Counts("scenarios", *([0] * 10)),
-        "recipe": Counts("recipes", *([0] * 10)),
-        "check": Counts("checks", *([0] * 10)),
-        "critical": Counts("critical", *([0] * 10)),
-        "major": Counts("major", *([0] * 10)),
-        "minor": Counts("minor", *([0] * 10)),
-        "document": Counts("documents", *([0] * 10)),
-        "page": Counts("pages", *([0] * 10)),
-        "section": Counts("sections", *([0] * 10)),
-        "example": Counts("examples", *([0] * 10))
+        "module": Counts("modules", *([0] * 11)),
+        "book": Counts("books", *([0] * 11)),
+        "suite": Counts("suites", *([0] * 11)),
+        "feature": Counts("features", *([0] * 11)),
+        "chapter": Counts("chapters", *([0] * 11)),
+        "test": Counts("tests", *([0] * 11)),
+        "outline": Counts("outlines", *([0] * 11)),
+        "iteration": Counts("iterations", *([0] * 11)),
+        "retry": Counts("retries", *([0] * 11)),
+        "paragraph": Counts("paragraphs", *([0] * 11)),
+        "step": Counts("steps", *([0] * 11)),
+        "scenario": Counts("scenarios", *([0] * 11)),
+        "recipe": Counts("recipes", *([0] * 11)),
+        "check": Counts("checks", *([0] * 11)),
+        "critical": Counts("critical", *([0] * 11)),
+        "major": Counts("major", *([0] * 11)),
+        "minor": Counts("minor", *([0] * 11)),
+        "document": Counts("documents", *([0] * 11)),
+        "page": Counts("pages", *([0] * 11)),
+        "section": Counts("sections", *([0] * 11)),
+        "example": Counts("examples", *([0] * 11))
     }
 
 def transform(stop, divider="\n"):

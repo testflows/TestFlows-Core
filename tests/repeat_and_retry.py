@@ -47,6 +47,16 @@ def test7(self):
     with Step("could fail", repeats={"":(10, "complete")}, flags=EERROR):
         assert random.random() < 0.3 # 70% fail rate
 
+@TestScenario
+@Repeat(4)
+@Retry(4)
+def nested_retries(self):
+    """Check handling of nested retries.
+    """
+    for attempt in retries(count=10):
+        with attempt:
+            Scenario(test=test2, retries=Retry(count=1))()
+
 @TestModule
 @FFails({
     "test4": (Skip, "not supported on 21.8", version("21.8")), # FFails overrides Skipped of test4 so we must specify force result again

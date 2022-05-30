@@ -50,6 +50,9 @@ class UnstableCounts(Counts):
             r.append(color_result("XError", f"{self.xerror} xerror"))
         if self.xnull > 0:
             r.append(color_result("XNull", f"{self.xnull} xnull"))
+        if self.retried > 0:
+            r.append(color_result("Retried", f"{self.retried} retried"))
+
         s += color(", ", "white", attrs=["bold"]).join(r)
         s += color(")\n", "white", attrs=["bold"])
         return s
@@ -81,7 +84,7 @@ def generate(results, divider):
 
     for entry in results.values():
         name = parentname(entry[0][0]["test_name"])
-        counts = UnstableCounts(name, *([0] * 10))
+        counts = UnstableCounts(name, *([0] * 11))
         for iteration in entry:
             msg, result = iteration
             counts.units += 1

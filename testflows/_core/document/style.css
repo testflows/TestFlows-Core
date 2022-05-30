@@ -108,6 +108,7 @@ ul { padding-left: 1.5em; }
 .result-inline { display: inline-block; margin-right: 10px; margin-left: 10px; width: 3em; text-align: center; }
 .result-ok { color: #0dad55 }
 .result-xout, .result-xok, .result-xfail, .result-xerror, .result-xnull { background-color: #307bbb; color: white; }
+.result-retried { background-color: #11c1c1; color: white; }
 .result-fail { background-color: #f02323; color: white; }
 .result-error { background-color: #ffa400; color: white; }
 .result-skip {background-color: #aeaeae; color: white; }
@@ -1235,6 +1236,10 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 .c100.orange .fill {
   border-color: orange !important;
 }
+.c100.cyan .bar,
+.c100.cyan .fill {
+  border-color: #11c1c1 !important;
+}
 .c100.green > span {
   color: green;
 }
@@ -1249,6 +1254,9 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN 
 }
 .c100.purple > span {
   color: purple;
+}
+.c100.cyan > span {
+  color: #11c1c1;
 }
 .c100 > span.title {
   top: 1em;

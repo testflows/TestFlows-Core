@@ -15,7 +15,7 @@
 import functools
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP, LAST_RETRY
+from testflows._core.flags import Flags, SKIP, LAST_RETRY, NESTED_RETRY
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
 from testflows._core.cli.colors import color
@@ -75,7 +75,7 @@ def generate(results, divider, only_new=False):
         out += "\n"
 
         if (getattr(TestType, msg["test_type"]) == TestType.RetryIteration
-                and not Flags(msg["test_flags"]) & LAST_RETRY):
+                and not Flags(msg["test_flags"]) & LAST_RETRY) or Flags(msg["test_cflags"]) & NESTED_RETRY:
             if settings.show_retries:
                 retries += out
         else:

@@ -82,6 +82,10 @@ REMOTE = 1 << 39
 SETUP = 1 << 40
 # cleanup
 CLEANUP = 1 << 41
+# retry
+RETRY = 1 << 42
+# nested retry
+NESTED_RETRY = 1 << 43
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -92,7 +96,7 @@ XRESULT = XOK | XFAIL | XERROR | XNULL
 NOT_COUNTED = FAIL_NOT_COUNTED
 NOT_COUNTED_ANY = FAIL_NOT_COUNTED | ERROR_NOT_COUNTED | NULL_NOT_COUNTED
 # cumulative flags
-CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL | NOT_REPEATABLE | RETRIED | SETUP | CLEANUP
+CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL | NOT_REPEATABLE | RETRY | NESTED_RETRY | SETUP | CLEANUP
 
 class Flags(object):
     """Test flags."""
@@ -103,7 +107,7 @@ class Flags(object):
             PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
             REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
             ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY,
-            PAUSE_ON_PASS, PAUSE_ON_FAIL, REMOTE, SETUP, CLEANUP
+            PAUSE_ON_PASS, PAUSE_ON_FAIL, REMOTE, SETUP, CLEANUP, RETRY, NESTED_RETRY
         ]
     all_str = [
             "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
@@ -112,7 +116,7 @@ class Flags(object):
             "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
             "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
             "ASYNC", "REPEATED", "NOT_REPEATABLE", "RETRIED", "LAST_RETRY",
-            "PAUSE_ON_PASS", "PAUSE_ON_FAIL", "REMOTE", "SETUP", "CLEANUP"
+            "PAUSE_ON_PASS", "PAUSE_ON_FAIL", "REMOTE", "SETUP", "CLEANUP", "RETRY", "NESTED_RETRY"
         ]
 
     def __init__(self, flags=0):
