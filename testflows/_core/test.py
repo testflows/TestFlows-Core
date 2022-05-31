@@ -932,8 +932,6 @@ def cli_argparser(kwargs, argparser=None):
                               "default: uses temporary log file"))
     parser.add_argument("--show-skipped", dest="_show_skipped", action="store_true",
                         help="show skipped tests, default: False", default=None)
-    parser.add_argument("--show-retries", dest="_show_retries", action="store_true",
-                        help="show test retries, default: False", default=None)
     parser.add_argument("--trim-results", dest="_trim_results",
                         help="enable or disable trimming result messages, default: on",
                         type=onoff_type, metavar=onoff_type.metavar, default=NoneValue)
@@ -1144,7 +1142,6 @@ def parse_cli_args(kwargs, parser_schema):
             settings.database = args.pop("_database")
 
         settings.show_skipped = args.pop("_show_skipped", None) or False
-        settings.show_retries = args.pop("_show_retries", None) or False
         settings.random_order = args.pop("_random", None) or False
 
         if args.get("_pause_before"):

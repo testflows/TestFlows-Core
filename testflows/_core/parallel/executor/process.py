@@ -95,7 +95,6 @@ class WorkerSettings:
         self.read_logfile = self._set_service_object(current().io.io.io.reader.fd)
         self.database = settings.database
         self.show_skipped = settings.show_skipped
-        self.show_retries = settings.show_retries
         self.trim_results = settings.trim_results
         self.random_order = settings.random_order
         self.service_timeout = settings.service_timeout
@@ -154,7 +153,6 @@ class _WorkItem(object):
             settings.read_logfile = work_settings.read_logfile
             settings.database = work_settings.database
             settings.show_skipped = work_settings.show_skipped
-            settings.show_retries = work_settings.show_retries
             settings.trim_results = work_settings.trim_results
             settings.random_order = work_settings.random_order
             settings.service_timeout = work_settings.service_timeout

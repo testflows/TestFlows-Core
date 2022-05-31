@@ -23,7 +23,7 @@ import testflows.settings as settings
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core import __version__
-from testflows._core.flags import Flags, SKIP, NESTED_RETRY
+from testflows._core.flags import Flags, SKIP, RETRY
 from testflows._core.testtype import TestType
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
@@ -258,7 +258,7 @@ class MarkdownFormatter:
             result = test["result"]
             flags = Flags(result["test_flags"])
             cflags = Flags(result["test_cflags"])
-            if flags & SKIP and settings.show_skipped is False or cflags & NESTED_RETRY:
+            if flags & SKIP and settings.show_skipped is False:
                 continue
             if result["result_type"] in FailResults:
                 cls = result["result_type"].lower()
@@ -312,9 +312,6 @@ class MarkdownFormatter:
             if flags & SKIP and settings.show_skipped is False:
                 continue
             cls = result["result_type"].lower()
-            if cflags & NESTED_RETRY:
-                if cls in ["fail", "error", "null"]:
-                    cls = "retried"
             s += " | ".join([result["result_test"], f'<span class="result result-{cls}">{result["result_type"]}</span>', strftimedelta(result["message_rtime"])]) + "\n"
         return s
 
@@ -428,6 +425,11 @@ class Handler(HandlerBase):
         for test in results["tests"].values():
             result = test["result"]
             if getattr(TestType, result["test_type"]) < TestType.Test:
+                continue
+            if result.get("test_parent_type"):
+                if getattr(TestType, result["test_parent_type"]) < TestType.Suite:
+                    continue
+            if Flags(result["test_cflags"]) & RETRY:
                 continue
             tests.append(test)
         return tests

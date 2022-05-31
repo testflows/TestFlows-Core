@@ -46,6 +46,9 @@ def add_result(msg, results):
     result = msg["result_type"]
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
+    if msg.get("test_parent_type"):
+        if getattr(TestType, msg["test_parent_type"]) < TestType.Suite:
+            return
     flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
         return

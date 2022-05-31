@@ -14,7 +14,7 @@
 # limitations under the License.
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP, REPEATED
+from testflows._core.flags import Flags, SKIP, RETRY
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
 from testflows._core.name import split, parentname
@@ -59,11 +59,13 @@ class UnstableCounts(Counts):
 
 def add_result(msg, results):
     flags = Flags(msg["test_flags"])
+    cflags = Flags(msg["test_cflags"])
 
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if getattr(TestType, msg["test_type"]) == TestType.Iteration:
+    if (getattr(TestType, msg["test_type"]) == TestType.Iteration
+            and not cflags & RETRY):
         result = msg["result_type"]
         parent_id, test_id = split(msg["test_id"])
         if results.get(parent_id) is None:
