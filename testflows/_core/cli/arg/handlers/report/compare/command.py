@@ -26,7 +26,7 @@ import testflows.settings as settings
 import testflows._core.cli.arg.type as argtype
 
 from testflows._core import __version__
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, RETRY
 from testflows._core.testtype import TestType
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
@@ -324,6 +324,11 @@ class Handler(HandlerBase):
         for r in results.values():
             for uname, test in r["tests"].items():
                 if getattr(TestType, test["test"]["test_type"]) < TestType.Test:
+                    continue
+                if test["test"].get("test_parent_type"):
+                    if getattr(TestType, test["test"]["test_parent_type"]) < TestType.Suite:
+                        continue
+                if Flags(test["test"]["test_cflags"]) & RETRY:
                     continue
                 tests.append(uname)
         return human(list(set(tests)))
