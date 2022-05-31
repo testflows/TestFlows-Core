@@ -120,7 +120,7 @@ class Service:
         def _register(sync: bool=False):
             if not self.open:
                 raise ServiceNotRunningError("service is not running")
-            
+
             _id = id(obj)
 
             if _id not in self.objects:
@@ -574,7 +574,7 @@ class BaseServiceObject:
         # cleanup object by decrementing reference count
         # when no longer in use
         self._cleanup = Finalize(
-            self, self._decref,
+            self, self._decref, args=(self.oid, self.address, self.identity), kwargs={"_tracer": self._tracer},
             exitpriority=1
             )
 
@@ -589,6 +589,7 @@ class BaseServiceObject:
         """
         oid = self.oid
         address = self.address
+        identity = self.identity
 
         with tracing.Event(self._tracer, "_incref"):
             if is_running_in_event_loop():
@@ -597,21 +598,19 @@ class BaseServiceObject:
                         if  _process_service.address == address:
                             _process_service.__incref__(oid)
                         else:
-                            _process_service.loop.create_task(self.__async_proxy_call__("__incref__"))
+                            _process_service.loop.create_task(self.__async_proxy_call__(oid, address, identity, "__incref__", _tracer=self._tracer))
                         return
 
-            self.__proxy_call__("__incref__")
+            self.__proxy_call__(oid, address, identity, "__incref__", _tracer=self._tracer)
 
-    def _decref(self, _timeout_err={}, _service_not_running_err=[False]):
+    @classmethod
+    def _decref(cls, oid, address, identity, _timeout_err={}, _service_not_running_err=[False], _tracer=tracer):
         """Decrement service object reference count.
         """
-        oid = self.oid
-        address = self.address
-
         if is_exiting():
             return 
 
-        with tracing.Event(self._tracer, "_decref"):
+        with tracing.Event(_tracer, "_decref"):
             if _service_not_running_err[0]:
                 return
 
@@ -631,10 +630,10 @@ class BaseServiceObject:
                             if _process_service.address == address:  
                                 _process_service.__decref__(oid)
                             else:
-                                _process_service.loop.create_task(no_errors(self.__async_proxy_call__("__decref__")))
+                                _process_service.loop.create_task(no_errors(cls.__async_proxy_call__(oid, address, identity, "__decref__", _tracer=_tracer)))
                             return
 
-                self.__proxy_call__("__decref__", timeout=settings.service_timeout)
+                cls.__proxy_call__(oid, address, identity, "__decref__", timeout=settings.service_timeout, _tracer=_tracer)
 
             except TimeoutError:
                 _timeout_err[address] = True
@@ -650,18 +649,15 @@ class BaseServiceObject:
         """
         return other.oid == self.oid and other.address == self.address 
 
-    async def __async_proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
+    @classmethod
+    async def __async_proxy_call__(cls, oid, address, identity, fn, args=None, kwargs=None, timeout=None, rid=None, _tracer=tracer):
         """Execute function call on the remote service.
         """
-        oid = self.oid
-        address = self.address
-        identity = self.identity
-
         if rid is None:
             rid = uuid.uuid1().hex
 
-        with tracing.Event(self._tracer, f"__async_proxy_call__(rid={rid},oid=0x{oid:x},identity={identity.hex()}"
-                                          ",address={address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
+        with tracing.Event(_tracer, f"__async_proxy_call__(rid={rid},oid=0x{oid:x},identity={identity.hex()}"
+                                    f",address={address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
             if args is None:
                 args = tuple()
             if kwargs is None:
@@ -692,20 +688,17 @@ class BaseServiceObject:
 
             return reply_body
 
-    def __proxy_call__(self, fn, args=None, kwargs=None, timeout=None, rid=None):
+    @classmethod
+    def __proxy_call__(cls, oid, address, identity, fn, args=None, kwargs=None, timeout=None, rid=None, _tracer=tracer):
         """Synchronously execute function call on the remote service.
         """
-        oid = self.oid
-        identity = self.identity
-        address = self.address
-
         if rid is None:
             rid = uuid.uuid1().hex
 
-        with tracing.Event(self._tracer, f"__proxy_call__(rid={rid},oid=0x{self.oid:x},identity={identity.hex()},"
-                                          "address={self.address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
+        with tracing.Event(_tracer, f"__proxy_call__(rid={rid},oid=0x{oid:x},identity={identity.hex()},"
+                                    f"address={address},fn={fn},args={args},kwargs={kwargs},timeout={timeout})"):
             try:
-                c = self.__async_proxy_call__(fn, args, kwargs, timeout=timeout, rid=rid)
+                c = cls.__async_proxy_call__(oid, address, identity, fn, args, kwargs, timeout=timeout, rid=rid, _tracer=_tracer)
                 try:
                     return asyncio.run_coroutine_threadsafe(c, loop=_process_service.loop).result()
                 finally:
@@ -751,17 +744,17 @@ def make_exposed_defs(exposed, asynced):
 
     for name in exposed.methods:
         defs.append(f"{'async ' if asynced else ''}def {name}(self, *args, **kwargs):\n"
-                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__( \"{name}\", args, kwargs)",
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.oid, self.address, self.identity, \"{name}\", args, kwargs, _tracer=self._tracer)",
             )
 
     for name in exposed.properties:
         defs.append(f"@property\n"
                 f"{'async ' if asynced else ''}def {name}(self):\n"
-                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(\"__getattribute__\", [\"{name}\"])"
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.oid, self.address, self.identity, \"__getattribute__\", [\"{name}\"], _tracer=self._tracer)"
                 f"\n"
                 f"@{name}.setter\n"
                 f"{'async ' if asynced else ''}def {name}(self, v):\n"
-                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(\"__setattribute__\", [\"{name}\", v])",
+                f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.oid, self.address, self.identity, \"__setattribute__\", [\"{name}\", v], _tracer=self._tracer)",
             )
     
     return defs
