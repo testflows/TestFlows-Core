@@ -209,7 +209,7 @@ def start_database_handler():
     handler = threading.Thread(target=database_handler)
     handler.name = 'tfs-database'
     handler.start()
-    _handlers.appen(handler)
+    _handlers.append(handler)
 
 def init():
     """Initialization before we run the first test.
