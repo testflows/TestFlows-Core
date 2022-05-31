@@ -2184,7 +2184,8 @@ class TestDefinition(object):
         """
         if not self.parent:
             if not test__exit__:
-                sys.stderr.write(warning(get_exception(exc_type, exc_value, exc_traceback), eol='\n'))
+                if settings.debug:
+                    sys.stderr.write(warning(get_exception(exc_type, exc_value, exc_traceback), eol='\n'))
                 sys.stderr.write(danger("error: " + str(exc_value).strip()))
                 sys.exit(1)
             sys.exit(0 if self.test.result else 1)

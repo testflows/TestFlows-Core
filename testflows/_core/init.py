@@ -53,6 +53,7 @@ def sigint_handler(signal, frame):
 
     if _ctrl_c > 1:
         raise KeyboardInterrupt()
+
     if top():
         top().terminate(result=Error, reason="KeyboardInterrupt")
 
@@ -214,6 +215,8 @@ def start_database_handler():
 def init():
     """Initialization before we run the first test.
     """
+    if threading.current_thread() is not threading.main_thread():
+        raise RuntimeError("top level test was not started in main thread")
     signal.signal(signal.SIGINT, sigint_handler)
     cleanup()
     start_output_handler()
