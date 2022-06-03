@@ -26,11 +26,11 @@ from testflows._core.objects import Specification, Requirement
 
 specification_template = """
 %(pyname)s = Specification(
-    name=%(name)s, 
+    name=%(name)s,
     description=%(description)s,
     author=%(author)s,
-    date=%(date)s, 
-    status=%(status)s, 
+    date=%(date)s,
+    status=%(status)s,
     approved_by=%(approved_by)s,
     approved_date=%(approved_date)s,
     approved_version=%(approved_version)s,
@@ -43,7 +43,8 @@ specification_template = """
     children=%(children)s,
     headings=%(headings)s,
     requirements=%(requirements)s,
-    content=%(content)s)
+    content=%(content)s
+)
 """
 
 requirement_template = """
@@ -57,7 +58,8 @@ requirement_template = """
     description=%(description)s,
     link=%(link)s,
     level=%(level)s,
-    num=%(num)s)
+    num=%(num)s
+)
 
 """
 
@@ -171,7 +173,7 @@ class Visitor(PTNodeVisitor):
         try:
             description = "\n".join([f'{"":8}{repr(line.value)}' for lines in node.requirement_description for line in lines])
             description = wstrip(description, f"{'':8}'\\n'\n")
-            description = f"(\n{description}\n{'':8})"
+            description = f"(\n{description}\n{'':4})"
         except:
             description = "None"
         try:

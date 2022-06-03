@@ -43,6 +43,7 @@ def open_resource(self, name=None):
 
 @TestScenario
 @Name("{$cls.name} my custom test")
+@Args(format_name=True)
 def custom_test(self, name=None):
     note(f"custom test {name}")
 
@@ -94,9 +95,9 @@ def feature(self):
     When(test=simple_step)()
     When("I run simple step", run=simple_step, args={"name":"hello"})
     When(run=simple_step)
-    Given("I {$cls.name} open resource {name}", test=open_resource)(name="hello")
+    Given("I {$cls.name} open resource {name}", test=open_resource, format_name=True)(name="hello")
 
-    with Given("I {$cls.name} open resource", test=open_resource):
+    with Given("I {$cls.name} open resource", test=open_resource, format_name=True):
         note("adding to beggining of test")
         open_resource()
         note("adding to the end of test")
