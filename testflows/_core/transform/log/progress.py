@@ -101,7 +101,7 @@ def transform(stop_event, show_input=True):
     """
     line = None
     counter = [-1]
-    counts = Counts("tests", *([0] * 10))
+    counts = Counts("tests", *([0] * 11))
 
     while True:
         if line is not None:
