@@ -94,6 +94,9 @@ class TestOutput(object):
                     message["result_message"] = settings.secrets_registry.filter(message["result_message"])
                 if "test_description" in message and message["test_description"]:
                     message["test_description"] = settings.secrets_registry.filter(message["test_description"])
+                if "argument_value" in message and message["argument_value"]:
+                    message["argument_value"] = settings.secrets_registry.filter(message["argument_value"])
+
         msg.update(message)
         self.test.tracer.debug("test message", extra={"test_message":msg})
 
