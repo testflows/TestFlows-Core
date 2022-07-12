@@ -39,7 +39,7 @@ show_skipped = False
 #: show retries
 show_retries = False
 #: show trimmed result messages
-trim_results = False
+trim_results = True
 #: randomize order of loaded tests
 random_order = False
 #: global thread pool

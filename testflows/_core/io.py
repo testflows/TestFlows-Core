@@ -88,11 +88,12 @@ class TestOutput(object):
 
         if settings.secrets_registry:
             if not settings.secrets_registry.is_empty():
-                if "message" in message:
+                if "message" in message and message["message"]:
                     message["message"] = settings.secrets_registry.filter(message["message"])
-                if "result_message" in message:
+                if "result_message" in message and message["result_message"]:
                     message["result_message"] = settings.secrets_registry.filter(message["result_message"])
-
+                if "test_description" in message and message["test_description"]:
+                    message["test_description"] = settings.secrets_registry.filter(message["test_description"])
         msg.update(message)
         self.test.tracer.debug("test message", extra={"test_message":msg})
 

@@ -157,6 +157,7 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
                 if exc is not None:
                     if exception is None:
                         exception = exc
+                        cancel_pending = True
                         if test:
                             test.terminate()
                     if not all:
@@ -241,6 +242,7 @@ async def _async_join(*future, futures=None, test=None, filter=None, all=False, 
                         raise
                     if exception is None:
                         exception = exc
+                        cancel_pending = True
                     continue
                 else:
                     futures.append(future)
