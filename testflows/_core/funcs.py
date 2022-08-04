@@ -20,6 +20,7 @@ import importlib
 import builtins
 import functools
 import textwrap
+import pkgutil
 
 from .message import Message, dumps
 from .name import basename
@@ -45,7 +46,16 @@ def current_module(frame=None):
 def load_module(name, package=None):
     """Load module by name.
     """
-    return importlib.import_module(module, package=package)
+    return importlib.import_module(name, package=package)
+
+def load_submodules(name, package=None):
+    """Load all submodules for a given module specified by name.
+
+    :param name: module name
+    :param package: package if module name is relative (optional)
+    """
+    module = load_module(name, package=package)
+    return [module_info[0].find_module(module_info[1]).load_module(module_info[1]) for module_info in pkgutil.iter_modules(module.__path__)]
 
 def load(name, test=None, package=None, frame=None):
     """Load test by name from module.
