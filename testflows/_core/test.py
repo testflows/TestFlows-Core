@@ -2815,3 +2815,110 @@ def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None):
                 return func(*args, **kwargs)
 
     return wrapper
+
+class repeats(object):
+    """Repeat object to repeat some piece of inline code until it succeeds.
+
+    ```python
+    for iteration in repeats(count=30, until="complete", delay=0):
+        with iteration:
+            my_code()
+    ```
+
+    :param count: number of iterations, default: None
+    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'  
+    :param delay: delay in sec between iterations, default: 0 sec
+    :param backoff: backoff multiplier that is applied to the delay, default: 1
+    :param jitter: jitter added to delay between retries specified as
+                   a tuple(min, max), default: (0,0)
+    """
+
+    def __init__(self, count=None, until="complete", delay=0, backoff=1, jitter=None):
+        self.count = int(count) if count is not None else None
+        self.until = str(until)
+        self.delay = float(delay)
+        self.backoff = backoff
+        self.jitter = tuple(jitter) if jitter else tuple([0, 0])
+        self.delay_with_backoff = self.delay
+        self.number = -1
+        self.started = None
+        self.iteration = None
+
+    def __iter__(self):
+        # re-initialize state
+        self.delay_with_backoff = self.delay
+        self.number = -1
+        self.started = None
+        return self
+
+    def __next__(self, **kwargs):
+        flags = kwargs.pop("flags", Flags())
+        current_type = current().type
+        parent_type = kwargs.pop("parent_type", current_type if current_type not in (Iteration, RetryIteration) else current().parent_type)
+        parent_subtype = kwargs.pop("parent_subtype", current_type if current_type not in (Iteration, RetryIteration) else current().parent_subtype)
+
+        if self.until in ("pass", "complete"):
+            flags |=  TE
+
+        if self.iteration is not None:
+            if self.iteration.test is not None:
+                if self.until == "pass" and isinstance(self.iteration.test.result, NonFailResults):
+                    raise StopIteration
+                elif self.until == "fail" and isinstance(self.iteration.test.result, FailResults):
+                    raise StopIteration
+                elif self.number + 1 == self.count:
+                    raise StopIteration
+
+        if self.started and self.delay_with_backoff:
+            if self.backoff:
+                self.delay_with_backoff *= self.backoff
+
+            delay = self.delay_with_backoff
+            if self.jitter:
+                delay += random.uniform(*self.jitter)
+
+            time.sleep(delay)
+
+        if not self.started:
+            self.started = time.time()
+
+        self.number += 1
+
+        if self.count is not None and self.count <= self.number + 1:
+            flags &= ~TE
+
+        self.iteration = Iteration(f"run #{self.number}", flags=flags, parent_type=parent_type, parent_subtype=parent_subtype, **kwargs)
+
+        return self.iteration
+
+def repeat(func, count=None, until="complete", delay=0, backoff=1, jitter=None):
+    """Repeat function and return a list of the results for each iteration.
+
+    For example,
+
+    ```python
+    repeat(my_func, count=5, until="complete")(*my_args, **kwargs)
+    ```
+
+    :param func: function to repeat
+    :param count: number of iterations, default: None
+    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete' 
+    :param timeout: timeout in sec, default: None
+    :param delay: delay in sec between iterations, default: 0 sec
+    :param backoff: backoff multiplier that is applied to the delay, default: 1
+    :param jitter: jitter added to delay between repeats specified as
+                   a tuple(min, max), default: (0,0)
+    """
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        results = []
+        for _iter in repeats(count=count, until=until, delay=delay, backoff=backoff, jitter=jitter):
+            with _iter:
+                try:
+                    results.append(func(*args, **kwargs))
+                except Exception as e:
+                    results.append(e)
+                    raise
+        return results
+
+    return wrapper

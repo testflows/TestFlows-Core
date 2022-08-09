@@ -15,8 +15,8 @@ def test1(self):
 
 @TestScenario
 @Retry(10) # retry test until it pass, any failed tries are not counted
-def test2(self):
-    assert random.random() < 0.2 # 20% fail rate
+def test2(self, fail_rate=0.2):
+    assert random.random() < fail_rate # 20% fail rate
   
 @TestScenario
 @Repeat(2)
@@ -48,6 +48,11 @@ def test7(self):
         assert random.random() < 0.3 # 70% fail rate
 
 @TestScenario
+def test8(self, fail_rate=0.2):
+    assert random.random() < fail_rate # provide fail rate
+
+
+@TestScenario
 @Repeat(4)
 @Retry(4)
 def nested_retries(self):
@@ -56,6 +61,32 @@ def nested_retries(self):
     for attempt in retries(count=10):
         with attempt:
             Scenario(test=test2, retries=Retry(count=1))()
+
+@TestScenario
+def repeats_object(self):
+    """Check repeats object.
+    """
+    with Check("until complete", flags=XFAIL):
+        for iteration in repeats(count=10, until="complete"):
+            with iteration:
+                Scenario(test=test8)(fail_rate=0.5)
+
+    with Check("until pass", flags=XFAIL):
+        for iteration in repeats(count=10, until="pass"):
+            with iteration:
+                Scenario(test=test8)(fail_rate=0.5)
+
+    with Check("until fail", flags=XFAIL):
+        for iteration in repeats(count=10, until="fail"):
+            with iteration:
+                Scenario(test=test8)(fail_rate=0.5)
+
+    with Check("repeat function"):
+        def add_note(m):
+            note(str(m))
+            return m
+
+        note(repeat(add_note, count=2)("hello"))
 
 @TestModule
 @FFails({
