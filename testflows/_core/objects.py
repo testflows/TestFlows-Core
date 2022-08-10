@@ -716,7 +716,7 @@ class XFails(NamedValue):
     """xfails container.
 
     xfails = {
-        "pattern": [("result", "reason")],
+        "pattern": [("result", "reason"[, when])],
         ...
         }
     """
@@ -733,7 +733,7 @@ class XFails(NamedValue):
 
         :param pattern: test name pattern to match
         :param *results: one or more results to cross out
-            where each result is a two-tuple of (result, reason)
+            where each result is a two-tuple or three-tuple of (result, reason[, when])
         """
         self.value[pattern] = results
         return self
@@ -824,7 +824,7 @@ class XFlags(NamedValue):
     """xflags container.
 
     xflags = {
-        "filter": (set_flags, clear_flags),
+        "filter": (set_flags, clear_flags[, when]),
         ...
     }
     """
@@ -836,14 +836,15 @@ class XFlags(NamedValue):
     def items(self):
         return self.value.items()
 
-    def add(self, pattern, set_flags=0, clear_flags=0):
+    def add(self, pattern, set_flags=0, clear_flags=0, when=None):
         """Add an entry to the xflags.
 
         :param pattern: test name pattern to match
         :param set_flags: flags to set
         :param clear_flags: flags to clear, default: None
+        :param when: condition function, default: None
         """
-        self.value[pattern] = [Flags(set_flags), Flags(clear_flags)]
+        self.value[pattern] = [Flags(set_flags), Flags(clear_flags), when]
         return self
 
 class Repeats(NamedValue):

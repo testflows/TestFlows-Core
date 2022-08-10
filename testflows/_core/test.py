@@ -805,7 +805,10 @@ class TestBase(object):
         for pattern, xouts in self.xfails.items():
             if match(self.name, pattern):
                 for xout in xouts:
-                    result, reason = xout
+                    result, reason = xout[:2]
+                    when = xout[2] if len(xout) > 2 else None
+                    if when is not None and not when(self):
+                        continue
                     if isinstance(self.result, result):
                         self.result = self.result.xout(reason)
 
@@ -1898,7 +1901,10 @@ class TestDefinition(object):
 
         for pattern, item in xflags.items():
             if match(name, pattern):
-                set_flags, clear_flags = item
+                set_flags, clear_flags = item[:2]
+                when = item[2] if len(item) > 2 else None
+                if when is not None and not when(self.parent):
+                    continue
                 kwargs["flags"] = (kwargs["flags"] & ~Flags(clear_flags)) | Flags(set_flags)
 
     def _parent_type_propagation(self, parent, kwargs):
