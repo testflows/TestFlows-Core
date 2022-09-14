@@ -302,7 +302,7 @@ def Parser():
         return _(r"[ \t]*uid:[ \t]*"), word
 
     def specification_name():
-        return _(r"(QA-)?SRS[^\n]+")
+        return _(r"[^\n]+")
 
     def specification_heading():
         return _(r"#[ \t]+"), specification_name, _(r"\n")
