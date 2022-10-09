@@ -20,6 +20,7 @@ from testflows._core.testtype import TestType
 from testflows._core.message import Message
 from testflows._core.name import split
 from testflows._core.cli.colors import color
+from testflows._core.utils.timefuncs import strftimedelta
 
 indent = " " * 2
 
@@ -72,6 +73,7 @@ def generate(results, divider):
         passing += _color("\u2714") + f" [ {_color(result)} ] {msg['result_test']}"
         if msg["result_reason"]:
             passing += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
+        passing += " " + color("(" + strftimedelta(msg['message_rtime']) + ")", "white", attrs=["dim"])
         passing += "\n"
     if passing:
         passing = color(f"{divider}Passing\n\n", "white", attrs=["bold"]) + passing

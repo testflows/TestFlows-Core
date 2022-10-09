@@ -98,7 +98,7 @@ def generate(results, divider):
         unstable += _counts
 
     if unstable:
-        unstable = color(f"{divider}Unstable\n\n", "white", attrs=["bold"]) + unstable.rstrip()
+        unstable = color(f"{divider}Unstable\n\n", "white", attrs=["bold"]) + unstable.rstrip() + "\n"
 
     report = f"{unstable}"
 
