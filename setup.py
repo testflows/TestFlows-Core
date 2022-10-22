@@ -36,6 +36,7 @@ setup(
     license="Apache-2.0",
     packages=[
         "testflows.core",
+        "testflows.exceptions",
         "testflows.settings",
         "testflows._core",
         "testflows._core.contrib",
