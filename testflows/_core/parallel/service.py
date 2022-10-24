@@ -17,6 +17,7 @@ import sys
 import uuid
 import types
 import atexit
+import socket
 import inspect
 import traceback
 import threading
@@ -64,7 +65,7 @@ class Service:
     remote services to access their remote objects.
 
     :param name: name of the service
-    :param address: (optional) address of the server, default: (127.0.0.1, 0)
+    :param address: (optional) address of the server, default: (ip_address_of_the_host, 0)
     :param loop: (optional) event loop ,default: None
     """
     class MsgTypes:
@@ -89,7 +90,7 @@ class Service:
         self.loop = loop or asyncio.get_running_loop()
         self.in_socket = Socket(loop=self.loop)
         self.out_socket = Socket(loop=self.loop)
-        self.address = address if address is not None else Address("127.0.0.1", 0)
+        self.address = address if address is not None else Address(socket.gethostbyname(socket.gethostname()), 0)
         self.identity = self.in_socket.identity
         self.serve_tasks = []
         self.reply_futures = {}
