@@ -252,8 +252,11 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
         if not self.ready_future.done():
             self.ready_future.set_result(True)
 
+class RemotePoolExecutor(_base.Executor):
+    """Remote pool executor."""
+    pass
 
-class ProcessPoolExecutor(_base.Executor):
+class ProcessPoolExecutor(RemotePoolExecutor):
     """Process pool executor.
     """
     _counter = itertools.count().__next__

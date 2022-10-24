@@ -67,7 +67,7 @@ from .parallel import current, top, previous, _check_parallel_context, join as p
 from .parallel import convert_result_to_concurrent_future
 from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
-from .parallel.executor.process import ProcessPoolExecutor, GlobalProcessPoolExecutor
+from .parallel.executor.process import RemotePoolExecutor, ProcessPoolExecutor, GlobalProcessPoolExecutor
 from .parallel.asyncio import is_running_in_event_loop, async_next, wrap_future, OptionalFuture
 
 tracer = tracing.getLogger(__name__)
@@ -1494,7 +1494,7 @@ class TestDefinition(object):
         current_test = current()
         is_async = is_running_in_event_loop()
         is_parallel = self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel
-        is_remote = self.kwargs.get("flags", Flags()) & REMOTE or self.remote or (executor and (isinstance(executor, ProcessPoolExecutor)))
+        is_remote = self.kwargs.get("flags", Flags()) & REMOTE or self.remote or (executor and (isinstance(executor, RemotePoolExecutor)))
 
         if current_test:
             if current_test.cflags & NO_PARALLEL:
@@ -1525,7 +1525,7 @@ class TestDefinition(object):
 
                 if isinstance(executor, AsyncPoolExecutor):
                     future = executor.submit(async_callable)
-                elif isinstance(executor, ProcessPoolExecutor):
+                elif isinstance(executor, RemotePoolExecutor):
                     self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) | REMOTE
                     future = executor.submit(callable)
                 else:
