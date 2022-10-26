@@ -17,10 +17,10 @@ import os
 import sys
 import time
 import uuid
+import queue
 import codecs
 import atexit
 import signal
-import queue
 import threading
 import traceback
 import itertools

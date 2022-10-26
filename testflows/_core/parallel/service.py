@@ -453,7 +453,8 @@ class Service:
                 with tracing.Event(event_tracer, f"reply:rid={rid},message={msg_body}"):
                     # process reply
                     reply_future = self.reply_futures.pop(rid)
-                    reply_future.set_result((msg_type, msg_body))
+                    if not reply_future.cancelled():
+                        reply_future.set_result((msg_type, msg_body))
 
     async def _serve_forever(self):
         """Start service until coroutine is cancelled.
