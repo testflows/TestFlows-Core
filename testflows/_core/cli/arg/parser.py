@@ -34,8 +34,10 @@ except:
 
 try:
     from testflows.enterprise._core.cli.handler import Handler as enterprise_handler
+    from testflows.enterprise._core.cli.parser import argument_parser as enterprise_parser
 except:
     enterprise_handler = None
+    enterprise_parser = None
 
 from testflows._core import __version__, __license__
 
@@ -63,7 +65,11 @@ parser.add_argument("--trim-results", dest="trim_results", type=onoff_type,
 parser.add_argument("-v", "--version", action="version", version=f"{__version__}")
 parser.add_argument("--license", action="version", help="show program's license and exit", version=f"{__license__}")
 
+if enterprise_parser:
+    enterprise_parser(parser)
+
 commands = parser.add_subparsers(title='commands', metavar='command', description=None, help=None)
+commands.required = True
 
 log_handler.add_command(commands)
 report_handler.add_command(commands)

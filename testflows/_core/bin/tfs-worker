@@ -28,6 +28,11 @@ from testflows._core.cli.arg.type import trace_level as trace_level_type
 from testflows._core.parallel.executor.process import WORKER_READY
 from testflows._core.parallel.service import Address
 
+try:
+    from testflows.enterprise._core.cli.parser import argument_parser as enterprise_parser
+except:
+    enterprise_parser = None
+
 tracer = tracing.getLogger(__name__)
 
 def worker_ready():
@@ -83,6 +88,9 @@ parser.add_argument("--trace", dest="trace",
                     metavar=trace_level_type.metavar,
                     help="enable low-level test program tracing for debugging "
                         "using Python's logging module at the specified level.")
+
+if enterprise_parser:
+    enterprise_parser(parser)
 
 parser.set_defaults(func=worker)
 

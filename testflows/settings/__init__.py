@@ -54,3 +54,5 @@ service_timeout = 0.1
 secrets_registry = None
 #: tracing
 trace = False
+#: license key
+license_key = None
