@@ -1688,9 +1688,9 @@ class TestDefinition(object):
                 if prev and depth(prev.name) == depth(name):
                     sibling = prev
                 if not sibling:
-                    raise TypeError("`And` subtype can't be used here as it has no sibling from which to inherit the subtype")
+                    raise TypeError("`And` step can't be used here as it has no sibling from which to inherit test subtype")
                 if sibling.type != kwargs["type"]:
-                    raise TypeError("`And` subtype can't be used here as it sibling is not of the same type")
+                    raise TypeError("`And` step can't be used here as its sibling is not of the same test type")
                 kwargs["subtype"] = sibling.subtype
 
             # auto set mandatory flag for Background, Given, Finally and Cleanup steps
