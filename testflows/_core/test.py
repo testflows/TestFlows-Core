@@ -490,7 +490,7 @@ class TestBase(object):
         else:
             # convert Null into an Error
             result = Error(test=self.name, message=test_result.message)
-        
+
         with self.lock:
             if isinstance(self.result, Error):
                 pass
@@ -737,7 +737,7 @@ class TestBase(object):
             self.io.close(final=True)
         else:
             self.io.close(flush=self.flags & REMOTE)
-        
+
         self.tracer.debug("test exit", extra={"event_action": tracing.Action.END})
 
         if not self.flags & SKIP:
@@ -997,7 +997,7 @@ def cli_argparser(kwargs, argparser=None):
                             help=("force all tests to be test to end and continue "
                                   "the run even if one of the tests fails"))
 
-    parser.add_argument("--trace", dest="_trace", 
+    parser.add_argument("--trace", dest="_trace",
                         type=trace_level_type, default=None,
                         metavar=trace_level_type.metavar,
                         help="enable low-level test program tracing for debugging "
@@ -1435,7 +1435,7 @@ class TestDefinition(object):
 
         test = self.kwargs.get("test", None)
         executor = self.kwargs.pop("executor", None)
-        
+
         self.kwargs["args"] = dict(self.kwargs.get("args") or {})
         self.kwargs["args"].update(args)
 
@@ -1516,7 +1516,7 @@ class TestDefinition(object):
                         executor = current_test.executor or ProcessPoolExecutor(join_on_shutdown=False)
                     else:
                         executor = current_test.executor or ThreadPoolExecutor(join_on_shutdown=False)
-                    
+
                     if current_test.executor is None:
                         current_test.executor = executor
 
@@ -2294,7 +2294,7 @@ class TestDefinition(object):
 
         except (Exception, KeyboardInterrupt) as exc:
             raise
-        
+
         finally:
             if self.test:
                 self.test.terminated = True
@@ -2832,7 +2832,7 @@ class repeats(object):
     ```
 
     :param count: number of iterations, default: None
-    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'  
+    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'
     :param delay: delay in sec between iterations, default: 0 sec
     :param backoff: backoff multiplier that is applied to the delay, default: 1
     :param jitter: jitter added to delay between retries specified as
@@ -2908,7 +2908,7 @@ def repeat(func, count=None, until="complete", delay=0, backoff=1, jitter=None):
 
     :param func: function to repeat
     :param count: number of iterations, default: None
-    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete' 
+    :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'
     :param timeout: timeout in sec, default: None
     :param delay: delay in sec between iterations, default: 0 sec
     :param backoff: backoff multiplier that is applied to the delay, default: 1
@@ -2928,3 +2928,14 @@ def repeat(func, count=None, until="complete", delay=0, backoff=1, jitter=None):
         return results
 
     return wrapper
+
+def define(name, value, encoder=str):
+    """Adds `By` step to define a value.
+
+    :param name: name of the value
+    :param value: value
+    :param encoder: string encoder, default: str() function
+    :return: value
+    """
+    with By(f"defining {name}", description=f"{encoder(value)}"):
+       return value

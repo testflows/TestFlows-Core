@@ -18,7 +18,8 @@ from testflows._core.test import TestStep, TestCase, TestSuite, TestModule, Test
 from testflows._core.test import Context, SharedContext
 from testflows._core.test import Feature, Background, Scenario, Example, Outline
 from testflows._core.test import Critical, Major, Minor, Check, Given, When, Then, And, But, By, Finally, Cleanup
-from testflows._core.test import TestFeature, TestScenario, TestCheck, loads, ordered, retry, retries, repeat, repeats
+from testflows._core.test import TestFeature, TestScenario, TestCheck
+from testflows._core.test import loads, ordered, retry, retries, repeat, repeats, define
 from testflows._core.has import has
 from testflows._core.flags import Flags
 from testflows._core.objects import OK, XOK, Fail, XFail, Skip, Error, XError, Null, XNull
