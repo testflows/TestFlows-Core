@@ -45,6 +45,9 @@ def color_secondary_keyword(keyword):
 def color_other(other):
     return color(other, "white", attrs=["dim"])
 
+def color_prefix(prefix):
+    return color("\u22A1 ", "green") + color(prefix, "yellow", attrs=["dim"])
+
 def color_result(result, attrs=None, retry=False):
     if attrs is None:
         attrs = ["bold"]
@@ -350,10 +353,10 @@ formatters = {
     Message.RESULT.name: (format_result, f"{result_mark} "),
 }
 
-def transform(show_input=True):
-    """Transform parsed log line into a nice format.
-    """
+def transform(show_input=True, add_test_name_prefix=False):
+    """Transform parsed log line into a nice format."""
     line = None
+    test_types = {}
 
     while True:
         if line is not None:
@@ -371,5 +374,25 @@ def transform(show_input=True):
                         last_message[0] = msg
             else:
                 line = None
+
+        if line and add_test_name_prefix:
+            test_type = get_type(msg)
+            test_types[msg["test_name"]] = test_type
+            test_name_prefix = "?\n  "
+
+            if test_type >= TestType.Outline:
+                test_name_prefix = msg["test_name"] + "\n  "
+            else:
+                test_name = msg["test_name"]
+                while test_name:
+                    test_name = test_name.rsplit("/", 1)[0]
+                    test_type = test_types.get(test_name)
+                    if test_type is None:
+                        break
+                    if test_type >= TestType.Outline:
+                        test_name_prefix = test_name + "\n  "
+                        break
+
+            line = f"{color_prefix(test_name_prefix)}{line}"
 
         line = yield line

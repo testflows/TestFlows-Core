@@ -78,7 +78,7 @@ except:
     database_module = None
 
 output_formats = ["new-fails", "fails", "classic", "slick", "nice",
-    "brisk", "quiet", "short", "manual", "dots", "progress", "raw"]
+    "brisk", "quiet", "short", "manual", "dots", "progress", "pnice", "raw"]
 
 rerun_results = ["fails", "passes", "xouts", "ok", "fail", "error", "null",
     "xok", "xfail", "xerror", "xnull", "skip"]

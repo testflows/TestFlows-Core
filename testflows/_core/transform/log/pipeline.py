@@ -180,6 +180,30 @@ class NiceLogPipeline(Pipeline):
         ]
         super(NiceLogPipeline, self).__init__(steps, stop=stop_event)
 
+class ParallelNiceLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, show_input=True):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(),
+            fanout(
+                nice_transform(show_input=show_input, add_test_name_prefix=True),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
+                coverage_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin(
+                "".join
+            ),
+            write_transform(output),
+            stop_transform(stop_event)
+        ]
+        super(ParallelNiceLogPipeline, self).__init__(steps, stop=stop_event)
+
 class BriskLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()

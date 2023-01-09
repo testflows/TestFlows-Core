@@ -24,6 +24,7 @@ import testflows.settings as settings
 from .compress import CompressedFile
 from .transform.log.pipeline import RawLogPipeline
 from .transform.log.pipeline import NiceLogPipeline
+from .transform.log.pipeline import ParallelNiceLogPipeline
 from .transform.log.pipeline import BriskLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ProgressLogPipeline
@@ -142,6 +143,14 @@ def stdout_nice_handler():
         log.seek(0)
         NiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+def stdout_pnice_handler():
+    """Handler to output messages to sys.stdout
+    using "pnice" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        ParallelNiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 def stdout_brisk_handler():
     """Handler to output messages to sys.stdout
     using "brisk" format.
@@ -191,6 +200,7 @@ def start_output_handler():
         "fails": stdout_fails_handler,
         "new-fails": stdout_new_fails_handler,
         "nice": stdout_nice_handler,
+        "pnice": stdout_pnice_handler,
         "brisk": stdout_brisk_handler,
         "quiet": stdout_quiet_handler,
         "short": stdout_short_handler,

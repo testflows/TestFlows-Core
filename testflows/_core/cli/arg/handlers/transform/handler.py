@@ -16,6 +16,7 @@ from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.transform.nice import Handler as nice_handler
+from testflows._core.cli.arg.handlers.transform.pnice import Handler as pnice_handler
 from testflows._core.cli.arg.handlers.transform.brisk import Handler as brisk_handler
 from testflows._core.cli.arg.handlers.transform.short import Handler as short_handler
 from testflows._core.cli.arg.handlers.transform.dots import Handler as dots_handler
@@ -40,6 +41,7 @@ class Handler(HandlerBase):
         transform_commands.required = True
         raw_handler.add_command(transform_commands)
         nice_handler.add_command(transform_commands)
+        pnice_handler.add_command(transform_commands)
         brisk_handler.add_command(transform_commands)
         short_handler.add_command(transform_commands)
         slick_handler.add_command(transform_commands)
