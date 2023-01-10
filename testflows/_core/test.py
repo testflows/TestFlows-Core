@@ -2829,6 +2829,14 @@ def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None):
             with _retry:
                 return func(*args, **kwargs)
 
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter):
+            async with _retry:
+                return func(*args, **kwargs)
+
+    if is_running_in_event_loop():
+        return async_wrapper
     return wrapper
 
 class repeats(object):
@@ -2936,6 +2944,20 @@ def repeat(func, count=None, until="complete", delay=0, backoff=1, jitter=None):
                     raise
         return results
 
+    @functools.wraps(func)
+    async def async_wrapper(*args, **kwargs):
+        results = []
+        for _iter in repeats(count=count, until=until, delay=delay, backoff=backoff, jitter=jitter):
+            async with _iter:
+                try:
+                    results.append(func(*args, **kwargs))
+                except Exception as e:
+                    results.append(e)
+                    raise
+        return results
+
+    if is_running_in_event_loop():
+        return async_wrapper
     return wrapper
 
 def define(name, value, encoder=str):
