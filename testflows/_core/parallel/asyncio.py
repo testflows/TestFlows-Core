@@ -37,6 +37,16 @@ def is_running_in_event_loop():
         pass
     return False
 
+class Future(asyncio.Future):
+    def __init__(self, *args, loop=None, **kwargs):
+        self.loop = loop
+        super(Future, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        if self.loop is not None:
+            return self.loop
+        return super(Future, self)._get_loop()
+
 class OptionalFuture(Future):
     """Future that will not complain about any
     exceptions not being retrieved.
@@ -56,3 +66,33 @@ def wrap_future(future, *, loop=None, new_future=None):
         new_future = loop.create_future()
     asyncio.futures._chain_future(future, new_future)
     return new_future
+
+class Event(asyncio.Event):
+    def __init__(self, loop, *args, **kwargs):
+        self.loop = loop
+        super(Event, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        if self.loop is not None:
+            return self.loop
+        return super(Future, self)._get_loop()
+
+class Queue(asyncio.Queue):
+    def __init__(self, loop, *args, **kwargs):
+        self.loop = loop
+        super(Queue, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        if self.loop is not None:
+            return self.loop
+        return super(Future, self)._get_loop()
+
+class Lock(asyncio.Lock):
+    def __init__(self, loop, *args, **kwargs):
+        self.loop = loop
+        super(Lock, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        if self.loop is not None:
+            return self.loop
+        return super(Future, self)._get_loop()

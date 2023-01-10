@@ -43,7 +43,7 @@ import time
 import socket
 import random
 import asyncio
-
+import asyncio.streams
 import testflows._core.tracing as tracing
 
 from enum import Enum, auto
@@ -75,6 +75,47 @@ tracer = tracing.getLogger(__name__)
 
 SEND_MODES = ["round_robin", "publish"]
 JSONCompatible = Union[str, int, float, bool, List, Dict, None]
+
+async def asyncio_open_connection(host=None, port=None, *,
+                          limit=asyncio.streams._DEFAULT_LIMIT, loop=None, **kwds):
+    """asyncio.open_connection that takes loop."""
+    if loop is None:
+        loop = asyncio.get_running_loop()
+    reader = asyncio.StreamReader(limit=limit, loop=loop)
+    protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
+    transport, _ = await loop.create_connection(
+        lambda: protocol, host, port, **kwds)
+    writer = asyncio.StreamWriter(transport, protocol, reader, loop)
+    return reader, writer
+
+async def asyncio_start_server(client_connected_cb, host=None, port=None, *,
+                       loop=None, limit=asyncio.streams._DEFAULT_LIMIT, **kwds):
+    """asyncio.start_server that takes loop."""
+    if loop is None:
+        loop = asyncio.get_running_loop()
+
+    def factory():
+        reader = asyncio.StreamReader(limit=limit, loop=loop)
+        protocol = asyncio.StreamReaderProtocol(reader, client_connected_cb, loop=loop)
+        return protocol
+
+    return await loop.create_server(factory, host, port, **kwds)
+
+class asyncio_Event(asyncio.Event):
+    def __init__(self, loop, *args, **kwargs):
+        self.loop = loop
+        super(asyncio_Event, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        return self.loop
+
+class asyncio_Queue(asyncio.Queue):
+    def __init__(self, loop, *args, **kwargs):
+        self.loop = loop
+        super(asyncio_Queue, self).__init__(*args, **kwargs)
+
+    def _get_loop(self):
+        return self.loop
 
 class NoConnectionsAvailableError(Exception):
     pass
@@ -164,14 +205,14 @@ class Søcket:
         self.loop = loop or asyncio.get_event_loop()
         self.pickler = pickler
 
-        self._queue_recv = asyncio.Queue(maxsize=recv_queue_maxsize, loop=self.loop)
+        self._queue_recv = asyncio_Queue(maxsize=recv_queue_maxsize, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
-        self._user_send_queue = asyncio.Queue(loop=self.loop)
+        self._user_send_queue = asyncio_Queue(loop=self.loop)
 
         self.server = None
         self.socket_type: Optional[ConnectionEnd] = None
         self.closed = False
-        self.at_least_one_connection = asyncio.Event(loop=self.loop)
+        self.at_least_one_connection = asyncio_Event(loop=self.loop)
 
         self.waiting_for_acks: Dict[uuid.UUID, asyncio.Handle] = {}
         self.reconnection_delay = reconnection_delay
@@ -195,7 +236,7 @@ class Søcket:
         """Exponential backoff delay function that can be used
         to set reconnection_delay function.
 
-        :return: reconnection_delay function that takes retry count 
+        :return: reconnection_delay function that takes retry count
         """
         return lambda count: min(max_delay, max(min_delay, math.exp(0.1 * count) - 1))
 
@@ -250,7 +291,7 @@ class Søcket:
         try:
             with tracing.Event(self.tracer, name=f"bind(hostname={hostname},port={port},ssl_context={ssl_context},kwargs={kwargs})") as event_tracer:
                 event_tracer.info(f"Binding socket to {hostname}:{port}")
-                self.server = await asyncio.start_server(
+                self.server = await asyncio_start_server(
                     self._connection,
                     hostname,
                     port,
@@ -281,7 +322,7 @@ class Søcket:
 
         if reconnection_delay is None:
             reconnection_delay = self.reconnection_delay
-  
+
         self.check_socket_type()
 
         async def new_connection(future: Optional[asyncio.Future]):
@@ -298,7 +339,7 @@ class Søcket:
                 try:
                     event_tracer.warning(f"Attempting to open connection {hostname}:{port}")
                     reader, writer = await asyncio.wait_for(
-                        asyncio.open_connection(
+                        asyncio_open_connection(
                             hostname, port, loop=self.loop, ssl=ssl_context
                         ),
                         timeout=connect_timeout,
@@ -423,10 +464,10 @@ class Søcket:
                 return
 
             event_tracer.debug(f"Received identity {identity.hex()}")
-            
+
             if expected_identity and identity != expected_identity:
                 raise IdentityError(f"expected identity {expected_identity.hex()} did not match {identity.hex()}")
-            
+
             if identity in self._connections:
                 event_tracer.error(
                     f"Socket with identity {identity.hex()} is already "
@@ -443,9 +484,9 @@ class Søcket:
                 event_tracer.warning("First connection made")
                 self.at_least_one_connection.set()
             self._connections[connection.identity] = connection
-            
+
             # Set connection future and identity of the server to
-            # which we have established the connection 
+            # which we have established the connection
             if future is not None:
                 future.set_result(connection.identity)
 
@@ -893,7 +934,7 @@ class Connection:
         self.identity = identity
         self.reader = reader
         self.writer = writer
-        self.writer_queue = asyncio.Queue(maxsize=writer_queue_maxsize)
+        self.writer_queue = asyncio_Queue(maxsize=writer_queue_maxsize, loop=self.loop)
         self.reader_event = recv_event
         self.client_connection = client_connection
 

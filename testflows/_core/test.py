@@ -2033,7 +2033,7 @@ class TestDefinition(object):
         retry_kwargs["flags"] = Flags(retry_kwargs.get("flags")) & ~PARALLEL
 
         if repeat is not None:
-            _, until = repeat
+            _, until = repeat[:2]
             if until == "fail":
                 repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) & ~TE
             else:
@@ -2050,15 +2050,17 @@ class TestDefinition(object):
 
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        repeat_count, repeat_until = repeat if repeat is not None else (1, None)
+        repeat_count, repeat_until = repeat[:2] if repeat is not None else (1, None)
         _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-        for i in range(repeat_count):
-            parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
+        parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
 
-            with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs,
-                           parent_type=parent_type, parent_subtype=parent_subtype) if repeat is not None else NullStep() as iteration:
+        _repeats = repeats(*repeat)
+        while True:
+            i = _repeats.__next__(tags=self.tags,
+                 parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            with i if repeat is not None else NullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
                     r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
@@ -2087,19 +2089,22 @@ class TestDefinition(object):
 
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        repeat_count, repeat_until = repeat if repeat is not None else (1, None)
+        repeat_count, repeat_until = repeat[:2] if repeat is not None else (1, None)
         _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-        for i in range(repeat_count):
-            parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
+        parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
 
-            async with Iteration(name=f"{i}", tags=self.tags, **repeat_kwargs, parent_type=parent_type, parent_subtype=parent_subtype) if repeat is not None else AsyncNullStep() as iteration:
+        _repeats = repeats(*repeat)
+        while True:
+            i = _repeats.__next__(tags=self.tags,
+                 parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            async with i if repeat is not None else AsyncNullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
                     r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
                         parent_type=parent_type, parent_subtype=parent_subtype, **retry_kwargs)
-                    with r if retry is not None else AsyncNullStep() as retry_iteration:
+                    async with r if retry is not None else AsyncNullStep() as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
                         if isinstance(self.repeatable_func, TestOutline):

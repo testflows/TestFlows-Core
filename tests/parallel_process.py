@@ -69,10 +69,10 @@ async def my_async_test(self):
         f = Scenario(name=f"test 0", test=my_scenario, parallel=True, executor=pool)()
         assert isinstance(f, asyncio.Future), error()
         r = await f
-        assert r.result.value == "value", error()
+        assert r.value == "value", error()
 
         r = await Scenario(name=f"test 1", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)(force_fail=True)
-        assert isinstance(r.result, XFail), error()
+        assert isinstance(r, XFail), error()
 
         async with Scenario("multiple parallel tests"):
             for i in range(10):
@@ -133,7 +133,7 @@ def feature(self):
                             Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
                         )
                 for v in join(*futures):
-                    v = v.result.value
+                    v = v.value
                     assert v == "value", error()
 
             with Scenario("check child count is being incremented") as test:

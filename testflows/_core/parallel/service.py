@@ -31,7 +31,7 @@ from multiprocessing.util import Finalize, is_exiting
 from testflows._core.contrib import cloudpickle
 from testflows._core.contrib.aiomsg import Socket
 
-from .asyncio import asyncio, is_running_in_event_loop, OptionalFuture, CancelledError
+from .asyncio import asyncio, is_running_in_event_loop, OptionalFuture, CancelledError, Lock as asyncio_Lock
 from .asyncio import TimeoutError as AsyncTimeoutError
 from .executor.thread import SharedThreadPoolExecutor
 
@@ -97,7 +97,7 @@ class Service:
         self.objects = {}
         self.executor = SharedThreadPoolExecutor(sys.maxsize, join_on_shutdown=False)
         self.open = False
-        self.lock = asyncio.Lock(loop=self.loop)
+        self.lock = asyncio_Lock(loop=self.loop)
         self.init_tracer = tracing.EventAdapter(tracer, None, source=str(self))
         self.tracer = tracing.EventAdapter(tracer, None, source=str(self))
 
@@ -109,7 +109,7 @@ class Service:
         """
         event_tracer = tracing.EventAdapter(self.tracer, name=f"register({obj},sync={sync},expose={expose},awaited={awaited}")
         event_tracer.debug("registration started", extra={"event_action":tracing.Action.START})
-  
+
         if isinstance(obj, BaseServiceObject):
             raise ValueError(f"registering service objects not allowed")
 
@@ -153,7 +153,7 @@ class Service:
         """
         event_tracer = tracing.EventAdapter(self.tracer, name=f"unregister({obj}@0x{id(self):x})")
         event_tracer.debug("unregistration started", extra={"event_action":tracing.Action.START})
-  
+
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
@@ -166,7 +166,7 @@ class Service:
                 del self.objects[_id]
 
             event_tracer.debug("unregistration complete", extra={"event_action":tracing.Action.END})
-        
+
         if loop is None:
             return asyncio.run_coroutine_threadsafe(_async_unregister(), loop=self.loop).result()
         elif loop is not self.loop:
@@ -178,7 +178,7 @@ class Service:
         """Connect to the remote service that provides
         access to the remote object.
         """
-        event_tracer = tracing.EventAdapter(self.tracer, name=f"_connect(rid={rid},identity={identity.hex()},address={address})")      
+        event_tracer = tracing.EventAdapter(self.tracer, name=f"_connect(rid={rid},identity={identity.hex()},address={address})")
         event_tracer.debug("connecting", extra={"event_action": tracing.Action.START})
 
         try:
@@ -230,7 +230,7 @@ class Service:
                                     except TypeError:
                                         send_tracer.debug(f"registering {arg}, sync=True")
                                         args[i] = await self.register(arg, sync=True)
-                                
+
                                 for k in kwargs:
                                     arg = kwargs[k]
                                     try:
@@ -255,13 +255,13 @@ class Service:
                                 event_tracer.debug(f"send without reply complete")
 
                         except BaseException as exc:
-                            raise 
+                            raise
                 finally:
                     event_tracer.debug("complete", extra={"event_action": tracing.Action.END})
 
             if not self.open:
                 raise ServiceNotRunningError("service is not running")
-                
+
             if address == self.address:
                 event_tracer.debug("using local_send")
                 return local_send
@@ -334,7 +334,7 @@ class Service:
                 event_tracer.debug("got lock")
                 try:
                     self.objects = {}
-                   
+
                     for task in self.serve_tasks:
                         task.cancel()
                     await asyncio.gather(*self.serve_tasks, return_exceptions=True)
@@ -371,11 +371,11 @@ class Service:
                     obj_item = self.objects[oid]
                 except KeyError:
                     raise ServiceObjectNotFoundError(f"0x{oid:x} not found")
-            
+
             if obj_item.refcount < 0:
                 raise ValueError(f"0x{oid:x} for {obj_item.obj} has invalid refcount {obj_item.refcount}")
             obj_item.refcount -= 1
-            
+
             event_tracer.debug(f"new refcount {obj_item.refcount}")
 
             if obj_item.refcount <= 0:
@@ -386,7 +386,7 @@ class Service:
         """Execute fn request on a service object specified
         by the object id.
         """
-        with tracing.Event(self.tracer, f"_exec(oid=0x{oid:x},fn={fn},args={args},kwargs={kwargs})") as event_tracer:     
+        with tracing.Event(self.tracer, f"_exec(oid=0x{oid:x},fn={fn},args={args},kwargs={kwargs})") as event_tracer:
             msg_type = self.MsgTypes.REPLY_RESULT
 
             try:
@@ -429,7 +429,7 @@ class Service:
                 msg_type = self.MsgTypes.REPLY_EXCEPTION
                 exc_type, exc_value, exc_tb = sys.exc_info()
                 r = exc_type(str(exc_value) + "\n\nService Traceback (most recent call last):\n" + "".join(traceback.format_tb(exc_tb)).rstrip())
-            
+
             event_tracer.debug(f"executed, result={r}")
             return msg_type, r
 
@@ -465,7 +465,7 @@ class Service:
                     while True:
                         try:
                             requests_tracer.debug("waiting for request")
-                            identity, message = await asyncio.wait_for(self.in_socket.recv_identity(), timeout=1) 
+                            identity, message = await asyncio.wait_for(self.in_socket.recv_identity(), timeout=1)
                         except AsyncTimeoutError:
                             continue
                         self.in_socket.loop.create_task(self._process_message(identity, message))
@@ -595,7 +595,7 @@ class BaseServiceObject:
 
         with tracing.Event(self._tracer, "_incref"):
             if is_running_in_event_loop():
-                if _process_service: 
+                if _process_service:
                     if _process_service.loop is asyncio.get_running_loop():
                         if  _process_service.address == address:
                             _process_service.__incref__(oid)
@@ -610,7 +610,7 @@ class BaseServiceObject:
         """Decrement service object reference count.
         """
         if is_exiting():
-            return 
+            return
 
         with tracing.Event(_tracer, "_decref"):
             if _service_not_running_err[0]:
@@ -629,7 +629,7 @@ class BaseServiceObject:
 
                     if _process_service:
                         if _process_service.loop is asyncio.get_running_loop():
-                            if _process_service.address == address:  
+                            if _process_service.address == address:
                                 _process_service.__decref__(oid)
                             else:
                                 _process_service.loop.create_task(no_errors(cls.__async_proxy_call__(oid, address, identity, "__decref__", _tracer=_tracer)))
@@ -649,7 +649,7 @@ class BaseServiceObject:
     def __eq__(self, other: object) -> bool:
         """Compare to service objects.
         """
-        return other.oid == self.oid and other.address == self.address 
+        return other.oid == self.oid and other.address == self.address
 
     @classmethod
     async def __async_proxy_call__(cls, oid, address, identity, fn, args=None, kwargs=None, timeout=None, rid=None, _tracer=tracer):
@@ -758,7 +758,7 @@ def make_exposed_defs(exposed, asynced):
                 f"{'async ' if asynced else ''}def {name}(self, v):\n"
                 f"    return {'await ' if asynced else ''}self.__{'async_' if asynced else ''}proxy_call__(self.oid, self.address, self.identity, \"__setattribute__\", [\"{name}\", v], _tracer=self._tracer)",
             )
-    
+
     return defs
 
 
@@ -769,9 +769,9 @@ def ServiceObjectType(typename, exposed, asynced=False, _cache={}):
         return _cache[(typename, exposed, asynced)]
     except KeyError:
         pass
-    
+
     _attrs = {}
-   
+
     exec("\n".join(make_exposed_defs(exposed, asynced=asynced)), _attrs)
 
     base = AsyncBaseServiceObject if asynced else BaseServiceObject
@@ -781,7 +781,7 @@ def ServiceObjectType(typename, exposed, asynced=False, _cache={}):
     service_type._typename = typename
 
     _cache[(typename, exposed, asynced)] = service_type
-    
+
     return service_type
 
 

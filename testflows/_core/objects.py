@@ -851,31 +851,44 @@ class Repeats(NamedValue):
     """repeats containers.
 
     repeats={
-        "pattern": (count, until),
+        "pattern": (count, [until[,count[,timeout[,delay[,backoff[,jitter]]]]]])
         ...
     }
     """
     name = "repeats"
 
     def __init__(self, value):
-        super(Repeats, self).__init__(dict(value))
+        value = dict(value)
+        value = {p: list(Repeat(*r).value.values())[0] for p, r in value.items()}
+        super(Repeats, self).__init__(value)
 
 class Repeat(NamedValue):
     """single repetition container.
     """
     name = "repeats"
 
-    def __init__(self, count, until="complete", pattern=""):
+    def __init__(self, count, until="complete", pattern="", delay=0, backoff=1, jitter=None):
+        """
+        :param count: number of iterations, default: None
+        :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'
+        :param delay: delay in sec between iterations, default: 0 sec
+        :param backoff: backoff multiplier that is applied to the delay, default: 1
+        :param jitter: jitter added to delay between iterationsspecified as
+                   a tuple(min, max), default: (0,0)
+        """
         self.count = int(count)
         self.pattern = str(pattern)
         self.until = str(until)
+        self.delay = float(delay)
+        self.backoff = float(backoff)
+        self.jitter =  tuple(jitter) if jitter else tuple([0, 0])
 
         if self.count < 1:
             raise ValueError("count must be > 0")
         if self.until not in ("fail", "pass", "complete"):
             raise ValueError("invalid until value")
 
-        return super(Repeat, self).__init__({self.pattern: (self.count, self.until)})
+        return super(Repeat, self).__init__({self.pattern: (self.count, self.until, self.delay, self.backoff, self.jitter)})
 
 class Retries(NamedValue):
     """retries containers.
@@ -909,7 +922,7 @@ class Retry(NamedValue):
         self.count = int(count) if count is not None else None
         self.timeout = float(timeout) if timeout is not None else None
         self.delay = float(delay)
-        self.backoff = backoff
+        self.backoff = float(backoff)
         self.jitter = tuple(jitter) if jitter else tuple([0, 0])
         
         self.pattern = str(pattern)

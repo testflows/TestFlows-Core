@@ -36,7 +36,7 @@ from .future import Future
 from .thread import GlobalThreadPoolExecutor
 from .asyncio import asyncio
 from .asyncio import GlobalAsyncPoolExecutor
-from ..asyncio import is_running_in_event_loop, wrap_future
+from ..asyncio import is_running_in_event_loop, wrap_future, Future as asyncio_Future
 from ..service import BaseServiceObject, ServiceObjectType, process_service, auto_expose
 from .. import current, top, previous, _get_parallel_context, join as parallel_join
 from ...objects import Result
@@ -59,7 +59,7 @@ ProcessError = subprocess.SubprocessError
 def async_wait_for(aw, loop, timeout=None):
     return asyncio.run_coroutine_threadsafe(asyncio.wait_for(aw, timeout), loop=loop).result()
 
-def is_running(pid):        
+def is_running(pid):
     try:
         os.getpgid(pid)
     except BaseException as e:
@@ -214,7 +214,7 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
         self.decoder = codecs.getincrementaldecoder(encoding)(errors=errors)
         self.test_io = test_io
         self.io_prefix = io_prefix
-        self.ready_future = asyncio.Future(loop=loop)
+        self.ready_future = asyncio_Future(loop=loop)
         self.buffer = ''
         self.transport = None
         self.stdout_io = None
@@ -240,7 +240,7 @@ class WorkerProtocol(asyncio.SubprocessProtocol):
 
         elif data:
             data = self.decoder.decode(data)
-        
+
         if data:
             if fd == 1:
                 self.stdout_io.write(data)
@@ -401,7 +401,7 @@ class SharedProcessPoolExecutor(ProcessPoolExecutor):
     """Shared process pool executor.
     """
     def __init__(self, max_workers, process_name_prefix="", join_on_shutdown=True):
-        self.initargs = (max_workers, process_name_prefix, join_on_shutdown) 
+        self.initargs = (max_workers, process_name_prefix, join_on_shutdown)
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")

@@ -20,9 +20,9 @@ import itertools
 import threading
 import concurrent.futures.thread as _base
 
-from .future import Future 
+from .future import Future
 from .. import _get_parallel_context
-from ..asyncio import is_running_in_event_loop, asyncio
+from ..asyncio import is_running_in_event_loop, asyncio, Event as asyncio_Event, Queue as asyncio_Queue
 from .. import current, join as parallel_join
 
 _tasks_queues = weakref.WeakKeyDictionary()
@@ -37,8 +37,8 @@ def _python_exit():
     #for k in (list(_tasks_queues.keys())):
     #    print(f"{k} {sys.getrefcount(k)} {gc.get_referrers(k)}")
     for work_queue in _tasks_queues.values():
-        if work_queue._loop.is_running():
-            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=work_queue._loop)
+        if work_queue.loop.is_running():
+            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=work_queue.loop)
     for task in _tasks_queues.keys():
         task.result()
 
@@ -122,8 +122,8 @@ class AsyncPoolExecutor(_base._base.Executor):
         self._open = False
         self._max_workers = max_workers
         self._loop = loop or asyncio.new_event_loop()
-        self._loop_stop_event = asyncio.Event(loop=self._loop)
-        self._work_queue = asyncio.Queue(loop=self._loop)
+        self._loop_stop_event = asyncio_Event(loop=self._loop)
+        self._work_queue = asyncio_Queue(loop=self._loop)
         self._tasks = set()
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
@@ -242,7 +242,7 @@ class SharedAsyncPoolExecutor(AsyncPoolExecutor):
     """Shared async pool executor.
     """
     def __init__(self, max_workers, task_name_prefix="", join_on_shutdown=True):
-        self.initargs = (max_workers, task_name_prefix, join_on_shutdown) 
+        self.initargs = (max_workers, task_name_prefix, join_on_shutdown)
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
