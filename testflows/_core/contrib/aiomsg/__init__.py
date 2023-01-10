@@ -36,6 +36,7 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
         -p '*.py'
 
 """
+import sys
 import math
 import uuid
 import json
@@ -101,21 +102,25 @@ async def asyncio_start_server(client_connected_cb, host=None, port=None, *,
 
     return await loop.create_server(factory, host, port, **kwds)
 
-class asyncio_Event(asyncio.Event):
-    def __init__(self, loop, *args, **kwargs):
-        self.loop = loop
-        super(asyncio_Event, self).__init__(*args, **kwargs)
+class LoopMixin:
+    def __init__(self, *args, loop=None, **kwargs):
+        self._loop_mixin = loop
+        if sys.version_info < (3,10,0):
+            kwargs["loop"] = self._loop_mixin
+        super(LoopMixin, self).__init__(*args, **kwargs)
 
     def _get_loop(self):
-        return self.loop
+        if self._loop_mixin is not None:
+            return self._loop_mixin
+        if sys.version_info >= (3,10,0):
+            return super(LoopMixin, self)._get_loop()
+        return self._loop
 
-class asyncio_Queue(asyncio.Queue):
-    def __init__(self, loop, *args, **kwargs):
-        self.loop = loop
-        super(asyncio_Queue, self).__init__(*args, **kwargs)
+class asyncio_Event(LoopMixin, asyncio.Event):
+    pass
 
-    def _get_loop(self):
-        return self.loop
+class asyncio_Queue(LoopMixin, asyncio.Queue):
+    pass
 
 class NoConnectionsAvailableError(Exception):
     pass

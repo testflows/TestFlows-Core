@@ -37,8 +37,8 @@ def _python_exit():
     #for k in (list(_tasks_queues.keys())):
     #    print(f"{k} {sys.getrefcount(k)} {gc.get_referrers(k)}")
     for work_queue in _tasks_queues.values():
-        if work_queue.loop.is_running():
-            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=work_queue.loop)
+        if work_queue._get_loop().is_running():
+            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=work_queue._get_loop())
     for task in _tasks_queues.keys():
         task.result()
 

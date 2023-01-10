@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
 import inspect
 import asyncio
 import concurrent
@@ -37,15 +38,22 @@ def is_running_in_event_loop():
         pass
     return False
 
-class Future(asyncio.Future):
+class LoopMixin:
     def __init__(self, *args, loop=None, **kwargs):
-        self.loop = loop
-        super(Future, self).__init__(*args, **kwargs)
+        self._loop_mixin = loop
+        if sys.version_info < (3,10,0):
+            kwargs["loop"] = self._loop_mixin
+        super(LoopMixin, self).__init__(*args, **kwargs)
 
     def _get_loop(self):
-        if self.loop is not None:
-            return self.loop
-        return super(Future, self)._get_loop()
+        if self._loop_mixin is not None:
+            return self._loop_mixin
+        if sys.version_info >= (3,10,0):
+            return super(LoopMixin, self)._get_loop()
+        return self._loop
+
+class Future(LoopMixin, asyncio.Future):
+    pass
 
 class OptionalFuture(Future):
     """Future that will not complain about any
@@ -67,32 +75,11 @@ def wrap_future(future, *, loop=None, new_future=None):
     asyncio.futures._chain_future(future, new_future)
     return new_future
 
-class Event(asyncio.Event):
-    def __init__(self, loop, *args, **kwargs):
-        self.loop = loop
-        super(Event, self).__init__(*args, **kwargs)
+class Event(LoopMixin, asyncio.Event):
+    pass
 
-    def _get_loop(self):
-        if self.loop is not None:
-            return self.loop
-        return super(Future, self)._get_loop()
+class Queue(LoopMixin, asyncio.Queue):
+    pass
 
-class Queue(asyncio.Queue):
-    def __init__(self, loop, *args, **kwargs):
-        self.loop = loop
-        super(Queue, self).__init__(*args, **kwargs)
-
-    def _get_loop(self):
-        if self.loop is not None:
-            return self.loop
-        return super(Future, self)._get_loop()
-
-class Lock(asyncio.Lock):
-    def __init__(self, loop, *args, **kwargs):
-        self.loop = loop
-        super(Lock, self).__init__(*args, **kwargs)
-
-    def _get_loop(self):
-        if self.loop is not None:
-            return self.loop
-        return super(Future, self)._get_loop()
+class Lock(LoopMixin, asyncio.Lock):
+    pass
