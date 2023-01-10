@@ -2050,13 +2050,13 @@ class TestDefinition(object):
 
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        repeat_count, repeat_until = repeat[:2] if repeat is not None else (1, None)
         _retry = retry if retry is not None else (1,)
+        _repeat = repeat if repeat is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
         parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
 
-        _repeats = repeats(*repeat)
+        _repeats = repeats(*_repeat)
         while True:
             try:
                 i = _repeats.__next__(tags=self.tags,parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
@@ -2065,8 +2065,11 @@ class TestDefinition(object):
             with i if repeat is not None else NullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
-                    r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
-                        parent_type=parent_type, parent_subtype=parent_subtype, **retry_kwargs)
+                    try:
+                        r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
+                            parent_type=parent_type, parent_subtype=parent_subtype, **retry_kwargs)
+                    except StopIteration:
+                        break
                     with r if retry is not None else NullStep() as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
@@ -2074,14 +2077,10 @@ class TestDefinition(object):
                             retry_iteration._run_outline_with_no_arguments = self.no_arguments
                             retry_iteration._run_outline = True
                         self.repeatable_func(**args, __run_as_func__=True)
-
-                    if retry is None:
+                    if not retry:
                         break
-                    if isinstance(retry_iteration.result, NonFailResults):
-                        break
-
-            if repeat_until and repeat_until == "pass" and isinstance(iteration.result, PassResults):
-                break
+                if not repeat:
+                    break
 
     async def __exit_async_process_test_iteration(self, exc_value):
         """Process TestIteration exception in asyncronous test.
@@ -2091,13 +2090,13 @@ class TestDefinition(object):
 
         repeat, retry, args, repeat_kwargs, retry_kwargs = self.__exit_process_test_iteration_setup(exc_value)
 
-        repeat_count, repeat_until = repeat[:2] if repeat is not None else (1, None)
+        _repeat = repeat if repeat is not None else (1,)
         _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
         parent_type, parent_subtype = (self.test.type, self.test.subtype) if self.test.type not in (Iteration, RetryIteration) else (self.test.parent_type, self.test.parent_subtype)
 
-        _repeats = repeats(*repeat)
+        _repeats = repeats(*_repeat)
         while True:
             try:
                 i = _repeats.__next__(tags=self.tags, parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
@@ -2106,8 +2105,11 @@ class TestDefinition(object):
             async with i if repeat is not None else AsyncNullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
-                    r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
-                        parent_type=parent_type, parent_subtype=parent_subtype, **retry_kwargs)
+                    try:
+                        r = _retries.__next__(flags=retry_kwargs_flags, tags=self.tags,
+                            parent_type=parent_type, parent_subtype=parent_subtype, **retry_kwargs)
+                    except StopIteration:
+                        pass
                     async with r if retry is not None else AsyncNullStep() as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
@@ -2116,13 +2118,10 @@ class TestDefinition(object):
                             retry_iteration._run_outline = True
                         await self.repeatable_func(**args, __run_as_func__=True)
 
-                    if retry is None:
+                    if not retry:
                         break
-                    if isinstance(retry_iteration.result, NonFailResults):
-                        break
-
-            if repeat_until and repeat_until == "pass" and isinstance(iteration.result, PassResults):
-                break
+                if not repeat:
+                    break
 
     def __exit_process_test_rerun_individually_iteration_setup(self, rerun_test):
         """Setup for an iteration of running test individually.
