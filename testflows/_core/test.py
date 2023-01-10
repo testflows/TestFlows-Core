@@ -2058,8 +2058,10 @@ class TestDefinition(object):
 
         _repeats = repeats(*repeat)
         while True:
-            i = _repeats.__next__(tags=self.tags,
-                 parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            try:
+                i = _repeats.__next__(tags=self.tags,parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            except StopIteration:
+                break
             with i if repeat is not None else NullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
@@ -2097,8 +2099,10 @@ class TestDefinition(object):
 
         _repeats = repeats(*repeat)
         while True:
-            i = _repeats.__next__(tags=self.tags,
-                 parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            try:
+                i = _repeats.__next__(tags=self.tags, parent_type=parent_type, parent_subtype=parent_subtype, **repeat_kwargs)
+            except StopIteration:
+                break
             async with i if repeat is not None else AsyncNullStep() as iteration:
                 _retries = retries(*_retry)
                 while True:
