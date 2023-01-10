@@ -57,8 +57,8 @@ examples = Examples(
 @Examples(
     header="name",
     rows = [
-        ("vitaliy",),
-        ("natalia",)
+        ("v",),
+        ("n",)
     ]
 )
 def suite_outline(self, name):
@@ -69,8 +69,8 @@ def suite_outline(self, name):
 @Examples(
     header="name",
     rows = [
-        ("vitaliy",),
-        ("natalia",)
+        ("v",),
+        ("n",)
     ]
 )
 def step_outline(self, name):
@@ -80,8 +80,8 @@ def step_outline(self, name):
 @Examples(
     header="name lastname",
     rows = [
-        ("vitaliy", "zakaznikov",),
-        ("natalia", "lucar",)
+        ("v", "z",),
+        ("n", "l",)
     ]
 )
 def with_examples(self, name, lastname=None):
