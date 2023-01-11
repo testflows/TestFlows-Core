@@ -2959,13 +2959,15 @@ def repeat(func, count=None, until="complete", delay=0, backoff=1, jitter=None):
         return async_wrapper
     return wrapper
 
-def define(name, value, encoder=str):
+def define(name, value, encoder=str, type=By, name_prefix="defining "):
     """Adds `By` step to define a value.
 
     :param name: name of the value
     :param value: value
     :param encoder: string encoder, default: str() function
+    :param type: test type, default: By
+    :param name_prefix: name prefix, default: 'defining '
     :return: value
     """
-    with By(f"defining {name}", description=f"{encoder(value)}"):
+    with type(f"{name_prefix}{name}", description=f"{encoder(value)}"):
        return value
