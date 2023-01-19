@@ -165,7 +165,7 @@ class Node(TestObject):
 
     def __init__(self, map, module, nexts=None, ins=None, outs=None):
         self.map = map
-        self.name = module.rsplit(".", 1)
+        self.name = module.rsplit(".", 1)[-1]
         self.module = module
         self.uid = self.get_uid(None, module)
         self.nexts = get(nexts, [])
