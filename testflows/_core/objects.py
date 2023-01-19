@@ -160,26 +160,24 @@ PassResults = (OK,) + XoutResults
 NonFailResults = (Skip,) + PassResults
 
 class Node(TestObject):
-    _fields = ("name", "module", "uid", "nexts", "ins", "outs")
+    _fields = ("map", "name", "module", "uid", "nexts", "ins", "outs")
     _defaults = (None,) * 3
 
-    NodeAttributes = namedtuple("NodeAttributes", "name module uid")
-
-    def __init__(self, name, module, uid, nexts=None, ins=None, outs=None):
-        self.name = name
+    def __init__(self, map, module, nexts=None, ins=None, outs=None):
+        self.map = map
+        self.name = module.rsplit(".", 1)
         self.module = module
-        self.uid = uid
+        self.uid = self.get_uid(None, module)
         self.nexts = get(nexts, [])
         self.ins = get(ins, [])
         self.outs =get(outs, [])
         return super(Node, self).__init__()
 
     @classmethod
-    def attributes(cls, test):
-        name = test.__name__
-        module = ".".join([test.__module__, test.__name__])
-        uid = hash(module, short=True)
-        return cls.NodeAttributes(name, module, uid)
+    def get_uid(cls, test, module=None):
+        if module is None:
+            module = test.module
+        return hash(module, short=True)
 
 class Tag(TestObject):
     _fields = ("value",)
@@ -356,7 +354,7 @@ class Secrets:
         self._filter_secrets = []
         self._lock = threading.Lock()
         self._update_filter()
-    
+
     def __reduce__(self):
         return (Secrets, (self._secrets,))
 
@@ -395,7 +393,7 @@ class Secrets:
             if not isinstance(s, str):
                 return message
             return self._filter_regex.sub(lambda m: f"[masked]:{self._filter_secrets[m.lastindex-1]}", s)
-    
+
         with self._lock:
             if isinstance(message, (list, tuple)):
                 for i, e in enumerate(message):
@@ -413,7 +411,7 @@ class Secret(TestObject):
     """
     _fields = ("name", "type", "group", "uid")
     _defaults = (None,) * 4
-    
+
     uid = None
     type = None
     name = None
@@ -437,7 +435,7 @@ class Secret(TestObject):
 
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_value, exc_type, exc_tb):
         self.clear()
 
@@ -781,7 +779,7 @@ class FFail(NamedValue):
             raise TypeError(f"reason '{type(reason)}' must be str")
         if when is not None and not callable(when):
             raise TypeError(f"when '{type(when)}' must be callable")
-        
+
         super(FFail, self).__init__({pattern: (result, reason, when)})
 
 class Skipped(FFail):
@@ -924,7 +922,7 @@ class Retry(NamedValue):
         self.delay = float(delay)
         self.backoff = float(backoff)
         self.jitter = tuple(jitter) if jitter else tuple([0, 0])
-        
+
         self.pattern = str(pattern)
 
         if self.count is not None and self.count < 1:
@@ -1004,3 +1002,9 @@ class Examples(ExamplesTable):
     def __call__(self, func):
         func.examples = self
         return func
+
+class Maps(NamedList):
+    name = "maps"
+
+    def __init__(self, *mappings):
+        super(Maps, self).__init__(*mappings)

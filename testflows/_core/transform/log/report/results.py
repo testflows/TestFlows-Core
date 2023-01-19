@@ -34,7 +34,7 @@ def process_test(msg, results, names, unique):
     test = {
         "attributes":[], "arguments":[], "tags": [],
         "specifications": [], "requirements": [],
-        "node": None, "map": [], "examples": []
+        "maps": [], "examples": []
     }
     test.update(msg)
     results["tests"][names[msg["test_id"]]] = {"test": test, "result": {"tickets":[], "values":[], "metrics":[]}}
@@ -77,11 +77,8 @@ def process_argument(msg, results, names, unique):
 def process_example(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["examples"].append(msg)
 
-def process_node(msg, results, names, unique):
-    results["tests"][names[msg["test_id"]]]["test"]["node"] = msg
-
 def process_map(msg, results, names, unique):
-    results["tests"][names[msg["test_id"]]]["test"]["map"].append(msg)
+    results["tests"][names[msg["test_id"]]]["test"]["maps"].append(msg)
 
 def process_ticket(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"]["tickets"].append(msg)
@@ -103,7 +100,6 @@ processors = {
     Message.REQUIREMENT.name: process_requirement,
     Message.ARGUMENT.name: process_argument,
     Message.EXAMPLE.name: process_example,
-    Message.NODE.name: process_node,
     Message.MAP.name: process_map,
     Message.TICKET.name: process_ticket,
     Message.METRIC.name: process_metric,

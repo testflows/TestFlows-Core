@@ -154,6 +154,7 @@ class TestOutput(object):
         """
         msg = {
             "test_name": self.test.name,
+            "test_module": self.test.module,
             "test_uid": str(self.test.uid or "") or None,
             "test_description": str(self.test.description or "") or None,
         }
@@ -166,10 +167,7 @@ class TestOutput(object):
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
         [self.example(ExamplesRow(row._idx, row._fields, [str(f) for f in row], row._row_format)) for row in self.test.examples]
-        if self.test.node:
-            self.node(self.test.node)
-        if self.test.map:
-            self.map(self.test.map)
+        [self.map(mapping) for mapping in self.test.maps]
 
     def attribute(self, attribute, object_type=MessageObjectType.TEST):
         msg = object_fields(attribute, "attribute")
@@ -205,12 +203,8 @@ class TestOutput(object):
         msg = object_fields(example, "example")
         self.message(Message.EXAMPLE, msg, object_type=object_type)
 
-    def node(self, node, object_type=MessageObjectType.TEST):
-        msg = object_fields(node, "node")
-        self.message(Message.NODE, msg, object_type=object_type)
-
     def map(self, map, object_type=MessageObjectType.TEST):
-        for node in map:
+        for node in map.nodes.values():
             msg = object_fields(node, "node")
             self.message(Message.MAP, msg, object_type=object_type)
 
@@ -404,11 +398,11 @@ class NamedMessageIO(MessageIO):
 
 class ProtectedFile:
     """Thread lock wrapped file descriptor.
-    """ 
+    """
     def __init__(self, fd):
         self.fd = fd
         self.lock = threading.Lock()
-    
+
     def write(self, *args, **kwargs):
         with self.lock:
             return self.fd.write(*args, **kwargs)
@@ -538,7 +532,7 @@ class LogIO(object):
             self.writer = LogWriter(fd=settings.write_logfile)
         else:
             self.writer = LogWriter()
-        
+
         if isinstance(settings.read_logfile, BaseServiceObject):
             self.reader = LogReader(fd=settings.read_logfile)
         else:

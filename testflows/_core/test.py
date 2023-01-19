@@ -290,8 +290,7 @@ class TestBase(object):
     examples = None
     name = None
     description = None
-    node = None
-    map = []
+    maps = []
     flags = Flags()
     name_sep = "."
     type = TestType.Test
@@ -302,9 +301,9 @@ class TestBase(object):
                  examples=None, description=None, parent=None, parent_type=None, parent_subtype=None,
                  xfails=None, xflags=None, ffails=None, only=None, skip=None,
                  start=None, end=None, only_tags=None, skip_tags=None,
-                 args=None, id=None, node=None, map=None, context=None,
+                 args=None, id=None, maps=None, context=None,
                  repeats=None, retries=None, private_key=None, setup=None, first_fail=None, test_to_end=None,
-                 parallel_pool_size=None):
+                 parallel_pool_size=None, module=None):
 
         self.lock = threading.Lock()
 
@@ -330,8 +329,8 @@ class TestBase(object):
         self.parent_subtype = parent_subtype
         self.id = get(id, [settings.test_id])
         self.id_str = id_sep + id_sep.join(str(n) for n in self.id)
-        self.node = get(node, self.node)
-        self.map = get(map, list(self.map))
+        self.maps = get(maps, list(self.maps))
+        self.module = module
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
         self.context = get(context, current_test.context if current_test and self.type < TestType.Iteration else (Context(current_test.context if current_test else None)))
@@ -2461,6 +2460,7 @@ class TestDecorator(object):
         self.func.type = self.type.type
         self.func.name = getattr(self.func, "name", self.func.__name__.replace("_", " "))
         self.func.description = getattr(self.func, "description", self.func.__doc__)
+        self.func.module = ".".join([self.func.__module__, self.func.__name__])
 
         signature = inspect.signature(self.func)
 
