@@ -23,8 +23,6 @@ import functools
 import textwrap
 import pkgutil
 
-import testflows._core.contrib.itertools as more_itertools
-
 from .message import Message, dumps
 from .name import basename
 from .objects import OK, Fail, Error, Skip, Null
@@ -450,4 +448,12 @@ def chunks(iterator, n):
 
     :param n: chunk size
     """
-    return more_itertools.ichunked(iterator, n=n)
+    while True:
+        try:
+            chunk = list()
+            for _ in range(n):
+                chunk.append(next(iterator))
+        except StopIteration:
+            break
+        finally:
+            yield chunk
