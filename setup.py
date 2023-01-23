@@ -62,6 +62,7 @@ setup(
         "testflows._core.contrib.aiomsg",
         "testflows._core.contrib.cloudpickle",
         "testflows._core.contrib.snowflake",
+        "testflows._core.contrib.itertools",
         "testflows._core.parallel",
         "testflows._core.parallel.executor",
         "testflows._core.utils",
