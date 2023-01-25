@@ -49,7 +49,7 @@ class Handler(HandlerBase):
                 Message.REQUIREMENT.name
             ]
 
-            command = "grep -E '^{\"message_keyword\":\""
+            command = "grep -E '^\\{\"message_keyword\":\""
             command = f"{command}({'|'.join(message_types)})\""
             command += ".+,\"test_name\":\"%s.*?\",'" % name.replace("'", r"'\''")
             steps = [

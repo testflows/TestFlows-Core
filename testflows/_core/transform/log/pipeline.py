@@ -375,7 +375,7 @@ class MetricsLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.METRIC.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -391,7 +391,7 @@ class ResultsReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -418,7 +418,7 @@ class TotalsReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -440,7 +440,7 @@ class FailsReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -462,7 +462,7 @@ class PassingReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
@@ -483,7 +483,7 @@ class UnstableReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
@@ -504,7 +504,7 @@ class CoverageReportLogPipeline(Pipeline):
         stop_event = threading.Event()
 
         message_types = [Message.TEST.name, Message.RESULT.name, Message.REQUIREMENT.name, Message.SPECIFICATION.name, Message.STOP.name]
-        grep = "grep -E '^{\"message_keyword\":\""
+        grep = "grep -E '^\\{\"message_keyword\":\""
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -563,7 +563,7 @@ class ResultsLogPipeline(Pipeline):
             Message.STOP.name
         ]
         test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
-        command = "grep -E '^{\"message_keyword\":\""
+        command = "grep -E '^\\{\"message_keyword\":\""
         command = (f"{command}({'|'.join(message_types)})\""
             + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
             + "'")
@@ -595,7 +595,7 @@ class CompactRawLogPipeline(Pipeline):
             Message.STOP.name
         ]
         test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
-        command = "grep -E '^{\"message_keyword\":\""
+        command = "grep -E '^\\{\"message_keyword\":\""
         command = (f"{command}({'|'.join(message_types)})\""
             + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
             + "'")

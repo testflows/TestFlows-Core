@@ -45,7 +45,7 @@ class Handler(HandlerBase):
         def __init__(self, name, input, output, tail=False):
             stop_event = threading.Event()
 
-            command = "grep -E '^{\"message_keyword\":\"%s\"" % Message.TEST.name
+            command = "grep -E '^\\{\"message_keyword\":\"%s\"" % Message.TEST.name
             command += ".+,\"test_name\":\"%s.*?\",'" % name.replace("'", r"'\''")
             steps = [
                 read_and_filter_transform(input, command=command, stop=stop_event, tail=tail),
