@@ -79,6 +79,9 @@ COLORS = dict(
 def reset(no_colors=False):
     return '\033[0m' if not (no_colors and settings.no_colors) else ''
 
+def cursor_hide(no_colors=False):
+    return '\033[?25l' if not (no_colors and settings.no_colors) else ''
+
 def cursor_up(no_colors=False):
     return '\033[A' if not (no_colors and settings.no_colors) else ''
 
