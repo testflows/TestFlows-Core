@@ -83,12 +83,14 @@ class Handler(HandlerBase):
 
         parser.set_defaults(func=cls())
 
-    def _reader(self, filename, out, stop_event, timeout=0.1):
+    def _reader(self, filename, out, stop_event, flush=False, timeout=0.1):
         """Read contents of file and write to the specified output."""
         with open(filename, "r") as fd:
             while True:
                 try:
                     out.write(fd.read())
+                    if flush:
+                        out.flush()
                 finally:
                     if stop_event.is_set():
                         break
@@ -126,7 +128,7 @@ class Handler(HandlerBase):
             if not args.no_output:
                 if args.stdout:
                     stdout_reader = threading.Thread(
-                        target=self._reader, args=(args.stdout, sys.stdout, stop_event)
+                        target=self._reader, args=(args.stdout, sys.stdout, stop_event, True)
                     )
                     stdout_reader.start()
                 if args.stderr:
