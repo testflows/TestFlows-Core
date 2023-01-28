@@ -25,6 +25,8 @@ from .handlers.requirement.handler import Handler as requirement_handler
 from .handlers.report.handler import Handler as report_handler
 from .handlers.show.handler import Handler as show_handler
 from .handlers.log import Handler as log_handler
+from .handlers.run import Handler as run_handler
+
 from .type import onoff as onoff_type
 
 try:
@@ -77,6 +79,7 @@ transform_handler.add_command(commands)
 requirement_handler.add_command(commands)
 document_handler.add_command(commands)
 show_handler.add_command(commands)
+run_handler.add_command(commands)
 
 if database_handler:
     database_handler.add_command(commands)
