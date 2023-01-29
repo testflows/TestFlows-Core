@@ -118,7 +118,7 @@ class Handler(HandlerBase):
 
         if args.pid:
             with open(args.pid, "w") as fd:
-                fd.write(f"{process.pid}\n")
+                fd.write(f"{os.getpid()}\n")
 
         stop_event = threading.Event()
         stdout_reader = None
@@ -128,7 +128,8 @@ class Handler(HandlerBase):
             if not args.no_output:
                 if args.stdout:
                     stdout_reader = threading.Thread(
-                        target=self._reader, args=(args.stdout, sys.stdout, stop_event, True)
+                        target=self._reader,
+                        args=(args.stdout, sys.stdout, stop_event, True),
                     )
                     stdout_reader.start()
                 if args.stderr:
@@ -137,7 +138,19 @@ class Handler(HandlerBase):
                     )
                     stderr_reader.start()
 
-            return process.wait()
+            while True:
+                if process.poll() is not None:
+                    return
+                if (
+                    subprocess.call(
+                        ["kill", "-0", f"{process.pid}"],
+                        stderr=subprocess.DEVNULL,
+                        stdout=subprocess.DEVNULL,
+                    )
+                    != 0
+                ):
+                    return
+                time.sleep(0.1)
 
         finally:
             stop_event.set()
