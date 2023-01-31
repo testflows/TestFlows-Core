@@ -77,7 +77,7 @@ class Handler(HandlerBase):
             "--no-output",
             action="store_true",
             default=False,
-            help="disable output to the terminal from redirected stdout or stderr",
+            help="disable output to the terminal from redirected stdout",
         )
 
         parser.add_argument(
@@ -90,7 +90,7 @@ class Handler(HandlerBase):
 
         parser.set_defaults(func=cls())
 
-    def _reader(self, filename, out, process, flush=False, timeout=0.1):
+    def _reader(self, filename, out, process, flush=True, timeout=0.1):
         """Read contents of file and write to the specified output."""
         with open(filename, "r") as fd:
             while True:
@@ -139,11 +139,11 @@ class Handler(HandlerBase):
                         args=(args.stdout, sys.stdout, process, True),
                     )
                     stdout_reader.start()
-                if args.stderr:
-                    stderr_reader = threading.Thread(
-                        target=self._reader, args=(args.stderr, sys.stderr, process)
-                    )
-                    stderr_reader.start()
+            if args.stderr:
+                stderr_reader = threading.Thread(
+                    target=self._reader, args=(args.stderr, sys.stderr, process)
+                )
+                stderr_reader.start()
 
             while True:
                 try:
@@ -175,3 +175,4 @@ class Handler(HandlerBase):
                 if args.exitcode:
                     with open(args.exitcode, "w") as fd:
                         fd.write(f"{process.returncode}\n")
+                sys.exit(process.returncode if process.returncode is not None else -1)
