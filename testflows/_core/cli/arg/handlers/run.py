@@ -15,6 +15,7 @@
 import os
 import sys
 import time
+import signal
 import threading
 import subprocess
 
@@ -41,6 +42,9 @@ Write pid, stdout and stderr to files but silence output to the terminal.
 
 Redirect stdout to file but turn colors back on.
     tfs run --stdout run.out --stderr run.err test.py -- -o classic --no-colors off
+
+Write exitcode to file
+    tfs run --exitcode run.exitcode test.py
 """
 
 
@@ -56,6 +60,9 @@ class Handler(HandlerBase):
         )
 
         parser.add_argument("--pid", metavar="file", type=str, help="pid file")
+        parser.add_argument(
+            "--exitcode", metavar="file", type=str, help="exit code file"
+        )
 
         parser.add_argument(
             "--stdout", metavar="file", type=str, help="file where to redirect stdout"
@@ -83,7 +90,7 @@ class Handler(HandlerBase):
 
         parser.set_defaults(func=cls())
 
-    def _reader(self, filename, out, stop_event, flush=False, timeout=0.1):
+    def _reader(self, filename, out, process, flush=False, timeout=0.1):
         """Read contents of file and write to the specified output."""
         with open(filename, "r") as fd:
             while True:
@@ -92,7 +99,7 @@ class Handler(HandlerBase):
                     if flush:
                         out.flush()
                 finally:
-                    if stop_event.is_set():
+                    if process.returncode is not None:
                         break
                     time.sleep(timeout)
 
@@ -129,32 +136,42 @@ class Handler(HandlerBase):
                 if args.stdout:
                     stdout_reader = threading.Thread(
                         target=self._reader,
-                        args=(args.stdout, sys.stdout, stop_event, True),
+                        args=(args.stdout, sys.stdout, process, True),
                     )
                     stdout_reader.start()
                 if args.stderr:
                     stderr_reader = threading.Thread(
-                        target=self._reader, args=(args.stderr, sys.stderr, stop_event)
+                        target=self._reader, args=(args.stderr, sys.stderr, process)
                     )
                     stderr_reader.start()
 
             while True:
-                if process.poll() is not None:
-                    return
-                if (
-                    subprocess.call(
-                        ["kill", "-0", f"{process.pid}"],
-                        stderr=subprocess.DEVNULL,
-                        stdout=subprocess.DEVNULL,
-                    )
-                    != 0
-                ):
-                    return
-                time.sleep(0.1)
-
+                try:
+                    if process.poll() is not None:
+                        break
+                    if (
+                        subprocess.call(
+                            ["kill", "-0", f"{process.pid}"],
+                            stderr=subprocess.DEVNULL,
+                            stdout=subprocess.DEVNULL,
+                        )
+                        != 0
+                    ):
+                        break
+                    time.sleep(0.25)
+                except KeyboardInterrupt:
+                    process.send_signal(signal.SIGINT)
+                except BaseException:
+                    process.terminate()
         finally:
-            stop_event.set()
-            if stdout_reader is not None:
-                stdout_reader.join()
-            if stderr_reader is not None:
-                stderr_reader.join()
+            try:
+                if stdout_reader is not None:
+                    stdout_reader.join()
+                if stderr_reader is not None:
+                    stderr_reader.join()
+            finally:
+                sys.stdout.flush()
+                sys.stderr.flush()
+                if args.exitcode:
+                    with open(args.exitcode, "w") as fd:
+                        fd.write(f"{process.returncode}\n")
