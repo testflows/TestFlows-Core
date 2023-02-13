@@ -2745,11 +2745,13 @@ class retries(object):
     :param backoff: backoff multiplier that is applied to the delay, default: 1
     :param jitter: jitter added to delay between retries specified as
                    a tuple(min, max), default: (0,0)
+    :param initial_delay: initial delay in sec before first attempt, default: 0 sec
     """
-    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None):
+    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None, initial_delay=0):
         self.count = int(count) if count is not None else None
         self.timeout = float(timeout) if timeout is not None else None
         self.delay = float(delay)
+        self.initial_delay = float(initial_delay)
         self.backoff = backoff
         self.jitter = tuple(jitter) if jitter else tuple([0, 0])
         self.delay_with_backoff = self.delay
@@ -2794,6 +2796,7 @@ class retries(object):
 
         if not self.started:
             self.started = time.time()
+            time.sleep(self.initial_delay)
 
         self.number += 1
 
@@ -2805,7 +2808,7 @@ class retries(object):
 
         return self.retry
 
-def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None):
+def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None, initial_delay=0):
     """Retry function.
 
     For example,
@@ -2821,16 +2824,17 @@ def retry(func, count=None, timeout=None, delay=0, backoff=1, jitter=None):
     :param backoff: backoff multiplier that is applied to the delay, default: 1
     :param jitter: jitter added to delay between retries specified as
                    a tuple(min, max), default: (0,0)
+    :param initial_delay: initial delay in sec before first attempt, default: 0 sec
     """
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
-        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter):
+        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, initial_delay=initial_delay):
             with _retry:
                 return func(*args, **kwargs)
 
     @functools.wraps(func)
     async def async_wrapper(*args, **kwargs):
-        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter):
+        for _retry in retries(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, initial_delay=initial_delay):
             async with _retry:
                 return func(*args, **kwargs)
 

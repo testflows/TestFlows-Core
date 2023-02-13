@@ -908,7 +908,7 @@ class Retry(NamedValue):
     """
     name = "retries"
 
-    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None, pattern=""):
+    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None, pattern="", initial_delay=0):
         """
         :param count: number of retries, default: None
         :param timeout: timeout in sec, default: None
@@ -916,10 +916,12 @@ class Retry(NamedValue):
         :param backoff: backoff multiplier that is applied to the delay, default: 1
         :param jitter: jitter added to delay between retries specified as
                    a tuple(min, max), default: (0,0)
+        :param initial_delay: initial delay in sec before first attempt, default: 0 sec
         """
         self.count = int(count) if count is not None else None
         self.timeout = float(timeout) if timeout is not None else None
         self.delay = float(delay)
+        self.initial_delay = float(initial_delay)
         self.backoff = float(backoff)
         self.jitter = tuple(jitter) if jitter else tuple([0, 0])
 
@@ -931,7 +933,7 @@ class Retry(NamedValue):
         if self.timeout is not None and self.timeout < 0:
             raise ValueError("timeout must be >= 0")
 
-        return super(Retry, self).__init__({self.pattern: (self.count, self.timeout, self.delay, self.backoff, self.jitter)})
+        return super(Retry, self).__init__({self.pattern: (self.count, self.timeout, self.delay, self.backoff, self.jitter, self.initial_delay)})
 
 class Args(dict):
     def __init__(self, **args):

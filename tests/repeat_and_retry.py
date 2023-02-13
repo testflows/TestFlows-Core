@@ -62,6 +62,18 @@ def nested_retries(self):
         with attempt:
             Scenario(test=test2, retries=Retry(count=1))()
 
+
+@TestScenario
+@Repeat(4)
+@Retry(4, initial_delay=5)
+def nested_retries_with_initial_delay(self):
+    """Check handling of nested retries with initial delay.
+    """
+    for attempt in retries(count=10, initial_delay=1):
+        with attempt:
+            Scenario(test=test2, retries=Retry(count=1))()
+
+
 @TestScenario
 def repeats_object(self):
     """Check repeats object.
@@ -88,6 +100,7 @@ def repeats_object(self):
 
         note(repeat(add_note, count=2)("hello"))
 
+
 @TestModule
 @FFails({
     "test4": (Skip, "not supported on 21.8", version("21.8")), # FFails overrides Skipped of test4 so we must specify force result again
@@ -99,6 +112,7 @@ def module(self):
 
     for scenario in loads(current_module(), Scenario):
         scenario()
+
 
 if main():
     module()
