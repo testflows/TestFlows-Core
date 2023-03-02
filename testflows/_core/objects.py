@@ -714,7 +714,7 @@ class XFails(NamedValue):
     """xfails container.
 
     xfails = {
-        "pattern": [("result", "reason"[, when])],
+        "pattern": [("result", "reason"[, when][, result_message])],
         ...
         }
     """
@@ -731,7 +731,7 @@ class XFails(NamedValue):
 
         :param pattern: test name pattern to match
         :param *results: one or more results to cross out
-            where each result is a two-tuple or three-tuple of (result, reason[, when])
+            where each result is a two-tuple or three-tuple or four-tuple of (result, reason[, when][, result_message])
         """
         self.value[pattern] = results
         return self

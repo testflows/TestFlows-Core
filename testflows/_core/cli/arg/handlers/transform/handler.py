@@ -29,6 +29,11 @@ from testflows._core.cli.arg.handlers.transform.raw import Handler as raw_handle
 from testflows._core.cli.arg.handlers.transform.compress import Handler as compress_handler
 from testflows._core.cli.arg.handlers.transform.decompress import Handler as decompress_handler
 
+try:
+    from testflows.enterprise._core.cli.transform.handler import Handler as enterprise_handler
+except:
+    enterprise_handler = None
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
@@ -52,3 +57,5 @@ class Handler(HandlerBase):
         compact_handler.add_command(transform_commands)
         compress_handler.add_command(transform_commands)
         decompress_handler.add_command(transform_commands)
+        if enterprise_handler is not None:
+            enterprise_handler.add_command(transform_commands)

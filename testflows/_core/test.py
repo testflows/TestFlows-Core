@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import re
 import sys
 import time
 import random
@@ -806,9 +807,16 @@ class TestBase(object):
                 for xout in xouts:
                     result, reason = xout[:2]
                     when = xout[2] if len(xout) > 2 else None
+                    result_message = xout[3] if len(xout) > 3 else None
                     if when is not None and not when(self):
                         continue
                     if isinstance(self.result, result):
+                        if result_message is not None:
+                            try:
+                                if self.result.message is None or not re.match(result_message, self.result.message, flags=re.MULTILINE|re.DOTALL):
+                                    continue
+                            except re.error as exc:
+                                raise RuntimeError(f"xfail '{pattern}' has invalid result message regex expression: {exc}") from None
                         self.result = self.result.xout(reason)
 
     def bind(self, func):
