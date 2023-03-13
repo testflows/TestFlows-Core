@@ -4,4 +4,4 @@
 
 [TestFlows.com Open-Source Software Testing Framework]: https://testflows.com
 
-Testing CLA Assistant.
+Testing CLA Assistant 2.
