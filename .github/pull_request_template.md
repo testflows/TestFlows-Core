@@ -1,15 +1,13 @@
-We cannot accept any contributions without a CLA. For more information 
-see https://github.com/testflows/TestFlows/blob/master/CONTRIBUTING.md.
+## Contributor License Agreement
 
-I, the Contributor, have agreed to, completed, and signed a CLA.
+For more information see https://github.com/testflows/TestFlows/blob/master/CONTRIBUTING.md.
 
-[ ] Individual Contributor License Agreement
-    https://github.com/testflows/TestFlows/blob/master/cla/individual_v1.md
+I, the Contributor, have agreed to, completed, and signed a CLA:
 
-[ ] Corporate Contributor License Agreement
-    https://github.com/testflows/TestFlows/blob/master/cla/corporate_v1.md
-
----
+* [ ] Individual Contributor License Agreement
+      https://github.com/testflows/TestFlows/blob/master/cla/individual_v1.md
+* [ ] Corporate Contributor License Agreement
+      https://github.com/testflows/TestFlows/blob/master/cla/corporate_v1.md
 
 ## Description of Changes
 
