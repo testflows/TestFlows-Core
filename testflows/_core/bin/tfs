@@ -58,8 +58,7 @@ try:
     if args.show_skipped:
         settings.show_skipped = True
 
-    if args.trim_results:
-        settings.trim_results = True
+    settings.trim_results = args.trim_results
 
     args.func(args)
 
