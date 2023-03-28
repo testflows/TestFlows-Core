@@ -1501,6 +1501,8 @@ class TestDefinition(object):
         current_test = current()
         is_async = is_running_in_event_loop()
         is_parallel = self.kwargs.get("flags", Flags()) & PARALLEL or self.parallel
+        if is_parallel:
+            self.kwargs["flags"] = self.kwargs.pop("flags", Flags()) & ~NO_PARALLEL
         is_remote = self.kwargs.get("flags", Flags()) & REMOTE or self.remote or (executor and (isinstance(executor, RemotePoolExecutor)))
 
         if current_test:
