@@ -160,7 +160,7 @@ def repeat(value):
             pattern, count = fields
         option = Repeat(count=count, pattern=pattern, until=until)
     except Exception as e:
-        raise ArgumentTypeError(f"'{value}' is invalid")
+        raise ArgumentTypeError(f"'{value}' is invalid: {e}")
     return option
 
 def retry(value):
@@ -182,7 +182,7 @@ def retry(value):
             backoff = 1
         option = Retry(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, pattern=pattern)
     except Exception as e:
-        raise ArgumentTypeError(f"'{value}' is invalid")
+        raise ArgumentTypeError(f"'{value}' is invalid: {e}")
     return option
 
 def tags_filter(value):
@@ -196,7 +196,7 @@ def tags_filter(value):
             type = "suite"
         option = (type, tuple(tags))
     except Exception as e:
-        raise ArgumentTypeError(f"'{value}' is invalid")
+        raise ArgumentTypeError(f"'{value}' is invalid: {e}")
     return option
 
 def onoff(value):
