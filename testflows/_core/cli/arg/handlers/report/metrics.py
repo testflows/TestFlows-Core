@@ -22,6 +22,7 @@ from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.transform.log.pipeline import MetricsLogPipeline
 from testflows._core.message import dumps
 
+
 class OpenMetricsFormatter:
     def format_metric_name(self, name):
         return name.replace(" ", "_")
@@ -38,8 +39,9 @@ class OpenMetricsFormatter:
     def format(self, data):
         body = ""
         for metric in data["metrics"]:
-             body += self.format_metric(metric)
+            body += self.format_metric(metric)
         return body
+
 
 class CSVMetricsFormatter:
     def format_metric_name(self, name):
@@ -51,31 +53,61 @@ class CSVMetricsFormatter:
         metric_units = metric["metric_units"]
         metric_time = metric["message_time"]
         test_name = metric["test_name"]
-        writer.writerow((test_name, metric_name, metric_units, metric_value, int(metric_time)))
+        writer.writerow(
+            (test_name, metric_name, metric_units, metric_value, int(metric_time))
+        )
 
     def format(self, data):
         body = io.StringIO()
-        header = "test_name", "metric_name", "metric_units", "metric_value", "metric_time"
+        header = (
+            "test_name",
+            "metric_name",
+            "metric_units",
+            "metric_value",
+            "metric_time",
+        )
         writer = csv.writer(body, quoting=csv.QUOTE_NONNUMERIC)
         writer.writerow(header)
         for metric in data["metrics"]:
-             self.format_metric(writer, metric)
+            self.format_metric(writer, metric)
         return body.getvalue()
 
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("metrics", help="metrics report", epilog=epilog(),
+        parser = commands.add_parser(
+            "metrics",
+            help="metrics report",
+            epilog=epilog(),
             description="Generate metrics report.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
-                nargs="?", help="input log, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
-                nargs="?", help='output file, default: stdout', default="-")
-        parser.add_argument("--format", metavar="type", type=str,
-            help="output format choices: 'openmetrics', 'csv' default: openmetrics", choices=["openmetrics", "csv"], default="openmetrics")
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input log, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.file("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
+        parser.add_argument(
+            "--format",
+            metavar="type",
+            type=str,
+            help="output format choices: 'openmetrics', 'csv' default: openmetrics",
+            choices=["openmetrics", "csv"],
+            default="openmetrics",
+        )
 
         parser.set_defaults(func=cls())
 
@@ -86,9 +118,7 @@ class Handler(HandlerBase):
 
     def generate(self, formatter, metrics, args):
         output = args.output
-        output.write(
-            formatter.format(self.data(metrics, args))
-        )
+        output.write(formatter.format(self.data(metrics, args)))
 
     def handle(self, args):
         metrics = []

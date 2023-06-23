@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 def transform(msgs, stop=None, key="test_id"):
-    """Sort messages by key.
-    """
+    """Sort messages by key."""
+
     def sorting_key(msg):
         return msg[key]
 

@@ -3,15 +3,20 @@ from testflows.asserts import error, raises
 
 from testflows._core.testtype import TestType, TestSubType
 
+
 @TestOutline(Scenario)
-@Examples("sibling", [
-    (When,),
-    (Given,),
-    (Finally,),
-    (But,),
-    (By,),
-    (Then,),
-], args=Name("check {sibling.subtype!s} subtype inherirance"))
+@Examples(
+    "sibling",
+    [
+        (When,),
+        (Given,),
+        (Finally,),
+        (But,),
+        (By,),
+        (Then,),
+    ],
+    args=Name("check {sibling.subtype!s} subtype inherirance"),
+)
 def check_subtype_inheritance(self, sibling):
     """Check that And step properly inherits the subtype
     of its sibling.
@@ -35,12 +40,11 @@ def check_subtype_inheritance(self, sibling):
 
 
 @TestOutline(Scenario)
-@Examples("sibling", [
-    (Test,),
-    (Scenario,),
-    (When,),
-    (Given,)
-], args=Name("check {sibling.__name__!s} sibling type"))
+@Examples(
+    "sibling",
+    [(Test,), (Scenario,), (When,), (Given,)],
+    args=Name("check {sibling.__name__!s} sibling type"),
+)
 def check_when_sibling_is_of_invalid_type(self, sibling):
     """Check that a exception is raised when sibling
     has an invalid type.
@@ -49,6 +53,7 @@ def check_when_sibling_is_of_invalid_type(self, sibling):
         with raises(TypeError):
             with And("I have And step that follows it"):
                 pass
+
 
 @TestFeature
 @Name("inline And")
@@ -59,6 +64,7 @@ def feature(self):
     """
     Scenario(run=check_subtype_inheritance)
     Scenario(run=check_when_sibling_is_of_invalid_type)
+
 
 if main():
     feature()

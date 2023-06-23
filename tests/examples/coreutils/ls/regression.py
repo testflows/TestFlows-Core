@@ -6,11 +6,12 @@ from testflows.connect import Shell
 
 from requirements import *
 
+
 @TestScenario
 @Requirements(RQ_SRS001_CU_LS_Default_Directory("1.0"))
 def list_current_working_directory(self):
     """Check that `ls` utility when run without
-    any arguments lists the contents of the 
+    any arguments lists the contents of the
     current working directory.
     """
     shell = self.context.shell
@@ -26,16 +27,17 @@ def list_current_working_directory(self):
 
     metric("metric", random.random(), "ms")
 
+
 @TestModule
 @Name("ls")
 @Requirements(RQ_SRS001_CU_LS("1.0"))
 def regression(self):
-    """The `ls` utility regression module.
-    """
+    """The `ls` utility regression module."""
     with Shell() as shell:
         self.context.shell = shell
 
         Scenario(run=list_current_working_directory)
+
 
 if main():
     regression()

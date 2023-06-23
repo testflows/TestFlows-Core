@@ -13,8 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 def transform():
-    """Transform raw message into raw format.
-    """
+    """Transform raw message into raw format."""
     msg = None
     while True:
         if msg is not None:

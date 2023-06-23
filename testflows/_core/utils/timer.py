@@ -14,8 +14,10 @@
 # limitations under the License.
 import time
 
+
 class Timer(object):
     """Simple timer."""
+
     def __init__(self, timeout):
         self.timeout = timeout
         self.started = time.time()

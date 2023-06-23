@@ -79,21 +79,14 @@ setup(
         "testflows._core.cli.arg.handlers.document",
         "testflows._core.cli.arg.handlers.document.new",
         "testflows._core.cli.arg.handlers.requirement",
-        "testflows._core.cli.arg.handlers.show"
-        ],
+        "testflows._core.cli.arg.handlers.show",
+    ],
     package_data={
         "testflows._core.document": ["*.css"],
         "testflows._core.document.new": ["*.md"],
     },
-    scripts=[
-        "testflows/_core/bin/tfs",
-        "testflows/_core/bin/tfs-worker"
-    ],
+    scripts=["testflows/_core/bin/tfs", "testflows/_core/bin/tfs-worker"],
     zip_safe=False,
-    install_requires=[
-    ],
-    extras_require={
-        "dev": [
-        ]
-    }
+    install_requires=[],
+    extras_require={"dev": []},
 )

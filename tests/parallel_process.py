@@ -18,10 +18,10 @@ def start_process_service(self):
     with process_service() as service:
         yield service
 
+
 @TestScenario
 def my_scenario(self, count=1, sleep=0, force_fail=False):
-    """Simple scenario with 0 or more steps.
-    """
+    """Simple scenario with 0 or more steps."""
     for i in range(1):
         note(f"hello {os.getpid()}")
     for i in range(count):
@@ -33,35 +33,34 @@ def my_scenario(self, count=1, sleep=0, force_fail=False):
 
 
 def func_with_scenario():
-    """Simple function that runs a scenario.
-    """
+    """Simple function that runs a scenario."""
     Scenario(test=my_scenario)()
 
 
 def func_with_inline_scenario():
-    """Simple function that runs inline scenario.
-    """
+    """Simple function that runs inline scenario."""
     with Scenario("my test") as test:
         note(f"hi from test {test.name}")
 
 
 def simple(x, y):
-    """Simple function.
-    """
+    """Simple function."""
     print("foo", file=sys.stdout)
     print("boo", file=sys.stderr)
     for i in range(1):
         note(f"here {os.getpid()}")
     return x + y
 
+
 def simple_error():
-    """Simple function that raises error.
-    """
+    """Simple function that raises error."""
     raise ValueError("error")
+
 
 @TestScenario
 async def simple_async_test(self):
     note(f"hello {self.name} {os.getpid()}")
+
 
 @TestScenario
 async def my_async_test(self):
@@ -71,15 +70,23 @@ async def my_async_test(self):
         r = await f
         assert r.value == "value", error()
 
-        r = await Scenario(name=f"test 1", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)(force_fail=True)
+        r = await Scenario(
+            name=f"test 1", test=my_scenario, flags=XFAIL, parallel=True, executor=pool
+        )(force_fail=True)
         assert isinstance(r, XFail), error()
 
         async with Scenario("multiple parallel tests"):
             for i in range(10):
-                Scenario(name=f"test {i}", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)()
+                Scenario(
+                    name=f"test {i}",
+                    test=my_scenario,
+                    flags=XFAIL,
+                    parallel=True,
+                    executor=pool,
+                )()
             await join()
-        
-        #async with Scenario("multiple parallel async tests"):
+
+        # async with Scenario("multiple parallel async tests"):
         #    for i in range(10):
         #        Scenario(name=f"test {i}", test=simple_async_test, flags=XFAIL, parallel=True, executor=pool)()
         #    await join()
@@ -87,8 +94,7 @@ async def my_async_test(self):
 
 @TestFeature
 def feature(self):
-    """Test running tests in parallel processes.
-    """
+    """Test running tests in parallel processes."""
     with Scenario("try using process pool"):
         with ProcessPool() as pool:
             pass
@@ -97,18 +103,18 @@ def feature(self):
         with ProcessPool() as pool:
             with Example("single"):
                 for i in range(1):
-                    f = pool.submit(simple, args=[2,2])
+                    f = pool.submit(simple, args=[2, 2])
                     r = f.result()
                     assert r == 4, error()
             for i in range(3):
                 with Example(f"multiple {i}"):
                     tasks = []
                     for i in range(10):
-                        tasks.append(pool.submit(simple, kwargs={"x":2,"y":2}))
+                        tasks.append(pool.submit(simple, kwargs={"x": 2, "y": 2}))
                     for task in tasks:
                         r = task.result()
                         assert r == 4, error()
-            
+
             with Example("raises exception"):
                 f = pool.submit(simple_error)
                 with raises(ValueError):
@@ -118,7 +124,7 @@ def feature(self):
                 f = pool.submit(simple, args=[2])
                 with raises(TypeError):
                     f.result()
-            
+
             with Example("use non function"):
                 f = pool.submit(None)
                 with raises(TypeError):
@@ -130,8 +136,13 @@ def feature(self):
                 futures = []
                 for i in range(10):
                     futures.append(
-                            Scenario(name=f"test {i}", test=my_scenario, parallel=True, executor=pool)()
-                        )
+                        Scenario(
+                            name=f"test {i}",
+                            test=my_scenario,
+                            parallel=True,
+                            executor=pool,
+                        )()
+                    )
                 for v in join(*futures):
                     v = v.value
                     assert v == "value", error()
@@ -141,17 +152,42 @@ def feature(self):
                 debug(f"before: {test.child_count}")
                 futures = []
                 for i in range(2):
-                    futures.append(Scenario(name=f"my test {i}", test=my_scenario, parallel=True, executor=pool)())
+                    futures.append(
+                        Scenario(
+                            name=f"my test {i}",
+                            test=my_scenario,
+                            parallel=True,
+                            executor=pool,
+                        )()
+                    )
                 join(*futures)
                 debug(f"after: {test.child_count}")
                 assert test.child_count == count + 2, error()
 
             with Scenario("failing parallel test"):
-                Scenario(name=f"test", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)(force_fail=True).result()         
+                Scenario(
+                    name=f"test",
+                    test=my_scenario,
+                    parallel=True,
+                    flags=XFAIL,
+                    executor=pool,
+                )(force_fail=True).result()
 
             with Scenario("check if parallel test future is added to futures") as test:
-                f1 = Scenario(name=f"test 0", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)()
-                f2 = Scenario(name=f"test 1", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)()
+                f1 = Scenario(
+                    name=f"test 0",
+                    test=my_scenario,
+                    parallel=True,
+                    flags=XFAIL,
+                    executor=pool,
+                )()
+                f2 = Scenario(
+                    name=f"test 1",
+                    test=my_scenario,
+                    parallel=True,
+                    flags=XFAIL,
+                    executor=pool,
+                )()
                 assert len(test.futures) == 2, error()
                 join(f1)
                 join(f2)
@@ -161,6 +197,6 @@ def feature(self):
         with Scenario("async test that runs parallel tests in a process pool"):
             Scenario(test=my_async_test)()
 
+
 if main():
     feature()
-

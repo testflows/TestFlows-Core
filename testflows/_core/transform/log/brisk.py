@@ -27,7 +27,7 @@ from testflows._core.utils.timefuncs import localfromtimestamp
 from testflows._core.name import split, basename, parentname, sep
 from testflows._core.cli.colors import color, cursor_up
 
-strip_nones = re.compile(r'( None)+$')
+strip_nones = re.compile(r"( None)+$")
 indent = " " * 2
 #: map of tests by name
 tests_by_name = {}
@@ -38,14 +38,18 @@ test_type_parent_by_name = {}
 #: last message
 last_message = [None]
 
+
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold"])
+
 
 def color_secondary_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold", "dim"])
 
+
 def color_other(other):
     return color(other, "white", attrs=["dim"])
+
 
 def color_result(result, attrs=None, retry=False):
     if attrs is None:
@@ -67,6 +71,7 @@ def color_result(result, attrs=None, retry=False):
     else:
         raise ValueError(f"unknown result {result}")
 
+
 def format_prompt(msg, keyword):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -77,9 +82,11 @@ def format_prompt(msg, keyword):
         out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
     return out
 
+
 def format_input(msg, keyword):
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     return out
+
 
 def format_multiline(text, indent):
     first, rest = (text.rstrip() + "\n").split("\n", 1)
@@ -90,71 +97,112 @@ def format_multiline(text, indent):
     out = textwrap.indent(out, indent + "  ")
     return out
 
+
 def format_test_description(msg, indent):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     desc = format_multiline(msg["test_description"], indent)
     desc = color(desc, "white", attrs=["dim"])
     return desc + "\n"
 
+
 def format_requirements(msg, indent):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = [f"{indent}{' ' * 2}{color_secondary_keyword('Requirements')}"]
     for req in msg.requirements:
         out.append(color(f"{indent}{' ' * 4}{req.name}", "white", attrs=["dim"]))
-        out.append(color(f"{indent}{' ' * 6}version {req.version}", "white", attrs=["dim"]))
+        out.append(
+            color(f"{indent}{' ' * 6}version {req.version}", "white", attrs=["dim"])
+        )
     return "\n".join(out) + "\n"
+
 
 def format_attribute(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
-    if last_message[0] and not last_message[0]["message_keyword"] == Message.ATTRIBUTE.name:
+    if (
+        last_message[0]
+        and not last_message[0]["message_keyword"] == Message.ATTRIBUTE.name
+    ):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Attributes')}"]
 
-    out.append(color(f"{_indent}{' ' * 4}{msg['attribute_name']}", "white", attrs=["dim"]))
-    out.append(color(f"{textwrap.indent(str(msg['attribute_value']), prefix=(_indent + ' ' * 6))}", "white", attrs=["dim"]))
+    out.append(
+        color(f"{_indent}{' ' * 4}{msg['attribute_name']}", "white", attrs=["dim"])
+    )
+    out.append(
+        color(
+            f"{textwrap.indent(str(msg['attribute_value']), prefix=(_indent + ' ' * 6))}",
+            "white",
+            attrs=["dim"],
+        )
+    )
     return "\n".join(out) + "\n"
+
 
 def format_specification(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
-    if last_message[0] and not last_message[0]["message_keyword"] == Message.SPECIFICATION.name:
+    if (
+        last_message[0]
+        and not last_message[0]["message_keyword"] == Message.SPECIFICATION.name
+    ):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Specifications')}"]
 
-    out.append(color(f"{_indent}{' ' * 4}{msg['specification_name']}", "white", attrs=["dim"]))
+    out.append(
+        color(f"{_indent}{' ' * 4}{msg['specification_name']}", "white", attrs=["dim"])
+    )
     if msg["specification_version"]:
-        out.append(color(f"{_indent}{' ' * 6}version {msg['specification_version']}", "white", attrs=["dim"]))
+        out.append(
+            color(
+                f"{_indent}{' ' * 6}version {msg['specification_version']}",
+                "white",
+                attrs=["dim"],
+            )
+        )
     return "\n".join(out) + "\n"
+
 
 def format_requirement(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
-    if last_message[0] and not last_message[0]["message_keyword"] == Message.REQUIREMENT.name:
+    if (
+        last_message[0]
+        and not last_message[0]["message_keyword"] == Message.REQUIREMENT.name
+    ):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Requirements')}"]
 
-    out.append(color(f"{_indent}{' ' * 4}{msg['requirement_name']}", "white", attrs=["dim"]))
-    out.append(color(f"{_indent}{' ' * 6}version {msg['requirement_version']}", "white", attrs=["dim"]))
+    out.append(
+        color(f"{_indent}{' ' * 4}{msg['requirement_name']}", "white", attrs=["dim"])
+    )
+    out.append(
+        color(
+            f"{_indent}{' ' * 6}version {msg['requirement_version']}",
+            "white",
+            attrs=["dim"],
+        )
+    )
     return "\n".join(out) + "\n"
+
 
 def format_tag(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
@@ -164,52 +212,104 @@ def format_tag(msg):
     out.append(color(f"{_indent}{' ' * 4}{msg['tag_value']}", "white", attrs=["dim"]))
     return "\n".join(out) + "\n"
 
+
 def format_example(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
-    row_format = msg["example_row_format"] or ExamplesTable.default_row_format(msg["example_columns"], msg["example_values"])
-    if last_message[0] and not last_message[0]["message_keyword"] == Message.EXAMPLE.name:
+    row_format = msg["example_row_format"] or ExamplesTable.default_row_format(
+        msg["example_columns"], msg["example_values"]
+    )
+    if (
+        last_message[0]
+        and not last_message[0]["message_keyword"] == Message.EXAMPLE.name
+    ):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Examples')}"]
-        out.append(color(textwrap.indent(f"{ExamplesTable.__str_header__(tuple(msg['example_columns']), row_format)}", prefix=f"{_indent}{' ' * 4}"), "white", attrs=["dim"]))
+        out.append(
+            color(
+                textwrap.indent(
+                    f"{ExamplesTable.__str_header__(tuple(msg['example_columns']), row_format)}",
+                    prefix=f"{_indent}{' ' * 4}",
+                ),
+                "white",
+                attrs=["dim"],
+            )
+        )
 
-    out.append(color(textwrap.indent(f"{ExamplesTable.__str_row__(tuple(msg['example_values']),row_format)}", prefix=f"{_indent}{' ' * 4}"), "white", attrs=["dim"]))
+    out.append(
+        color(
+            textwrap.indent(
+                f"{ExamplesTable.__str_row__(tuple(msg['example_values']),row_format)}",
+                prefix=f"{_indent}{' ' * 4}",
+            ),
+            "white",
+            attrs=["dim"],
+        )
+    )
     return "\n".join(out) + "\n"
+
 
 def format_argument(msg):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     out = []
     _indent = f"{' ':>23}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
 
-    if last_message[0] and not last_message[0]["message_keyword"] == Message.ARGUMENT.name:
+    if (
+        last_message[0]
+        and not last_message[0]["message_keyword"] == Message.ARGUMENT.name
+    ):
         out = [f"{_indent}{' ' * 2}{color_secondary_keyword('Arguments')}"]
 
-    out.append(color(f"{_indent}{' ' * 4}{msg['argument_name']}", "white", attrs=["dim"]))
-    out.append(color(textwrap.indent(f"{msg['argument_value']}", prefix=f"{_indent}{' ' * 6}"), "white", attrs=["dim"]))
+    out.append(
+        color(f"{_indent}{' ' * 4}{msg['argument_name']}", "white", attrs=["dim"])
+    )
+    out.append(
+        color(
+            textwrap.indent(f"{msg['argument_value']}", prefix=f"{_indent}{' ' * 6}"),
+            "white",
+            attrs=["dim"],
+        )
+    )
     return "\n".join(out) + "\n"
+
 
 def and_keyword(msg, parent_id, keyword, subtype):
     """Handle processing of Given, When, Then, But, By and Finally
     keywords and convert them to And when necessary.
     """
-    prev = tests_by_parent[parent_id][-2] if len(tests_by_parent.get(parent_id, [])) > 1 else None
-    if prev and get_subtype(prev) == subtype and tests_by_parent.get(prev["test_id"]) is None:
+    prev = (
+        tests_by_parent[parent_id][-2]
+        if len(tests_by_parent.get(parent_id, [])) > 1
+        else None
+    )
+    if (
+        prev
+        and get_subtype(prev) == subtype
+        and tests_by_parent.get(prev["test_id"]) is None
+    ):
         keyword = "And"
     parent = tests_by_name.get(parent_id)
-    if parent and get_subtype(parent) == subtype and len(tests_by_parent.get(parent_id, [])) == 1:
+    if (
+        parent
+        and get_subtype(parent) == subtype
+        and len(tests_by_parent.get(parent_id, [])) == 1
+    ):
         keyword = "And"
     return keyword
+
 
 def get_type(msg):
     return getattr(TestType, msg["test_type"])
 
+
 def get_subtype(msg):
     return getattr(TestSubType, str(msg["test_subtype"]), 0)
+
 
 def format_test(msg, keyword):
     # add test to the tests map
@@ -239,7 +339,7 @@ def format_test(msg, keyword):
             current_test_id = head
 
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
 
     if test_subtype == TestSubType.Example:
         keyword += "Example"
@@ -317,60 +417,114 @@ def format_test(msg, keyword):
         out += format_test_description(msg, _indent)
     return out
 
+
 def format_result(msg, prefix):
     test_id = msg["test_id"]
     if test_type_parent_by_name[test_id] != test_id:
-        return ''
+        return ""
     result = msg["result_type"]
-    _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(msg["test_flags"])
+    _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(
+        msg["test_flags"]
+    )
     _color = color_result(result, retry=_retry)
     _result = _color(prefix + result)
     _test = color_other(basename(msg["result_test"]))
-    _indent = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
+    _indent = (
+        f"{strftimedelta(msg['message_rtime']):>20}"
+        + f"{'':3}{indent * (msg['test_id'].count('/') - 1)}"
+    )
 
     _result_message = msg["result_message"]
     if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
         _result_message = _result_message.strip().split("\n", 1)[0].strip()
 
-    out = (f"{color_other(_indent)}{_result} "
+    out = (
+        f"{color_other(_indent)}{_result} "
         f"{_test}{color_other(', ' + msg['result_test'])}"
         f"{(color_other(', ') + _color(format_multiline(_result_message, ' ' * len(_indent)).strip())) if _result_message else ''}"
-        f"{(color_other(', ') + _color(msg['result_reason'])) if msg['result_reason'] else ''}\n")
+        f"{(color_other(', ') + _color(msg['result_reason'])) if msg['result_reason'] else ''}\n"
+    )
 
     return out
+
 
 def format_message(msg, keyword, prefix="", predicate=None):
     out = msg["message"]
     if msg["message_stream"]:
         out = f"[{msg['message_stream']}] {msg['message']}"
 
-    out = textwrap.indent(out, prefix=(indent * (test_type_parent_by_name[msg["test_id"]].count('/') - 1) + " " * 30 + prefix), predicate=predicate)
+    out = textwrap.indent(
+        out,
+        prefix=(
+            indent * (test_type_parent_by_name[msg["test_id"]].count("/") - 1)
+            + " " * 30
+            + prefix
+        ),
+        predicate=predicate,
+    )
     out = out.lstrip(" ")
     if out.endswith("\n"):
         out = out[:-1]
 
-    return color_other(f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}{keyword} {color_other(out)}\n")
+    return color_other(
+        f"{strftimedelta(msg['message_rtime']):>20}{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}{keyword} {color_other(out)}\n"
+    )
+
 
 def format_metric(msg, keyword):
-    prefix = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    prefix = (
+        f"{strftimedelta(msg['message_rtime']):>20}"
+        + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    )
     _indent = (len(prefix) + 3) * " "
-    out = [color_other(f"{prefix}{keyword}") + color("Metric", "white", attrs=["dim", "bold"]) + color_other(f" {msg['metric_name']}")]
-    out.append(color_other(format_multiline(f"{msg['metric_value']} {msg['metric_units']}", _indent + " " * 2)))
+    out = [
+        color_other(f"{prefix}{keyword}")
+        + color("Metric", "white", attrs=["dim", "bold"])
+        + color_other(f" {msg['metric_name']}")
+    ]
+    out.append(
+        color_other(
+            format_multiline(
+                f"{msg['metric_value']} {msg['metric_units']}", _indent + " " * 2
+            )
+        )
+    )
     return "\n".join(out) + "\n"
+
 
 def format_value(msg, keyword):
-    prefix = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    prefix = (
+        f"{strftimedelta(msg['message_rtime']):>20}"
+        + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    )
     _indent = (len(prefix) + 3) * " "
-    out = [color_other(f"{prefix}{keyword}") + color("Value", "white", attrs=["dim", "bold"]) + color_other(f" {msg['value_name']}")]
-    out.append(color_other(format_multiline(f"{msg['value_value']}", _indent + " " * 2)))
+    out = [
+        color_other(f"{prefix}{keyword}")
+        + color("Value", "white", attrs=["dim", "bold"])
+        + color_other(f" {msg['value_name']}")
+    ]
+    out.append(
+        color_other(format_multiline(f"{msg['value_value']}", _indent + " " * 2))
+    )
     return "\n".join(out) + "\n"
 
+
 def format_ticket(msg, keyword):
-    prefix = f"{strftimedelta(msg['message_rtime']):>20}" + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    prefix = (
+        f"{strftimedelta(msg['message_rtime']):>20}"
+        + f"{'':3}{indent * (test_type_parent_by_name[msg['test_id']].count('/') - 1)}"
+    )
     _indent = (len(prefix) + 3) * " "
-    out = [color_other(f"{prefix}{keyword}") + color("Ticket", "white", attrs=["dim", "bold"]) + color_other(f" {msg['ticket_name']}")]
-    out.append(color_other(format_multiline(f"{msg['ticket_link']}", _indent + " " * 2)))
+    out = [
+        color_other(f"{prefix}{keyword}")
+        + color("Ticket", "white", attrs=["dim", "bold"])
+        + color_other(f" {msg['ticket_name']}")
+    ]
+    out.append(
+        color_other(format_multiline(f"{msg['ticket_link']}", _indent + " " * 2))
+    )
     return "\n".join(out) + "\n"
+
 
 mark = "\u27e5"
 result_mark = "\u27e5\u27e4"
@@ -379,7 +533,7 @@ formatters = {
     Message.INPUT.name: (format_input, f"{mark} "),
     Message.PROMPT.name: (format_prompt, f"{mark} "),
     Message.TEST.name: (format_test, f"{mark}  "),
-    Message.ATTRIBUTE.name: (format_attribute, ),
+    Message.ATTRIBUTE.name: (format_attribute,),
     Message.ARGUMENT.name: (format_argument,),
     Message.SPECIFICATION.name: (format_specification,),
     Message.REQUIREMENT.name: (format_requirement,),
@@ -396,6 +550,7 @@ formatters = {
     Message.NONE.name: (format_message, "    "),
     Message.RESULT.name: (format_result, f"{result_mark} "),
 }
+
 
 def transform(show_input=True):
     """Transform parsed log line into a brisk format

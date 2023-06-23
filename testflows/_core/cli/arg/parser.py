@@ -36,41 +36,75 @@ except:
 
 try:
     from testflows.enterprise._core.cli.handler import Handler as enterprise_handler
-    from testflows.enterprise._core.cli.parser import argument_parser as enterprise_parser
+    from testflows.enterprise._core.cli.parser import (
+        argument_parser as enterprise_parser,
+    )
 except:
     enterprise_handler = None
     enterprise_parser = None
 
 from testflows._core import __version__, __license__
 
+
 class ArgumentParser(ArgumentParserBase):
-    """Customized argument parser.
-    """
+    """Customized argument parser."""
+
     def __init__(self, *args, **kwargs):
         description_prog = kwargs.pop("description_prog", None)
         kwargs["epilog"] = kwargs.pop("epilog", epilog())
-        kwargs["description"] = description(textwrap.dedent(kwargs.pop("description", None) or ""), prog=description_prog)
+        kwargs["description"] = description(
+            textwrap.dedent(kwargs.pop("description", None) or ""),
+            prog=description_prog,
+        )
         kwargs["formatter_class"] = kwargs.pop("formatter_class", HelpFormatter)
         return super(ArgumentParser, self).__init__(*args, **kwargs)
 
+
 parser = ArgumentParser(prog="tfs")
 
-parser.add_argument("--debug", dest="debug", action="store_true",
-                    help="enable debugging mode", default=False)
-parser.add_argument("--no-colors", dest="no_colors", action="store_true",
-                    help="disable terminal color highlighting", default=False)
-parser.add_argument("--show-skipped", dest="show_skipped", action="store_true",
-                    help="show skipped tests, default: False", default=False)
-parser.add_argument("--trim-results", dest="trim_results", type=onoff_type,
-                    help="enable or disable trimming of result messages, default: on",
-                    metavar=onoff_type.metavar, default="on")
+parser.add_argument(
+    "--debug",
+    dest="debug",
+    action="store_true",
+    help="enable debugging mode",
+    default=False,
+)
+parser.add_argument(
+    "--no-colors",
+    dest="no_colors",
+    action="store_true",
+    help="disable terminal color highlighting",
+    default=False,
+)
+parser.add_argument(
+    "--show-skipped",
+    dest="show_skipped",
+    action="store_true",
+    help="show skipped tests, default: False",
+    default=False,
+)
+parser.add_argument(
+    "--trim-results",
+    dest="trim_results",
+    type=onoff_type,
+    help="enable or disable trimming of result messages, default: on",
+    metavar=onoff_type.metavar,
+    default="on",
+)
 parser.add_argument("-v", "--version", action="version", version=f"{__version__}")
-parser.add_argument("--license", action="version", help="show program's license and exit", version=f"{__license__}")
+parser.add_argument(
+    "--license",
+    action="version",
+    help="show program's license and exit",
+    version=f"{__license__}",
+)
 
 if enterprise_parser:
     enterprise_parser(parser)
 
-commands = parser.add_subparsers(title='commands', metavar='command', description=None, help=None)
+commands = parser.add_subparsers(
+    title="commands", metavar="command", description=None, help=None
+)
 commands.required = True
 
 log_handler.add_command(commands)

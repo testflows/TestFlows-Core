@@ -15,23 +15,37 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.report.srs_coverage import Handler as srs_coverage_handler
+from testflows._core.cli.arg.handlers.report.srs_coverage import (
+    Handler as srs_coverage_handler,
+)
 from testflows._core.cli.arg.handlers.report.results import Handler as results_handler
-from testflows._core.cli.arg.handlers.report.compare.handler import Handler as compare_handler
+from testflows._core.cli.arg.handlers.report.compare.handler import (
+    Handler as compare_handler,
+)
 from testflows._core.cli.arg.handlers.report.coverage import Handler as coverage_handler
 from testflows._core.cli.arg.handlers.report.metrics import Handler as metrics_handler
-from testflows._core.cli.arg.handlers.report.specification import Handler as specification_handler
-from testflows._core.cli.arg.handlers.report.tracebility import Handler as tracebility_handler
+from testflows._core.cli.arg.handlers.report.specification import (
+    Handler as specification_handler,
+)
+from testflows._core.cli.arg.handlers.report.tracebility import (
+    Handler as tracebility_handler,
+)
+
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("report", help="generate report", epilog=epilog(),
+        parser = commands.add_parser(
+            "report",
+            help="generate report",
+            epilog=epilog(),
             description="Generate report.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        report_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        report_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         report_commands.required = True
         results_handler.add_command(report_commands)
         specification_handler.add_command(report_commands)
@@ -39,4 +53,4 @@ class Handler(HandlerBase):
         coverage_handler.add_command(report_commands)
         compare_handler.add_command(report_commands)
         metrics_handler.add_command(report_commands)
-        #srs_coverage_handler.add_command(report_commands)
+        # srs_coverage_handler.add_command(report_commands)

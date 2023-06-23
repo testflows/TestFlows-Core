@@ -20,8 +20,10 @@ from testflows._core.message import Message
 from testflows._core.utils.timefuncs import strftimedelta
 from testflows._core.cli.colors import color
 
+
 def color_line(line):
     return color(line, "white", attrs=["dim"])
+
 
 def color_result(result, text):
     if result.startswith("X"):
@@ -34,7 +36,7 @@ def color_result(result, text):
     elif result == "Error":
         return color(text, "yellow", attrs=["bold"])
     elif result == "Fail":
-         return color(text, "red", attrs=["bold"])
+        return color(text, "red", attrs=["bold"])
     elif result == "Null":
         return color(text, "magenta", attrs=["bold"])
     # Retried
@@ -43,8 +45,23 @@ def color_result(result, text):
     else:
         raise ValueError(f"unknown result {result}")
 
+
 class Counts(object):
-    def __init__(self, name, units, ok, fail, skip, error, null, xok, xfail, xerror, xnull, retried):
+    def __init__(
+        self,
+        name,
+        units,
+        ok,
+        fail,
+        skip,
+        error,
+        null,
+        xok,
+        xfail,
+        xerror,
+        xnull,
+        retried,
+    ):
         self.name = name
         self.units = units
         self.ok = ok
@@ -65,7 +82,7 @@ class Counts(object):
         data = {}
         counts = {}
         data["units"] = self.units
-        data["name"] = self.name if self.units != 1 else self.name.rstrip('s')
+        data["name"] = self.name if self.units != 1 else self.name.rstrip("s")
         data["counts"] = counts
         if self.ok > 0:
             counts["OK"] = self.ok
@@ -119,6 +136,7 @@ class Counts(object):
             s += color(")", "white", attrs=["bold"])
         s += "\n"
         return s
+
 
 def format_test(msg, counts):
     flags = Flags(msg["test_flags"])
@@ -175,6 +193,7 @@ def format_test(msg, counts):
             counts["section"].units += 1
         else:
             counts["test"].units += 1
+
 
 def format_result(msg, counts):
     flags = Flags(msg["test_flags"])
@@ -238,10 +257,9 @@ def format_result(msg, counts):
         else:
             setattr(counts["test"], _name, getattr(counts["test"], _name) + 1)
 
-formatters = {
-    Message.TEST.name: (format_test,),
-    Message.RESULT.name: (format_result,)
-}
+
+formatters = {Message.TEST.name: (format_test,), Message.RESULT.name: (format_result,)}
+
 
 def all_counts():
     return {
@@ -265,8 +283,9 @@ def all_counts():
         "document": Counts("documents", *([0] * 11)),
         "page": Counts("pages", *([0] * 11)),
         "section": Counts("sections", *([0] * 11)),
-        "example": Counts("examples", *([0] * 11))
+        "example": Counts("examples", *([0] * 11)),
     }
+
 
 def transform(stop, divider="\n"):
     """Totals report.
@@ -286,7 +305,7 @@ def transform(stop, divider="\n"):
 
         if stop.is_set():
             line = divider
-            line_icon = "" #"\u27a4 "
+            line_icon = ""  # "\u27a4 "
             if counts["module"]:
                 line += line_icon + str(counts["module"])
             if counts["book"]:

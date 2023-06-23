@@ -20,29 +20,45 @@ from testflows._core.cli.arg.handlers.transform.pnice import Handler as pnice_ha
 from testflows._core.cli.arg.handlers.transform.brisk import Handler as brisk_handler
 from testflows._core.cli.arg.handlers.transform.short import Handler as short_handler
 from testflows._core.cli.arg.handlers.transform.dots import Handler as dots_handler
-from testflows._core.cli.arg.handlers.transform.compact import Handler as compact_handler
+from testflows._core.cli.arg.handlers.transform.compact import (
+    Handler as compact_handler,
+)
 from testflows._core.cli.arg.handlers.transform.slick import Handler as slick_handler
-from testflows._core.cli.arg.handlers.transform.classic import Handler as classic_handler
+from testflows._core.cli.arg.handlers.transform.classic import (
+    Handler as classic_handler,
+)
 from testflows._core.cli.arg.handlers.transform.manual import Handler as manual_handler
 from testflows._core.cli.arg.handlers.transform.fails import Handler as fails_handler
 from testflows._core.cli.arg.handlers.transform.raw import Handler as raw_handler
-from testflows._core.cli.arg.handlers.transform.compress import Handler as compress_handler
-from testflows._core.cli.arg.handlers.transform.decompress import Handler as decompress_handler
+from testflows._core.cli.arg.handlers.transform.compress import (
+    Handler as compress_handler,
+)
+from testflows._core.cli.arg.handlers.transform.decompress import (
+    Handler as decompress_handler,
+)
 
 try:
-    from testflows.enterprise._core.cli.transform.handler import Handler as enterprise_handler
+    from testflows.enterprise._core.cli.transform.handler import (
+        Handler as enterprise_handler,
+    )
 except:
     enterprise_handler = None
+
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("transform", help="log file transformation", epilog=epilog(),
+        parser = commands.add_parser(
+            "transform",
+            help="log file transformation",
+            epilog=epilog(),
             description="Transform log files.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        transform_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        transform_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         transform_commands.required = True
         raw_handler.add_command(transform_commands)
         nice_handler.add_command(transform_commands)

@@ -17,19 +17,28 @@ import re
 import time
 import tempfile
 
-parser = re.compile(r".*testflows\.(?P<ppid>\d+)\.(?P<ts>\d+)\.(?P<tss>\d+)\.(?P<pid>\d+)\.log")
-glob = "testflows.*.log"
+
+def parser(extension="log"):
+    return re.compile(
+        r".*testflows\.(?P<ppid>\d+)\.(?P<ts>\d+)\.(?P<tss>\d+)\.(?P<pid>\d+)\.{extension}"
+    )
+
+
+glob = "testflows.*"
 
 
 def ppid_glob(ppid):
-    return f"testflows.{ppid}.*.log"
+    return f"testflows.{ppid}.*"
+
 
 def dirname():
-    """Return temporary log file directory name.
-    """
+    """Return temporary file directory name."""
     return tempfile.gettempdir()
 
-def filename():
-    """Return temporary log file name.
-    """
-    return os.path.join(tempfile.gettempdir(), f"testflows.{os.getppid()}.{time.time():017.7f}.{os.getpid()}.log")
+
+def filename(extenstion="log"):
+    """Return temporary file name."""
+    return os.path.join(
+        tempfile.gettempdir(),
+        f"testflows.{os.getppid()}.{time.time():017.7f}.{os.getpid()}.{extension}",
+    )

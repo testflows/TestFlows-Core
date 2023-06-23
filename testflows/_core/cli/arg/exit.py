@@ -14,27 +14,35 @@
 # limitations under the License
 __all__ = ["ExitException", "ExitWithError", "ExitWithWarning", "ExitWithSuccess"]
 
+
 class ExitException(Exception):
     """Base class for all exit exceptions.
 
     :param exitcode: exit code
     """
+
     def __init__(self, exitcode, message):
         self.exitcode = exitcode
         self.message = message
         super(ExitException, self).__init__(message)
 
+
 class ExitWithError(ExitException):
     """Exit with error exception."""
+
     def __init__(self, message, exitcode=1):
         super(ExitWithError, self).__init__(exitcode, message)
 
+
 class ExitWithWarning(ExitException):
     """Exit with warning exception."""
+
     def __init__(self, message, exitcode=0):
         super(ExitWithWarning, self).__init__(exitcode, message)
 
+
 class ExitWithSuccess(ExitException):
     """Exit with success exception."""
+
     def __init__(self, message, exitcode=0):
         super(ExitWithSuccess, self).__init__(exitcode, message)

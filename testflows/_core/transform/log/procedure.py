@@ -18,13 +18,11 @@ from testflows._core.flags import Flags, SKIP
 from testflows._core.message import Message
 from testflows._core.transform.log.short import formatters, last_message
 
-formatters = {
-    Message.TEST.name: formatters[Message.TEST.name]
-}
+formatters = {Message.TEST.name: formatters[Message.TEST.name]}
+
 
 def transform():
-    """Transform parsed log line into a procedure format.
-    """
+    """Transform parsed log line into a procedure format."""
     line = None
     while True:
         if line is not None:

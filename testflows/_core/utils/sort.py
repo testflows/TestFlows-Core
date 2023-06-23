@@ -14,6 +14,7 @@
 # limitations under the License.
 import re
 
+
 def human(l, key=None):
     """Sort in human readable format.
 
@@ -24,6 +25,6 @@ def human(l, key=None):
     if get_key is None:
         get_key = lambda x: x
     convert = lambda text: int(text) if text.isdigit() else text
-    alphanum_key = lambda key: [ convert(c) for c in re.split('([0-9]+)', get_key(key)) ]
+    alphanum_key = lambda key: [convert(c) for c in re.split("([0-9]+)", get_key(key))]
     l.sort(key=alphanum_key)
     return l

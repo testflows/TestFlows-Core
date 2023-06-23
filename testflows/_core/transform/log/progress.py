@@ -23,17 +23,20 @@ from .short import format_result as format_failing_result
 
 progress = [
     color("Executing", "white", attrs=["dim"]),
-    color("Executed", "white", attrs=["dim"])
+    color("Executed", "white", attrs=["dim"]),
 ]
+
 
 def clear_line():
     return "\r\033[K\r"
 
+
 def short_test_name(msg, max=80, tail=20):
     test_name = msg["test_name"]
     if len(test_name) > max:
-        test_name = test_name[:max-tail] + "..." + test_name[-tail:]
+        test_name = test_name[: max - tail] + "..." + test_name[-tail:]
     return color(test_name, "white", attrs=["dim"])
+
 
 def format_prompt(msg, *_):
     global count
@@ -50,11 +53,13 @@ def format_prompt(msg, *_):
     count = 0
     return out
 
+
 def format_input(msg, *_):
     global count
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     count = 0
     return out
+
 
 def format_result(msg, counter, counts):
     flags = Flags(msg["test_flags"])
@@ -71,8 +76,11 @@ def format_result(msg, counter, counts):
     setattr(counts, _result, getattr(counts, _result) + 1)
     out = f"{clear_line()}{progress[counter[0] % (len(progress) - 1)]} {str(counts).rstrip()} {short_test_name(msg)}"
     if result in ("Fail", "Error", "Null"):
-        out += "\n" + format_failing_result(msg, use_full_testname=True, use_indent=" "*2)
+        out += "\n" + format_failing_result(
+            msg, use_full_testname=True, use_indent=" " * 2
+        )
     return out
+
 
 def format_test(msg, counter, counts):
     flags = Flags(msg["test_flags"])
@@ -85,20 +93,22 @@ def format_test(msg, counter, counts):
 
     return f"{clear_line()}{progress[counter[0] % (len(progress)-1)]} {str(counts).rstrip()} {short_test_name(msg)}"
 
+
 def format_stop(msg, counter, counts):
     return f"{clear_line()}{progress[-1]} {counts}".rstrip()
+
 
 formatters = {
     Message.INPUT.name: (format_input,),
     Message.PROMPT.name: (format_prompt,),
     Message.RESULT.name: (format_result,),
     Message.TEST.name: (format_test,),
-    Message.STOP.name: (format_stop,)
+    Message.STOP.name: (format_stop,),
 }
 
+
 def transform(stop_event, show_input=True):
-    """Transform parsed log line into a progress format.
-    """
+    """Transform parsed log line into a progress format."""
     line = None
     counter = [-1]
     counts = Counts("tests", *([0] * 11))

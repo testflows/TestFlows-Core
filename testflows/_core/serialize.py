@@ -19,16 +19,18 @@ from json import JSONEncoder
 
 from .baseobject import TestArg
 
+
 class Encoder(JSONEncoder):
-    """Argument value encoder.
-    """
+    """Argument value encoder."""
+
     def default(self, o):
         if isinstance(o, TestArg):
             objtype = ".".join([o.__class__.__module__, o.__class__.__name__])
             args = list(o.initargs.args)
             args.append(o.initargs.kwargs)
-            return {"@py:%s" % objtype : args}
+            return {"@py:%s" % objtype: args}
         return super(Encoder, self).default(o)
+
 
 def object_hook(o):
     if not o:
@@ -39,21 +41,22 @@ def object_hook(o):
         objtype = key[4:]
         return decode_argument(objtype, initargs)
     return o
-    
+
+
 def decode_argument(objtype, initargs):
-    module, cls = objtype.rsplit('.',1)
-    args = initargs[:-1] 
+    module, cls = objtype.rsplit(".", 1)
+    args = initargs[:-1]
     kwargs = initargs[-1]
     return getattr(importlib.import_module(module), cls)(*args, **kwargs)
 
+
 def dumps(o, *args, **kwargs):
-    """Serialize argument.
-    """
-    cls = kwargs.pop('cls', Encoder)
-    return json.dumps(o, cls=cls, separators=(',', ':'), *args, **kwargs)
+    """Serialize argument."""
+    cls = kwargs.pop("cls", Encoder)
+    return json.dumps(o, cls=cls, separators=(",", ":"), *args, **kwargs)
+
 
 def loads(s, *args, **kwargs):
-    """Deserializes argument.
-    """
-    hook = kwargs.pop('object_hook', object_hook)
+    """Deserializes argument."""
+    hook = kwargs.pop("object_hook", object_hook)
     return json.loads(s, object_hook=hook, *args, **kwargs)

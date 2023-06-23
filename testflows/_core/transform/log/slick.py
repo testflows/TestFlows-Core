@@ -25,17 +25,22 @@ from testflows._core.cli.colors import color, cursor_up
 
 indent = " " * 2
 
+
 def color_other(other):
     return color(other, "white", attrs=["dim"])
+
 
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["dim"])
 
+
 def color_secondary_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold", "dim"])
 
+
 def color_test_name(name):
     return color(split(name)[-1], "white", attrs=[])
+
 
 def color_result(result):
     def result_icon(result):
@@ -65,6 +70,7 @@ def color_result(result):
     # Null
     return color(icon, "magenta", attrs=["bold"])
 
+
 def format_prompt(msg, last_test_id, keyword):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -75,9 +81,11 @@ def format_prompt(msg, last_test_id, keyword):
         out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
     return out
 
+
 def format_input(msg, last_test_id, keyword):
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     return out
+
 
 def format_multiline(text, indent):
     first, rest = (text.rstrip() + "\n").split("\n", 1)
@@ -87,6 +95,7 @@ def format_multiline(text, indent):
     out = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
     out = textwrap.indent(out, indent + "  ")
     return out
+
 
 def format_type(msg):
     test_type = getattr(TestType, msg["test_type"])
@@ -132,6 +141,7 @@ def format_type(msg):
         else:
             return "Test"
 
+
 def format_test(msg, last_test_id, keyword):
     flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
@@ -140,18 +150,19 @@ def format_test(msg, last_test_id, keyword):
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
 
-    icon = '\u27A4 '
+    icon = "\u27A4 "
 
     keyword += format_type(msg)
 
     _keyword = color_keyword(keyword)
     _name = color_test_name(split(msg["test_name"])[-1])
-    _indent = indent * (msg["test_id"].count('/') - 1)
+    _indent = indent * (msg["test_id"].count("/") - 1)
     out = f"{_indent}{icon}{_keyword} {_name}\n"
 
     last_test_id.append(msg["test_id"])
 
     return out
+
 
 def format_result(msg, last_test_id):
     result = msg["result_type"]
@@ -164,9 +175,11 @@ def format_result(msg, last_test_id):
         return
 
     _result = color_result(result)
-    _test = color_keyword(format_type(msg)) + color_test_name(f" {basename(msg['result_test'])}")
+    _test = color_keyword(format_type(msg)) + color_test_name(
+        f" {basename(msg['result_test'])}"
+    )
 
-    _indent = indent * (msg["test_id"].count('/') - 1)
+    _indent = indent * (msg["test_id"].count("/") - 1)
     out = f"{_indent}{_result}"
 
     if last_test_id and last_test_id[-1] == msg["test_id"]:
@@ -175,7 +188,7 @@ def format_result(msg, last_test_id):
 
     _result_message = msg["result_message"]
     if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
-        _result_message = _result_message.strip().split("\n",1)[0].strip()
+        _result_message = _result_message.strip().split("\n", 1)[0].strip()
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
@@ -184,23 +197,24 @@ def format_result(msg, last_test_id):
             out += f" {color(format_multiline(_result_message, _indent).lstrip(), 'yellow', attrs=['bold'])}"
     elif result.startswith("X"):
         out += f" {_test}"
-        if msg['result_reason']:
+        if msg["result_reason"]:
             out += color_test_name(",")
             out += f" {color(msg['result_reason'], 'blue', attrs=['bold'])}"
     else:
         out += f" {_test}"
     return out + "\n"
 
+
 formatters = {
     Message.INPUT.name: (format_input, f""),
     Message.PROMPT.name: (format_prompt, f""),
     Message.TEST.name: (format_test, f""),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
 }
 
+
 def transform(show_input=True):
-    """Transform parsed log line into a clean format.
-    """
+    """Transform parsed log line into a clean format."""
     last_test_id = []
     line = None
     while True:

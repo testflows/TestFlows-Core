@@ -15,18 +15,28 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.report.compare.results import Handler as results_handler
-from testflows._core.cli.arg.handlers.report.compare.metrics import Handler as metrics_handler
+from testflows._core.cli.arg.handlers.report.compare.results import (
+    Handler as results_handler,
+)
+from testflows._core.cli.arg.handlers.report.compare.metrics import (
+    Handler as metrics_handler,
+)
+
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("compare", help="comparison report", epilog=epilog(),
+        parser = commands.add_parser(
+            "compare",
+            help="comparison report",
+            epilog=epilog(),
             description="Generate comparison report between runs.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        report_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        report_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         report_commands.required = True
 
         results_handler.add_command(report_commands)

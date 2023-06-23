@@ -22,6 +22,7 @@ from testflows._core.testtype import TestType
 width = 70
 count = 0
 
+
 def color_result(result):
     if result.startswith("X"):
         return color(".", "blue", attrs=["bold"])
@@ -33,11 +34,12 @@ def color_result(result):
     elif result == "Error":
         return color("E", "yellow", attrs=["bold"])
     elif result == "Fail":
-         return color("F", "red", attrs=["bold"])
+        return color("F", "red", attrs=["bold"])
     elif result == "Null":
         return color("N", "magenta", attrs=["bold"])
     else:
         raise ValueError(f"unknown result {result}")
+
 
 def format_prompt(msg):
     global count
@@ -54,11 +56,13 @@ def format_prompt(msg):
     count = 0
     return out
 
+
 def format_input(msg):
     global count
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     count = 0
     return out
+
 
 def format_result(msg):
     global count
@@ -78,15 +82,16 @@ def format_result(msg):
 
     return _result
 
+
 formatters = {
     Message.INPUT.name: (format_input,),
     Message.PROMPT.name: (format_prompt,),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
 }
 
+
 def transform(stop_event, show_input=True):
-    """Transform parsed log line into a short format.
-    """
+    """Transform parsed log line into a short format."""
     line = None
     while True:
         if line is not None:

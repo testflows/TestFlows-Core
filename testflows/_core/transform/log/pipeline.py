@@ -42,10 +42,12 @@ from .report.coverage import transform as coverage_report_transform
 from .report.metrics import transform as metrics_transform
 from .report.results import transform as results_transform
 
+
 class Pipeline(object):
     """Combines multiple steps into a pipeline
     that can be executed.
     """
+
     def __init__(self, steps, stop=None):
         self.steps = steps
         self.stop = stop
@@ -54,8 +56,7 @@ class Pipeline(object):
             next(step)
 
     def run(self):
-        """Execute pipeline.
-        """
+        """Execute pipeline."""
         item = None
         while True:
             try:
@@ -67,6 +68,7 @@ class Pipeline(object):
                         break
             except StopIteration:
                 break
+
 
 def fanout(*steps):
     """Single step of pipeline
@@ -86,6 +88,7 @@ def fanout(*steps):
         item = yield outputs or None
         outputs = []
 
+
 def fanin(combinator):
     """Combine multiple outputs into one.
     using the combinator
@@ -96,6 +99,7 @@ def fanin(combinator):
             item = combinator(item)
         item = yield item
 
+
 class RawLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False):
         stop_event = threading.Event()
@@ -104,9 +108,10 @@ class RawLogPipeline(Pipeline):
             read_transform(input, tail=tail, stop=stop_event),
             raw_transform(),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(RawLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ReadRawLogPipeline(Pipeline):
     def __init__(self, input, output, encoding=None):
@@ -115,9 +120,10 @@ class ReadRawLogPipeline(Pipeline):
         steps = [
             read_raw_transform(input, stop=stop_event, encoding=encoding),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ReadRawLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class QuietLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -128,9 +134,10 @@ class QuietLogPipeline(Pipeline):
             parse_transform(),
             quiet_transform(show_input=show_input),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(QuietLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ShortLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -148,13 +155,12 @@ class ShortLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ShortLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class NiceLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -172,13 +178,12 @@ class NiceLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(NiceLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ParallelNiceLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -196,13 +201,12 @@ class ParallelNiceLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ParallelNiceLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class BriskLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -220,13 +224,12 @@ class BriskLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(BriskLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class SlickLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -244,13 +247,12 @@ class SlickLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(SlickLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ManualLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -268,13 +270,12 @@ class ManualLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ManualLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ClassicLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -292,13 +293,12 @@ class ClassicLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ClassicLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class FailsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, only_new=False, show_input=True):
@@ -314,13 +314,12 @@ class FailsLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(FailsLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class DotsLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -338,13 +337,12 @@ class DotsLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(DotsLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ProgressLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
@@ -362,36 +360,36 @@ class ProgressLogPipeline(Pipeline):
                 totals_report_transform(stop_event),
                 version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ProgressLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class MetricsLogPipeline(Pipeline):
     def __init__(self, input, metrics):
         stop_event = threading.Event()
 
         message_types = [Message.METRIC.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(),
             metrics_transform(metrics),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(MetricsLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ResultsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
         message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -403,22 +401,21 @@ class ResultsReportLogPipeline(Pipeline):
                 unstable_report_transform(stop_event),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),
-                version_report_transform(stop_event)
+                version_report_transform(stop_event),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ResultsReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class TotalsReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
         message_types = [Message.TEST.name, Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -427,20 +424,19 @@ class TotalsReportLogPipeline(Pipeline):
             fanout(
                 totals_report_transform(stop_event, divider=""),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(TotalsReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class FailsReportLogPipeline(Pipeline):
     def __init__(self, input, output, only_new=False):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -449,20 +445,19 @@ class FailsReportLogPipeline(Pipeline):
             fanout(
                 fails_report_transform(stop_event, divider="", only_new=only_new),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(FailsReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class PassingReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
@@ -470,20 +465,19 @@ class PassingReportLogPipeline(Pipeline):
             fanout(
                 passing_report_transform(stop_event, divider=""),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(PassingReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class UnstableReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
         message_types = [Message.RESULT.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
@@ -491,20 +485,25 @@ class UnstableReportLogPipeline(Pipeline):
             fanout(
                 unstable_report_transform(stop_event, divider=""),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(UnstableReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class CoverageReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
-        message_types = [Message.TEST.name, Message.RESULT.name, Message.REQUIREMENT.name, Message.SPECIFICATION.name, Message.STOP.name]
-        grep = "grep -E '^\\{\"message_keyword\":\""
+        message_types = [
+            Message.TEST.name,
+            Message.RESULT.name,
+            Message.REQUIREMENT.name,
+            Message.SPECIFICATION.name,
+            Message.STOP.name,
+        ]
+        grep = 'grep -E \'^\\{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
 
         steps = [
@@ -513,20 +512,19 @@ class CoverageReportLogPipeline(Pipeline):
             fanout(
                 coverage_report_transform(stop_event, divider=""),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(CoverageReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class VersionReportLogPipeline(Pipeline):
     def __init__(self, input, output):
         stop_event = threading.Event()
 
         message_types = [Message.VERSION.name, Message.STOP.name]
-        grep = "grep -m2 -E '^{\"message_keyword\":\""
+        grep = 'grep -m2 -E \'^{"message_keyword":"'
         command = f"{grep}({'|'.join(message_types)})\"'"
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
@@ -534,13 +532,12 @@ class VersionReportLogPipeline(Pipeline):
             fanout(
                 version_report_transform(stop_event, divider=""),
             ),
-            fanin(
-                "".join
-            ),
+            fanin("".join),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(VersionReportLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class ResultsLogPipeline(Pipeline):
     def __init__(self, input, results, steps=True):
@@ -560,20 +557,23 @@ class ResultsLogPipeline(Pipeline):
             Message.TICKET.name,
             Message.VALUE.name,
             Message.METRIC.name,
-            Message.STOP.name
+            Message.STOP.name,
         ]
         test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
-        command = "grep -E '^\\{\"message_keyword\":\""
-        command = (f"{command}({'|'.join(message_types)})\""
-            + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
-            + "'")
+        command = 'grep -E \'^\\{"message_keyword":"'
+        command = (
+            f"{command}({'|'.join(message_types)})\""
+            + (('.+"test_type":"' + f"({'|'.join(test_types)})\"") if not steps else "")
+            + "'"
+        )
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             parse_transform(),
             results_transform(results),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(ResultsLogPipeline, self).__init__(steps, stop=stop_event)
+
 
 class CompactRawLogPipeline(Pipeline):
     def __init__(self, input, output, steps=True):
@@ -592,17 +592,19 @@ class CompactRawLogPipeline(Pipeline):
             Message.TICKET.name,
             Message.VALUE.name,
             Message.METRIC.name,
-            Message.STOP.name
+            Message.STOP.name,
         ]
         test_types = [TestType.Module.name, TestType.Suite.name, TestType.Test.name]
-        command = "grep -E '^\\{\"message_keyword\":\""
-        command = (f"{command}({'|'.join(message_types)})\""
-            + ((".+\"test_type\":\"" + f"({'|'.join(test_types)})\"") if not steps else "")
-            + "'")
+        command = 'grep -E \'^\\{"message_keyword":"'
+        command = (
+            f"{command}({'|'.join(message_types)})\""
+            + (('.+"test_type":"' + f"({'|'.join(test_types)})\"") if not steps else "")
+            + "'"
+        )
         steps = [
             read_and_filter_transform(input, command=command, stop=stop_event),
             raw_transform(),
             write_transform(output),
-            stop_transform(stop_event)
+            stop_transform(stop_event),
         ]
         super(CompactRawLogPipeline, self).__init__(steps, stop=stop_event)

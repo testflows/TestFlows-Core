@@ -34,19 +34,22 @@ from .transform.log.pipeline import ClassicLogPipeline
 from .transform.log.pipeline import FailsLogPipeline
 from .transform.log.pipeline import ManualLogPipeline
 from .transform.log.pipeline import QuietLogPipeline
-from .templog import glob as templog_glob, parser as templog_parser, dirname as templog_dirname
+from .temp import glob as temp_glob, parser as temp_parser, dirname as temp_dirname
 from .parallel import top
 from .objects import Error
 
 _handlers = []
 
+
 def _at_exit():
     for handler in _handlers:
         handler.join()
 
+
 atexit.register(_at_exit)
 
 _ctrl_c = 0
+
 
 def sigint_handler(signal, frame):
     global _ctrl_c
@@ -58,11 +61,13 @@ def sigint_handler(signal, frame):
     if top():
         top().terminate(result=Error, reason="KeyboardInterrupt")
 
+
 def cleanup():
-    """Clean up old temporary log files.
-    """
+    """Clean up old temporary log files."""
+
     def pid_exists(pid):
-        if pid < 0: return False
+        if pid < 0:
+            return False
         try:
             os.kill(pid, 0)
         except ProcessLookupError:
@@ -72,11 +77,11 @@ def cleanup():
         else:
             return True
 
-    for file in glob.glob(os.path.join(templog_dirname(), templog_glob)):
-        match = templog_parser.match(file)
+    for file in glob.glob(os.path.join(temp_dirname(), temp_glob)):
+        match = temp_parser(extension="*").match(file)
         if not match:
             continue
-        pid = int(match.groupdict()['pid'])
+        pid = int(match.groupdict()["pid"])
         if not pid_exists(pid):
             try:
                 os.remove(file)
@@ -87,6 +92,7 @@ def cleanup():
             except OSError:
                 raise
 
+
 def stdout_raw_handler():
     """Handler to output messages to sys.stdout
     using "raw" format.
@@ -94,6 +100,7 @@ def stdout_raw_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         RawLogPipeline(log, sys.stdout, tail=True).run()
+
 
 def stdout_slick_handler():
     """Handler to output messages to sys.stdout
@@ -103,6 +110,7 @@ def stdout_slick_handler():
         log.seek(0)
         SlickLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_classic_handler():
     """Handler to output messages to sys.stdout
     using "classic" format.
@@ -110,6 +118,7 @@ def stdout_classic_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         ClassicLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 
 def stdout_fails_handler():
     """Handler to output messages to sys.stdout
@@ -119,13 +128,17 @@ def stdout_fails_handler():
         log.seek(0)
         FailsLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_new_fails_handler():
     """Handler to output messages to sys.stdout
     using "fails" format that shows only new fails.
     """
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
-        FailsLogPipeline(log, sys.stdout, tail=True, only_new=True, show_input=False).run()
+        FailsLogPipeline(
+            log, sys.stdout, tail=True, only_new=True, show_input=False
+        ).run()
+
 
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
@@ -135,6 +148,7 @@ def stdout_short_handler():
         log.seek(0)
         ShortLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_nice_handler():
     """Handler to output messages to sys.stdout
     using "nice" format.
@@ -142,6 +156,7 @@ def stdout_nice_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         NiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 
 def stdout_pnice_handler():
     """Handler to output messages to sys.stdout
@@ -151,6 +166,7 @@ def stdout_pnice_handler():
         log.seek(0)
         ParallelNiceLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_brisk_handler():
     """Handler to output messages to sys.stdout
     using "brisk" format.
@@ -158,6 +174,7 @@ def stdout_brisk_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         BriskLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 
 def stdout_manual_handler():
     """Handler to output messages to sys.stdout
@@ -167,6 +184,7 @@ def stdout_manual_handler():
         log.seek(0)
         ManualLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_dots_handler():
     """Handler to output messages to sys.stdout
     using "dots" format.
@@ -174,6 +192,7 @@ def stdout_dots_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         DotsLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 
 def stdout_progress_handler():
     """Handler to output messages to sys.stdout
@@ -183,6 +202,7 @@ def stdout_progress_handler():
         log.seek(0)
         ProgressLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
+
 def stdout_quiet_handler():
     """Handler that prints no output to sys.stdout unless
     top level test fails.
@@ -190,6 +210,7 @@ def stdout_quiet_handler():
     with CompressedFile(settings.read_logfile, tail=True) as log:
         log.seek(0)
         QuietLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
 
 def start_output_handler():
     output_handler_map = {
@@ -213,6 +234,7 @@ def start_output_handler():
     handler.start()
     _handlers.append(handler)
 
+
 def start_database_handler():
     if not settings.database:
         return
@@ -220,13 +242,13 @@ def start_database_handler():
     from testflows.database import database_handler
 
     handler = threading.Thread(target=database_handler)
-    handler.name = 'tfs-database'
+    handler.name = "tfs-database"
     handler.start()
     _handlers.append(handler)
 
+
 def init():
-    """Initialization before we run the first test.
-    """
+    """Initialization before we run the first test."""
     if threading.current_thread() is not threading.main_thread():
         raise RuntimeError("top level test was not started in main thread")
     signal.signal(signal.SIGINT, sigint_handler)

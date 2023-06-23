@@ -14,8 +14,10 @@
 # limitations under the License.
 from .utils.enum import IntEnum
 
+
 class TestType(IntEnum):
     """Test type."""
+
     Module = 40
     Suite = 30
     Test = 20
@@ -24,11 +26,13 @@ class TestType(IntEnum):
     RetryIteration = 14
     Step = 10
 
+
 class TestSubType(IntEnum):
     """Test behaviour subtype."""
+
     Book = 70
     Feature = 60
-    Chapter  = 55
+    Chapter = 55
     Scenario = 50
     Document = 48
     Section = 47

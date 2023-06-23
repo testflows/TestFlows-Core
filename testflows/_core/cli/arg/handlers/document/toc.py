@@ -20,22 +20,49 @@ from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.document.toc import generate
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("toc", help="generate table of contents", epilog=epilog(),
+        parser = commands.add_parser(
+            "toc",
+            help="generate table of contents",
+            epilog=epilog(),
             description="Genarate table of contents for a document.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("input", metavar="input", type=argtype.file("r", bufsize=1, encoding="utf-8"),
-                nargs="?", help="input file, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=str,
-                nargs="?", help='output file, default: stdout', default="-")
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.file("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input file, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=str,
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
 
-        parser.add_argument("--heading", metavar="name", type=str, default="Table of Contents",
-                help="table of contents heading name, default: 'Table of Contents'")
-        parser.add_argument("-u", "--update", action="store_true", default=False,
-                help="output original document with an updated table of contents")
+        parser.add_argument(
+            "--heading",
+            metavar="name",
+            type=str,
+            default="Table of Contents",
+            help="table of contents heading name, default: 'Table of Contents'",
+        )
+        parser.add_argument(
+            "-u",
+            "--update",
+            action="store_true",
+            default=False,
+            help="output original document with an updated table of contents",
+        )
 
         parser.set_defaults(func=cls())
 

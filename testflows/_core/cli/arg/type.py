@@ -30,8 +30,9 @@ import testflows._core.contrib.rsa as rsa
 KeyValue = namedtuple("KeyValue", "key value")
 NoneValue = "__none__"
 
+
 class FileType(object):
-    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None, safe=False):
+    def __init__(self, mode="r", bufsize=-1, encoding=None, errors=None, safe=False):
         self._mode = mode
         self._bufsize = bufsize
         self._encoding = encoding
@@ -40,13 +41,13 @@ class FileType(object):
 
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
-        if string == '-':
-            if 'r' in self._mode:
-                if 'b' in self._mode:
+        if string == "-":
+            if "r" in self._mode:
+                if "b" in self._mode:
                     return sys.stdin.buffer
                 return sys.stdin
-            elif 'w' in self._mode:
-                if 'b' in self._mode:
+            elif "w" in self._mode:
+                if "b" in self._mode:
                     return sys.stdout.buffer
                 return sys.stdout
             else:
@@ -56,37 +57,40 @@ class FileType(object):
         # all other arguments are used as file names
         try:
             if self._safe and os.path.exists(string):
-                raise FileExistsError(f"File '{string}' already exists, please delete it first.")
+                raise FileExistsError(
+                    f"File '{string}' already exists, please delete it first."
+                )
 
-            return open(string, self._mode, self._bufsize, self._encoding,
-                        self._errors)
+            return open(string, self._mode, self._bufsize, self._encoding, self._errors)
         except OSError as e:
             message = argparse._("can't open '%s': %s")
             raise ArgumentTypeError(message % (string, e))
 
     def __repr__(self):
         args = self._mode, self._bufsize
-        kwargs = [('encoding', self._encoding), ('errors', self._errors)]
-        args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
-                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
-                              if arg is not None])
-        return '%s(%s)' % (type(self).__name__, args_str)
+        kwargs = [("encoding", self._encoding), ("errors", self._errors)]
+        args_str = ", ".join(
+            [repr(arg) for arg in args if arg != -1]
+            + ["%s=%r" % (kw, arg) for kw, arg in kwargs if arg is not None]
+        )
+        return "%s(%s)" % (type(self).__name__, args_str)
+
 
 class LogFileType(object):
-    def __init__(self, mode='r', bufsize=-1, encoding=None, errors=None):
+    def __init__(self, mode="r", bufsize=-1, encoding=None, errors=None):
         self._mode = mode
         self._encoding = encoding
         self._errors = errors
 
     def __call__(self, string):
         # the special argument "-" means sys.std{in,out}
-        if string == '-':
-            if 'r' in self._mode:
+        if string == "-":
+            if "r" in self._mode:
                 fp = CompressedFile(sys.stdin.buffer, self._mode)
                 if self._encoding:
                     return io.TextIOWrapper(fp, self._encoding, self._errors)
                 return fp
-            elif 'w' in self._mode:
+            elif "w" in self._mode:
                 fp = CompressedFile(sys.stdout.buffer, self._mode)
                 if self._encoding:
                     return io.TextIOWrapper(fp, self._encoding, self._errors)
@@ -107,11 +111,13 @@ class LogFileType(object):
 
     def __repr__(self):
         args = self._mode
-        kwargs = [('encoding', self._encoding), ('errors', self._errors)]
-        args_str = ', '.join([repr(arg) for arg in args if arg != -1] +
-                             ['%s=%r' % (kw, arg) for kw, arg in kwargs
-                              if arg is not None])
-        return '%s(%s)' % (type(self).__name__, args_str)
+        kwargs = [("encoding", self._encoding), ("errors", self._errors)]
+        args_str = ", ".join(
+            [repr(arg) for arg in args if arg != -1]
+            + ["%s=%r" % (kw, arg) for kw, arg in kwargs if arg is not None]
+        )
+        return "%s(%s)" % (type(self).__name__, args_str)
+
 
 def path(p, special=""):
     if p in special or []:
@@ -120,27 +126,30 @@ def path(p, special=""):
         raise ArgumentTypeError(f"path does not exist: '{os.path.abspath(p)}'")
     return p
 
+
 def file(*args, **kwargs):
     """File type."""
     return FileType(*args, **kwargs)
+
 
 def logfile(*args, **kwargs):
     """Log file type."""
     return LogFileType(*args, **kwargs)
 
+
 def rsa_private_key_pem_file(p):
-    """RSA private key PEM file type.
-    """
+    """RSA private key PEM file type."""
     with open(p, mode="rb") as pem_file:
         return rsa.PrivateKey.load_pkcs1(pem_file.read())
 
-def key_value(s, sep='='):
-    """Parse a key, value pair using a seperator (default: '=').
-    """
+
+def key_value(s, sep="="):
+    """Parse a key, value pair using a seperator (default: '=')."""
     if sep not in s:
         raise ArgumentTypeError(f"invalid format of key{sep}value")
-    key, value= s.split(sep, 1)
+    key, value = s.split(sep, 1)
     return KeyValue(key.strip(), value.strip())
+
 
 def count(value):
     try:
@@ -149,6 +158,7 @@ def count(value):
     except:
         raise ArgumentTypeError(f"{value} is not a positive number")
     return value
+
 
 def repeat(value):
     try:
@@ -163,13 +173,17 @@ def repeat(value):
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
 
+
 def retry(value):
     try:
         fields = list(csv.reader([value], "unix"))[-1]
-        jitter = None # can't be specified
+        jitter = None  # can't be specified
         if len(fields) < 2:
             raise ValueError("needs at least 2 values")
-        pattern, count, timeout, delay, backoff = [*fields, *["", None, None, 0, 1][len(fields):]]
+        pattern, count, timeout, delay, backoff = [
+            *fields,
+            *["", None, None, 0, 1][len(fields) :],
+        ]
         if not pattern:
             pattern = ""
         if not count:
@@ -180,10 +194,18 @@ def retry(value):
             delay = 0
         if not backoff:
             backoff = 1
-        option = Retry(count=count, timeout=timeout, delay=delay, backoff=backoff, jitter=jitter, pattern=pattern)
+        option = Retry(
+            count=count,
+            timeout=timeout,
+            delay=delay,
+            backoff=backoff,
+            jitter=jitter,
+            pattern=pattern,
+        )
     except Exception as e:
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
+
 
 def tags_filter(value):
     try:
@@ -199,6 +221,7 @@ def tags_filter(value):
         raise ArgumentTypeError(f"'{value}' is invalid")
     return option
 
+
 def onoff(value):
     if value.lower() in ["yes", "1", "on"]:
         return True
@@ -208,7 +231,11 @@ def onoff(value):
         return NoneValue
     raise ArgumentTypeError(f"'{value}' is invalid")
 
-onoff.metavar = str(set(["yes", "1", "on", "no", "0", "off"])).replace(" ","").replace("'","")
+
+onoff.metavar = (
+    str(set(["yes", "1", "on", "no", "0", "off"])).replace(" ", "").replace("'", "")
+)
+
 
 def trace_level(value):
     if value.lower() in ["debug", "info", "warning", "error", "critical"]:
@@ -216,5 +243,6 @@ def trace_level(value):
     else:
         raise ArgumentTypeError(f"'{value}' is invalid")
 
+
 trace_level.choices = ["debug", "info", "warning", "error", "critical"]
-trace_level.metavar = str(set(trace_level.choices)).replace(" ","").replace("'","")
+trace_level.metavar = str(set(trace_level.choices)).replace(" ", "").replace("'", "")

@@ -19,6 +19,7 @@ from collections import namedtuple
 from .utils.enum import IntEnum
 from .baseobject import namedtuple_with_defaults
 
+
 class Message(IntEnum):
     NONE = 0
     #
@@ -53,23 +54,27 @@ class Message(IntEnum):
     #
     TEXT = 23
 
+
 class MessageObjectType(IntEnum):
     NONE = 0
     TEST = 1 << 0
 
+
 MessageMap = namedtuple(
-        "MessageMap",
-        "NONE "
-        "TEST RESULT "
-        "EXCEPTION NOTE DEBUG TRACE "
-        "VERSION PROTOCOL "
-        "INPUT "
-        "VALUE METRIC TICKET ARGUMENT TAG ATTRIBUTE REQUIREMENT "
-        "MAP STOP SPECIFICATION PROMPT TEXT"
-    )
+    "MessageMap",
+    "NONE "
+    "TEST RESULT "
+    "EXCEPTION NOTE DEBUG TRACE "
+    "VERSION PROTOCOL "
+    "INPUT "
+    "VALUE METRIC TICKET ARGUMENT TAG ATTRIBUTE REQUIREMENT "
+    "MAP STOP SPECIFICATION PROMPT TEXT",
+)
+
 
 def dumps(o):
     return json.dumps(o, separators=(",", ":"), ensure_ascii=False)
+
 
 def loads(s):
     return json.loads(s)

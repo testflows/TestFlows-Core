@@ -20,21 +20,51 @@ from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.document.convert import generate, stylesheet
 from testflows._core.contrib.markdown2 import Markdown
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("convert", help="convert document", epilog=epilog(),
+        parser = commands.add_parser(
+            "convert",
+            help="convert document",
+            epilog=epilog(),
             description="Convert markdown document.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("input", metavar="input", type=argtype.file("r", bufsize=1, encoding="utf-8"),
-            nargs="?", help="input file, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
-            nargs="?", help='output file, default: stdout', default="-")
-        parser.add_argument("-f", "--format", metavar="format", type=str, help="format, default: html",
-            choices=["html"], default="html")
-        parser.add_argument("-s", "--stylesheet", metavar="css", type=argtype.file("r", bufsize=1, encoding="utf-8"),
-            help="custom stylesheet", default=stylesheet)
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.file("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input file, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.file("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
+        parser.add_argument(
+            "-f",
+            "--format",
+            metavar="format",
+            type=str,
+            help="format, default: html",
+            choices=["html"],
+            default="html",
+        )
+        parser.add_argument(
+            "-s",
+            "--stylesheet",
+            metavar="css",
+            type=argtype.file("r", bufsize=1, encoding="utf-8"),
+            help="custom stylesheet",
+            default=stylesheet,
+        )
 
         parser.set_defaults(func=cls())
 

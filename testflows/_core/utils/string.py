@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def title(s):
     """Convert string to title case keeping any words
     already starting with capital letter as is.

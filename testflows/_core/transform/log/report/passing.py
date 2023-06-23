@@ -24,6 +24,7 @@ from testflows._core.utils.timefuncs import strftimedelta
 
 indent = " " * 2
 
+
 def color_result(result, attrs=None):
     if attrs is None:
         attrs = ["bold"]
@@ -43,6 +44,7 @@ def color_result(result, attrs=None):
     else:
         raise ValueError(f"unknown result {result}")
 
+
 def add_result(msg, results):
     result = msg["result_type"]
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
@@ -56,9 +58,11 @@ def add_result(msg, results):
     if result in ("OK", "Skip"):
         results[msg["test_id"]] = (msg, result)
 
+
 processors = {
     Message.RESULT.name: (add_result,),
 }
+
 
 def generate(results, divider):
     """Generate report"""
@@ -73,7 +77,9 @@ def generate(results, divider):
         passing += _color("\u2714") + f" [ {_color(result)} ] {msg['result_test']}"
         if msg["result_reason"]:
             passing += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
-        passing += " " + color("(" + strftimedelta(msg['message_rtime']) + ")", "white", attrs=["dim"])
+        passing += " " + color(
+            "(" + strftimedelta(msg["message_rtime"]) + ")", "white", attrs=["dim"]
+        )
         passing += "\n"
     if passing:
         passing = color(f"{divider}Passing\n\n", "white", attrs=["bold"]) + passing
@@ -82,9 +88,9 @@ def generate(results, divider):
 
     return report or None
 
+
 def transform(stop, divider="\n"):
-    """Transform parsed log line into a short format.
-    """
+    """Transform parsed log line into a short format."""
     line = None
     results = {}
     while True:

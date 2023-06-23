@@ -30,8 +30,13 @@ from .parallel.service import BaseServiceObject
 
 tracer = tracing.getLogger(__name__)
 
+
 def object_fields(obj, prefix):
-    return {f"{prefix}{'_' if prefix else ''}{field}":getattr(obj, field) for field in obj._fields}
+    return {
+        f"{prefix}{'_' if prefix else ''}{field}": getattr(obj, field)
+        for field in obj._fields
+    }
+
 
 def str_or_repr(v):
     try:
@@ -39,11 +44,13 @@ def str_or_repr(v):
     except:
         return repr(v)
 
+
 class TestOutput(object):
     """Test output protocol.
 
     :param io: message IO
     """
+
     protocol_version = "TFSPv2.1"
 
     def __init__(self, test, io):
@@ -53,13 +60,17 @@ class TestOutput(object):
         self.msg_count = 0
         self.prefix = {
             "test_type": str(self.test.type),
-            "test_subtype": str(self.test.subtype) if self.test.subtype is not None else None,
+            "test_subtype": str(self.test.subtype)
+            if self.test.subtype is not None
+            else None,
             "test_id": self.test.id_str,
             "test_name": self.test.name,
             "test_flags": int(self.test.flags),
             "test_cflags": int(self.test.cflags),
             "test_level": len(self.test.id),
-            "test_parent_type": str(self.test.parent_type) if self.test.parent_type is not None else None
+            "test_parent_type": str(self.test.parent_type)
+            if self.test.parent_type is not None
+            else None,
         }
 
     def message(self, keyword, message, object_type=0, stream=None):
@@ -78,35 +89,48 @@ class TestOutput(object):
             "message_stream": stream,
             "message_level": (
                 len(self.test.id) + 1
-                if keyword not in (Message.TEST, Message.RESULT, Message.PROTOCOL, Message.VERSION)
+                if keyword
+                not in (Message.TEST, Message.RESULT, Message.PROTOCOL, Message.VERSION)
                 else len(self.test.id)
             ),
             "message_time": round(msg_time, settings.time_resolution),
-            "message_rtime": round(msg_time - self.test.start_time, settings.time_resolution)
+            "message_rtime": round(
+                msg_time - self.test.start_time, settings.time_resolution
+            ),
         }
         msg.update(self.prefix)
 
         if settings.secrets_registry:
             if not settings.secrets_registry.is_empty():
                 if "message" in message and message["message"]:
-                    message["message"] = settings.secrets_registry.filter(message["message"])
+                    message["message"] = settings.secrets_registry.filter(
+                        message["message"]
+                    )
                 if "result_message" in message and message["result_message"]:
-                    message["result_message"] = settings.secrets_registry.filter(message["result_message"])
+                    message["result_message"] = settings.secrets_registry.filter(
+                        message["result_message"]
+                    )
                 if "test_description" in message and message["test_description"]:
-                    message["test_description"] = settings.secrets_registry.filter(message["test_description"])
+                    message["test_description"] = settings.secrets_registry.filter(
+                        message["test_description"]
+                    )
                 if "argument_value" in message and message["argument_value"]:
-                    message["argument_value"] = settings.secrets_registry.filter(message["argument_value"])
+                    message["argument_value"] = settings.secrets_registry.filter(
+                        message["argument_value"]
+                    )
 
         msg.update(message)
-        self.test.tracer.debug("test message", extra={"test_message":msg})
+        self.test.tracer.debug("test message", extra={"test_message": msg})
 
         msg = dumps(msg)
 
-        self.msg_hash = settings.hash_func(msg.encode("utf-8")).hexdigest()[:settings.hash_length]
+        self.msg_hash = settings.hash_func(msg.encode("utf-8")).hexdigest()[
+            : settings.hash_length
+        ]
         self.msg_count += 1
 
-        parts = msg.split(",",2)
-        parts[1] = f"\"message_hash\":\"{self.msg_hash}\""
+        parts = msg.split(",", 2)
+        parts[1] = f'"message_hash":"{self.msg_hash}"'
         self.io.write(f"{parts[0]},{parts[1]},{parts[2]}{end_of_message}")
 
     def stop(self):
@@ -114,14 +138,12 @@ class TestOutput(object):
         self.message(Message.STOP, {})
 
     def protocol(self):
-        """Output protocol version message.
-        """
+        """Output protocol version message."""
         msg = {"protocol_version": self.protocol_version}
         self.message(Message.PROTOCOL, msg)
 
     def version(self):
-        """Output framework version message.
-        """
+        """Output framework version message."""
         msg = {"framework_version": __version__}
         self.message(Message.VERSION, msg)
 
@@ -150,8 +172,7 @@ class TestOutput(object):
         self.message(Message.EXCEPTION, msg)
 
     def test_message(self):
-        """Output test message.
-        """
+        """Output test message."""
         msg = {
             "test_name": self.test.name,
             "test_module": self.test.module,
@@ -166,7 +187,14 @@ class TestOutput(object):
         [self.requirement(req) for req in self.test.requirements.values()]
         [self.argument(arg) for arg in self.test.args.values()]
         [self.tag(Tag(tag)) for tag in self.test.tags]
-        [self.example(ExamplesRow(row._idx, row._fields, [str(f) for f in row], row._row_format)) for row in self.test.examples]
+        [
+            self.example(
+                ExamplesRow(
+                    row._idx, row._fields, [str(f) for f in row], row._row_format
+                )
+            )
+            for row in self.test.examples
+        ]
         [self.map(mapping) for mapping in self.test.maps]
 
     def attribute(self, attribute, object_type=MessageObjectType.TEST):
@@ -229,7 +257,7 @@ class TestOutput(object):
             "result_message": result.message,
             "result_reason": result.reason,
             "result_type": str(result.type),
-            "result_test": result.test
+            "result_test": result.test,
         }
         self.message(Message.RESULT, msg, object_type=MessageObjectType.TEST)
 
@@ -265,17 +293,18 @@ class TestOutput(object):
         msg = {"message": str(message)}
         self.message(Message.TRACE, msg)
 
+
 class TestInput(object):
-    """Test input.
-    """
+    """Test input."""
+
     def __init__(self, test, io):
         self.test = test
         self.io = io
 
 
 class TestIO(object):
-    """Test input and output protocol.
-    """
+    """Test input and output protocol."""
+
     def __init__(self, test):
         self.io = MessageIO(LogIO())
         self.output = TestOutput(test, self.io)
@@ -304,13 +333,14 @@ class TestIO(object):
         """
         if not msg:
             return
-        self.output.message(Message.NONE, {"message":str(msg).rstrip()}, stream=stream)
+        self.output.message(Message.NONE, {"message": str(msg).rstrip()}, stream=stream)
 
     def flush(self):
         self.io.flush()
 
     def close(self, flush=False, final=False):
         self.io.close(flush=flush, final=final)
+
 
 class MessageIO(object):
     """Message input and output.
@@ -350,14 +380,14 @@ class MessageIO(object):
             self.buffer += msg
 
     def flush(self):
-        """Flush output buffer.
-        """
+        """Flush output buffer."""
         if self.buffer:
             self.io.write(f"{self.buffer}\n")
         self.buffer = ""
 
     def close(self, flush=False, final=False):
         self.io.close(flush=flush, final=final)
+
 
 class NamedMessageIO(MessageIO):
     """Message input and output.
@@ -389,16 +419,15 @@ class NamedMessageIO(MessageIO):
             self.buffer = messages[-1]
 
     def flush(self):
-        """Flush output buffer.
-        """
+        """Flush output buffer."""
         if self.buffer:
             self.io.write(f"{self.buffer}\n", stream=self.stream)
         self.buffer = ""
 
 
 class ProtectedFile:
-    """Thread lock wrapped file descriptor.
-    """
+    """Thread lock wrapped file descriptor."""
+
     def __init__(self, fd):
         self.fd = fd
         self.lock = threading.Lock()
@@ -429,8 +458,8 @@ class ProtectedFile:
 
 
 class LogReader(object):
-    """Read messages from the log.
-    """
+    """Read messages from the log."""
+
     lock = threading.Lock()
     fd = None
 
@@ -439,7 +468,9 @@ class LogReader(object):
 
         with cls.lock:
             if not cls.fd:
-                cls.fd = fd or ProtectedFile(open(settings.read_logfile, "rb", buffering=0))
+                cls.fd = fd or ProtectedFile(
+                    open(settings.read_logfile, "rb", buffering=0)
+                )
 
             return object.__new__(LogReader)
 
@@ -461,8 +492,8 @@ class LogReader(object):
 
 
 class LogWriter(object):
-    """Singleton log file writer.
-    """
+    """Singleton log file writer."""
+
     lock = threading.Lock()
     instance = None
     auto_flush_interval = 0.15
@@ -473,12 +504,16 @@ class LogWriter(object):
         with cls.lock:
             if not cls.instance:
                 self = object.__new__(LogWriter)
-                self.fd = fd or ProtectedFile(open(settings.write_logfile, "ab", buffering=0))
+                self.fd = fd or ProtectedFile(
+                    open(settings.write_logfile, "ab", buffering=0)
+                )
                 self.lock = threading.Lock()
                 self.buffer = []
                 self.pool = Pool(1)
                 self.cancel = False
-                self.pool.apply_async(self.flush, (), dict(sleep=cls.auto_flush_interval, force=True))
+                self.pool.apply_async(
+                    self.flush, (), dict(sleep=cls.auto_flush_interval, force=True)
+                )
                 cls.instance = self
             return cls.instance
 
@@ -509,7 +544,9 @@ class LogWriter(object):
 
             if not final and threading.main_thread().is_alive():
                 self.cancel = False
-                self.pool.apply_async(self.flush, (), dict(sleep=self.auto_flush_interval, force=True))
+                self.pool.apply_async(
+                    self.flush, (), dict(sleep=self.auto_flush_interval, force=True)
+                )
 
     def close(self, flush=False, final=False):
         if final:
@@ -527,6 +564,7 @@ class LogIO(object):
     :param read: file descriptor for read
     :param write: file descriptor for write
     """
+
     def __init__(self):
         if isinstance(settings.write_logfile, BaseServiceObject):
             self.writer = LogWriter(fd=settings.write_logfile)

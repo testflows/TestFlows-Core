@@ -1,16 +1,17 @@
 import asyncio
 from testflows.core import *
 
+
 @TestCase
 async def my_test(self):
     note("my test")
     fail("foo")
 
+
 @TestModule
 @Name("regression")
 async def module(self):
-    """Check support for top level test to be async.
-    """
+    """Check support for top level test to be async."""
     note("note")
     async with Test("foo"):
         note("test foo")
@@ -25,8 +26,10 @@ async def module(self):
     async with Test("test2"):
         pass
 
+
 async def start():
     await Module(run=foo_module)
+
 
 if main():
     with Module("main"):

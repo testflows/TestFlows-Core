@@ -14,6 +14,7 @@
 # limitations under the License.
 from enum import IntEnum as IntEnum
 
+
 class IntEnum(IntEnum):
     def __str__(self):
         return f"{self._name_}"

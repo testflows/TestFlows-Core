@@ -2,6 +2,7 @@ from testflows.core import *
 from testflows.asserts import raises
 from testflows.connect import Shell
 
+
 @TestScenario
 def check_filtering(self, secret):
     with When("in note, debug, trace"):
@@ -11,17 +12,17 @@ def check_filtering(self, secret):
 
     with When("in terminal"):
         with Shell() as bash:
-            bash(f"export SECRET=\"{secret.value}\"")
+            bash(f'export SECRET="{secret.value}"')
+
 
 @TestModule
 def feature(self):
-    """Test basic usage of secret.
-    """
+    """Test basic usage of secret."""
     secret = Secret("secret")("hello there")
 
     with When("creating secret"):
         Secret("my_secret")("my secret value")
-    
+
     with When("creating secret with invalid name"):
         with raises(ValueError):
             Secret("my secret")("my secret value")
@@ -44,7 +45,7 @@ def feature(self):
 
     with When("in value"):
         value("test", {secret.value: secret.value})
-    
+
     with When("in tag value", tags=[secret.value, secret.value]):
         pass
 
@@ -71,6 +72,7 @@ def feature(self):
 
     with When("RSASecret object"):
         s = RSASecret("my RSA encrypted secret")
+
 
 if main():
     feature()

@@ -19,17 +19,34 @@ from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.document.srs import generate
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("generate", help="generate requirements", epilog=epilog(),
+        parser = commands.add_parser(
+            "generate",
+            help="generate requirements",
+            epilog=epilog(),
             description="Generate requirements from an SRS document.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("input", metavar="input", type=argtype.file("r", bufsize=1, encoding="utf-8"),
-                nargs="?", help="input file, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
-                nargs="?", help='output file, default: stdout', default="-")
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.file("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input file, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.file("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
 
         parser.set_defaults(func=cls())
 

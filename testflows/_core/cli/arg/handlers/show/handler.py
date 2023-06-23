@@ -26,25 +26,39 @@ from testflows._core.cli.arg.handlers.show.details import Handler as details_han
 from testflows._core.cli.arg.handlers.show.metrics import Handler as metrics_handler
 from testflows._core.cli.arg.handlers.show.procedure import Handler as procedure_handler
 from testflows._core.cli.arg.handlers.show.arguments import Handler as arguments_handler
-from testflows._core.cli.arg.handlers.show.requirements import Handler as requirements_handler
-from testflows._core.cli.arg.handlers.show.attributes import Handler as attributes_handler
+from testflows._core.cli.arg.handlers.show.requirements import (
+    Handler as requirements_handler,
+)
+from testflows._core.cli.arg.handlers.show.attributes import (
+    Handler as attributes_handler,
+)
 from testflows._core.cli.arg.handlers.show.tags import Handler as tags_handler
-from testflows._core.cli.arg.handlers.show.description import Handler as description_handler
+from testflows._core.cli.arg.handlers.show.description import (
+    Handler as description_handler,
+)
 from testflows._core.cli.arg.handlers.show.result import Handler as result_handler
 from testflows._core.cli.arg.handlers.show.examples import Handler as examples_handler
-from testflows._core.cli.arg.handlers.show.specifications import Handler as specifications_handler
+from testflows._core.cli.arg.handlers.show.specifications import (
+    Handler as specifications_handler,
+)
 from testflows._core.cli.arg.handlers.show.messages import Handler as messages_handler
 from testflows._core.cli.arg.handlers.show.tests import Handler as tests_handler
+
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("show", help="show test data", epilog=epilog(),
+        parser = commands.add_parser(
+            "show",
+            help="show test data",
+            epilog=epilog(),
             description="Show test data.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        show_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        show_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         show_commands.required = True
         results_handler.add_command(show_commands)
         passing_handler.add_command(show_commands)

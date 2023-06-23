@@ -17,16 +17,18 @@ from collections import namedtuple
 
 InitArgs = namedtuple("InitArgs", "args kwargs")
 
+
 def namedtuple_with_defaults(*args, defaults=()):
     nt = namedtuple(*args)
     nt.__new__.__defaults__ = defaults
     [setattr(nt, f"_{field}", idx) for idx, field in enumerate(nt._fields)]
     return nt
 
+
 def get(a, b):
-    """a if not a is None else b.
-    """
+    """a if not a is None else b."""
     return a if a is not None else b
+
 
 def hash(*s, short=False):
     """Calculate standard hash.
@@ -34,15 +36,15 @@ def hash(*s, short=False):
     :param s: strings
     :param short: short version, default: False
     """
-    value = sha1(''.join(s).encode("utf-8")).hexdigest()[:32]
+    value = sha1("".join(s).encode("utf-8")).hexdigest()[:32]
     if short:
         return value[-16:]
     return value
 
 
 class TestObject(object):
-    """Base class for all the test objects.
-    """
+    """Base class for all the test objects."""
+
     #: object fields used to represent state of the object
     _fields = ()
     #: defaults for the fields
@@ -50,23 +52,26 @@ class TestObject(object):
 
     def __new__(cls, *args, **kwargs):
         obj = super(TestObject, cls).__new__(cls)
-        obj.initargs=InitArgs(
-            args=[a for a in args],
-            kwargs={k: v for k,v in kwargs.items()})
+        obj.initargs = InitArgs(
+            args=[a for a in args], kwargs={k: v for k, v in kwargs.items()}
+        )
         return obj
 
     @property
     def id(self):
-        return hash(*[repr(getattr(self, field)) for field in self._fields if field != "id"])
+        return hash(
+            *[repr(getattr(self, field)) for field in self._fields if field != "id"]
+        )
 
     def __iter__(self):
         return iter([getattr(self, field) for field in self._fields])
 
     def __repr__(self):
-        """Custom object representation.
-        """
+        """Custom object representation."""
         args = ",".join([repr(arg) for arg in self.initargs.args])
-        kwargs = ",".join([name + "=" + repr(value) for name, value in self.initargs.kwargs.items()])
+        kwargs = ",".join(
+            [name + "=" + repr(value) for name, value in self.initargs.kwargs.items()]
+        )
         name = self.__class__.__name__
         if args and kwargs:
             args += ","
@@ -74,13 +79,14 @@ class TestObject(object):
 
 
 class TestArg(TestObject):
-    """Base class for all test argument object.
-    """
+    """Base class for all test argument object."""
+
     pass
+
 
 class Table(tuple, TestObject):
     _fields = ("header", "rows", "row_format")
-    _defaults = (None, ) * 3
+    _defaults = (None,) * 3
     _row_type_name = "Row"
 
     def __new__(cls, header=None, rows=None, row_format=None, _row_type=None):
@@ -104,16 +110,16 @@ class Table(tuple, TestObject):
                 return self._asdict()
 
         obj = super(Table, cls).__new__(cls, [Row(*row) for row in rows])
-        obj.initargs=InitArgs(
-            args=[header, rows, row_format],
-            kwargs={})
+        obj.initargs = InitArgs(args=[header, rows, row_format], kwargs={})
         obj.header = header
         obj.rows = obj
         obj.row_type = row_type
         if row_format:
             row_format % tuple(obj.header.split(" "))
         else:
-            row_format = Table.default_row_format(row_type._fields, obj[0] if obj else None)
+            row_format = Table.default_row_format(
+                row_type._fields, obj[0] if obj else None
+            )
         obj.row_format = row_format
         return obj
 
@@ -138,14 +144,16 @@ class Table(tuple, TestObject):
         return row_format % row
 
     def __str__(self):
-        """Return markdown-styled table representation.
-        """
+        """Return markdown-styled table representation."""
         s = [Table.__str_header__(self.row_type._fields, self.row_format)]
         s += [Table.__str_row__(row, self.row_format) for row in self]
         return "\n".join(s)
 
     @classmethod
     def from_table(cls, table):
-        """Creates table from a table.
-        """
-        return cls(header=" ".join(table.row_type._fields), rows=table, row_format=table.row_format)
+        """Creates table from a table."""
+        return cls(
+            header=" ".join(table.row_type._fields),
+            rows=table,
+            row_format=table.row_format,
+        )

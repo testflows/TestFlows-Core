@@ -26,6 +26,7 @@ from .. import _get_parallel_context
 from ..asyncio import is_running_in_event_loop, wrap_future, asyncio
 from .. import current, join as parallel_join
 
+
 def _worker(executor_weakref, work_queue):
     try:
         while True:
@@ -51,13 +52,19 @@ def _worker(executor_weakref, work_queue):
                 finally:
                     del executor
     except BaseException:
-        _base._base.LOGGER.critical('Exception in thread worker', exc_info=True)
+        _base._base.LOGGER.critical("Exception in thread worker", exc_info=True)
 
 
 class ThreadPoolExecutor(_base.ThreadPoolExecutor):
-    """Thread pool executor.
-    """
-    def __init__(self, max_workers=16, thread_name_prefix="", _check_max_workers=True, join_on_shutdown=True):
+    """Thread pool executor."""
+
+    def __init__(
+        self,
+        max_workers=16,
+        thread_name_prefix="",
+        _check_max_workers=True,
+        join_on_shutdown=True,
+    ):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
@@ -67,14 +74,15 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         self._broken = False
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
-        self._thread_name_prefix = f"{thread_name_prefix}ThreadPoolExecutor-{self._counter()}"
+        self._thread_name_prefix = (
+            f"{thread_name_prefix}ThreadPoolExecutor-{self._counter()}"
+        )
         self._uid = str(uuid.uuid1())
         self._join_on_shutdown = join_on_shutdown
 
     @property
     def open(self):
-        """Return if pool is opened.
-        """
+        """Return if pool is opened."""
         return bool(self._open)
 
     def __enter__(self):
@@ -93,8 +101,9 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
             if self._shutdown:
                 raise RuntimeError("cannot schedule new futures after shutdown")
             if _base._shutdown:
-                raise RuntimeError("cannot schedule new futures after "
-                    "interpreter shutdown")
+                raise RuntimeError(
+                    "cannot schedule new futures after " "interpreter shutdown"
+                )
 
             future = Future()
             future._executor_uid = self._uid
@@ -127,9 +136,12 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
         num_threads = len(self._threads)
         if num_threads < self._max_workers:
             thread_name = "%s_%d" % (self._thread_name_prefix or self, num_threads)
-            thread = threading.Thread(name=thread_name,
-                target=_worker, args=(weakref.ref(self, weakref_cb),
-                self._work_queue), daemon=True)
+            thread = threading.Thread(
+                name=thread_name,
+                target=_worker,
+                args=(weakref.ref(self, weakref_cb), self._work_queue),
+                daemon=True,
+            )
             thread.start()
             self._threads.add(thread)
             _base._threads_queues[thread] = self._work_queue
@@ -149,26 +161,37 @@ class ThreadPoolExecutor(_base.ThreadPoolExecutor):
             try:
                 if test:
                     if self._join_on_shutdown:
-                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid, cancel_pending=True)
+                        parallel_join(
+                            no_async=True,
+                            test=test,
+                            filter=lambda future: hasattr(future, "_executor_uid")
+                            and future._executor_uid == self._uid,
+                            cancel_pending=True,
+                        )
             finally:
                 for thread in self._threads:
                     thread.join()
 
 
 class SharedThreadPoolExecutor(ThreadPoolExecutor):
-    """Shared thread pool executor.
-    """
+    """Shared thread pool executor."""
+
     def __init__(self, max_workers, thread_name_prefix="", join_on_shutdown=True):
         self.initargs = (max_workers, thread_name_prefix, join_on_shutdown)
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedThreadPoolExecutor, self).__init__(
-            max_workers=max_workers-1, thread_name_prefix=thread_name_prefix,
-            _check_max_workers=False, join_on_shutdown=join_on_shutdown)
+            max_workers=max_workers - 1,
+            thread_name_prefix=thread_name_prefix,
+            _check_max_workers=False,
+            join_on_shutdown=join_on_shutdown,
+        )
 
     def submit(self, fn, args=None, kwargs=None, block=False):
-        return super(SharedThreadPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+        return super(SharedThreadPoolExecutor, self).submit(
+            fn=fn, args=args, kwargs=kwargs, block=block
+        )
 
 
 GlobalThreadPoolExecutor = SharedThreadPoolExecutor

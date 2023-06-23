@@ -1,5 +1,6 @@
 from testflows.core import *
 
+
 @TestModule
 @Name("xout flags")
 def regression(self):
@@ -14,6 +15,7 @@ def regression(self):
 
     with Scenario("XNULL when Null", flags=XNULL):
         null("boo")
+
 
 if main():
     regression()

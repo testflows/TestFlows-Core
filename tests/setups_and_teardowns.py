@@ -2,6 +2,7 @@
 from testflows.core import *
 from testflows.asserts import error, values, raises
 
+
 @TestStep(Given)
 def given_with_yield(self, num):
     try:
@@ -10,31 +11,33 @@ def given_with_yield(self, num):
         with Finally(f"clean up given with yield {num}"):
             pass
 
+
 @TestBackground
 def open_logs(self):
-     with Given("open log1"):
-         self.append(open("helllo", "w+"))
-     with Given("open log2"):
-         self.append(open("helllo2", "w+"))
-     yield self
-     with Finally("I close the logs"):
-         pass
+    with Given("open log1"):
+        self.append(open("helllo", "w+"))
+    with Given("open log2"):
+        self.append(open("helllo2", "w+"))
+    yield self
+    with Finally("I close the logs"):
+        pass
+
 
 @TestBackground
 def open_logs_with_fail(self, ref):
-     ref.append(self.contexts)
-     try:
-         with Given("open log1"):
-             self.append(open("helllo", "w+"))
-         with Given("open log that fails"):
-             self.append(open("foozoo", "r"))
-         with Given("open log2"):
-             self.append(open("helllo2", "w+"))
-         yield self
-     finally:
-         with Finally("I close the logs"):
-             for log in self.contexts:
-                 assert log.closed is False, error()
+    ref.append(self.contexts)
+    try:
+        with Given("open log1"):
+            self.append(open("helllo", "w+"))
+        with Given("open log that fails"):
+            self.append(open("foozoo", "r"))
+        with Given("open log2"):
+            self.append(open("helllo2", "w+"))
+        yield self
+    finally:
+        with Finally("I close the logs"):
+            for log in self.contexts:
+                assert log.closed is False, error()
 
 
 @TestBackground
@@ -50,7 +53,7 @@ def open_logs_and_given_with_yield(self):
 
 @TestFeature
 def background(self):
-    """Check using Background test definition 
+    """Check using Background test definition
     and TestBackground decorator.
     """
     with Scenario("direct call"):
@@ -62,13 +65,13 @@ def background(self):
         log, log2 = Background(run=open_logs)
         assert log.closed is False and log2.closed is False, error()
     assert log.closed is True and log2.closed is True, error()
-   
-    with Scenario("direct call inside test definition"): 
-        with Background("open logs"): # works
+
+    with Scenario("direct call inside test definition"):
+        with Background("open logs"):  # works
             log, log2 = open_logs()
         assert log.closed is False and log2.closed is False, error()
     assert log.closed is True and log2.closed is True, error()
-        
+
     with Scenario("call test definition"):
         log, log2 = Background(test=open_logs)()
         assert log.closed is False and log2.closed is False, error()
@@ -86,6 +89,7 @@ def background(self):
         with Background("my background"):
             open_logs_and_given_with_yield()
 
+
 @TestStep(Given)
 def given_with_multiple_yields(self):
     try:
@@ -97,15 +101,18 @@ def given_with_multiple_yields(self):
         note("third")
         yield 3
 
+
 @TestScenario
 def check_given_with_multiple_yields(self):
     with Given("setup"):
         assert given_with_multiple_yields() == 1, error()
 
+
 @TestFeature
 def feature(self):
     Scenario(run=check_given_with_multiple_yields)
     background()
+
 
 if main():
     feature()

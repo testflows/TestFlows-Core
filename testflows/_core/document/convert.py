@@ -17,25 +17,26 @@ import re
 
 from testflows._core.contrib.markdown2 import Markdown
 
-link_patterns = [
-    (re.compile(r'((https?|ftp|file)://[^\s]+)'), r"\1")
-]
+link_patterns = [(re.compile(r"((https?|ftp|file)://[^\s]+)"), r"\1")]
 
-md = Markdown(extras={
-    "header-ids":None,
-    "fenced-code-blocks":{"cssclass":"highlight"},
-    "footnotes":None,
-    "reference-style-links": None,
-    "target-blank-links": None,
-    "nofollow": None,
-    "noopener": None,
-    "link-patterns": None,
-    "noreferrer": None,
-    "code-friendly": None,
-    "tables": None,
-    "wiki-tables": None,
-    "markdown-in-html": None
-}, link_patterns=link_patterns)
+md = Markdown(
+    extras={
+        "header-ids": None,
+        "fenced-code-blocks": {"cssclass": "highlight"},
+        "footnotes": None,
+        "reference-style-links": None,
+        "target-blank-links": None,
+        "nofollow": None,
+        "noopener": None,
+        "link-patterns": None,
+        "noreferrer": None,
+        "code-friendly": None,
+        "tables": None,
+        "wiki-tables": None,
+        "markdown-in-html": None,
+    },
+    link_patterns=link_patterns,
+)
 
 template = """
 <!DOCTYPE html>
@@ -72,10 +73,8 @@ requirements.forEach(function(item){
 file_dir = os.path.dirname(os.path.abspath(__file__))
 stylesheet = os.path.join(file_dir, "style.css")
 
+
 def generate(source, destination, stylesheet, format=None):
     body = md.convert(source.read())
-    document = template % {
-        "body": body,
-        "style": stylesheet.read()
-    }
+    document = template % {"body": body, "style": stylesheet.read()}
     destination.write(document)

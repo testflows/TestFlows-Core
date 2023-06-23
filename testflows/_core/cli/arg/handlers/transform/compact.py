@@ -19,22 +19,51 @@ from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.transform.log.pipeline import CompactRawLogPipeline
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("compact", help="compact transform", epilog=epilog(),
+        parser = commands.add_parser(
+            "compact",
+            help="compact transform",
+            epilog=epilog(),
             description="Transform log into compact raw log containing only test results.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("--with-steps", action="store_true", help="include test steps, default: True", default=True)
-        parser.add_argument("--without-steps", action="store_true", help="exclude test steps, default: False", default=False)
-        parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
-                nargs="?", help="input log, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.logfile("w", bufsize=1, encoding="utf-8"),
-                nargs="?", help='output file, default: stdout', default="-")
+        parser.add_argument(
+            "--with-steps",
+            action="store_true",
+            help="include test steps, default: True",
+            default=True,
+        )
+        parser.add_argument(
+            "--without-steps",
+            action="store_true",
+            help="exclude test steps, default: False",
+            default=False,
+        )
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input log, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.logfile("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
 
         parser.set_defaults(func=cls())
 
     def handle(self, args):
         with args.output:
-            CompactRawLogPipeline(args.input, args.output, steps=(not args.without_steps)).run()
+            CompactRawLogPipeline(
+                args.input, args.output, steps=(not args.without_steps)
+            ).run()

@@ -15,8 +15,13 @@
 from testflows._core.name import parentname
 from testflows._core.message import Message
 from testflows._core.transform.log.report.totals import Counts, all_counts
-from testflows._core.transform.log.report.totals import format_test as process_test_counts
-from testflows._core.transform.log.report.totals import format_result as process_result_counts
+from testflows._core.transform.log.report.totals import (
+    format_test as process_test_counts,
+)
+from testflows._core.transform.log.report.totals import (
+    format_result as process_result_counts,
+)
+
 
 def process_test(msg, results, names, unique):
     def add_name(name, names, unique, test_id):
@@ -25,19 +30,26 @@ def process_test(msg, results, names, unique):
         if name in unique:
             duplicate = unique[name]
             duplicate += 1
-            _name = f'{name} ~{duplicate}'
+            _name = f"{name} ~{duplicate}"
         names[test_id] = _name
         unique[name] = duplicate
         return
 
     add_name(msg["test_name"], names, unique, msg["test_id"])
     test = {
-        "attributes":[], "arguments":[], "tags": [],
-        "specifications": [], "requirements": [],
-        "maps": [], "examples": []
+        "attributes": [],
+        "arguments": [],
+        "tags": [],
+        "specifications": [],
+        "requirements": [],
+        "maps": [],
+        "examples": [],
     }
     test.update(msg)
-    results["tests"][names[msg["test_id"]]] = {"test": test, "result": {"tickets":[], "values":[], "metrics":[]}}
+    results["tests"][names[msg["test_id"]]] = {
+        "test": test,
+        "result": {"tickets": [], "values": [], "metrics": []},
+    }
     process_test_counts(msg, results["counts"])
 
     # add test to the tests map
@@ -47,47 +59,61 @@ def process_test(msg, results, names, unique):
     results["tests_by_parent"][parent].append(test)
     results["tests_by_id"][msg["test_id"]] = test
 
+
 def process_result(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"].update(msg)
     process_result_counts(msg, results["counts"])
+
 
 def process_version(msg, results, names, unique):
     results["version"] = msg["framework_version"]
     results["started"] = msg["message_time"]
 
+
 def process_protocol(msg, results, names, unique):
     results["protocol"] = msg["protocol_version"]
+
 
 def process_attribute(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["attributes"].append(msg)
 
+
 def process_tag(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["tags"].append(msg)
 
+
 def process_requirement(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["requirements"].append(msg)
+
 
 def process_specification(msg, results, names, unique):
     results["specifications"].append(msg)
     results["tests"][names[msg["test_id"]]]["test"]["specifications"].append(msg)
 
+
 def process_argument(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["arguments"].append(msg)
+
 
 def process_example(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["examples"].append(msg)
 
+
 def process_map(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["test"]["maps"].append(msg)
+
 
 def process_ticket(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"]["tickets"].append(msg)
 
+
 def process_metric(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"]["metrics"].append(msg)
 
+
 def process_value(msg, results, names, unique):
     results["tests"][names[msg["test_id"]]]["result"]["values"].append(msg)
+
 
 processors = {
     Message.VERSION.name: process_version,
@@ -106,9 +132,9 @@ processors = {
     Message.VALUE.name: process_value,
 }
 
+
 def transform(results):
-    """Transform log file into results.
-    """
+    """Transform log file into results."""
     names = {}
     # unique test names
     unique = {}

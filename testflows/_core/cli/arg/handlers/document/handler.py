@@ -19,21 +19,28 @@ from testflows._core.cli.arg.handlers.document.convert import Handler as convert
 from testflows._core.cli.arg.handlers.document.toc import Handler as toc_handler
 from testflows._core.cli.arg.handlers.document.new.handler import Handler as new_handler
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("document", help="document processing", epilog=epilog(),
+        parser = commands.add_parser(
+            "document",
+            help="document processing",
+            epilog=epilog(),
             description="Work with a document.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        document_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        document_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         document_commands.required = True
         convert_handler.add_command(document_commands)
         toc_handler.add_command(document_commands)
         new_handler.add_command(document_commands)
         try:
             from testflows.texts.run import Handler as run_handler
+
             run_handler.add_command(document_commands)
         except ImportError:
             pass

@@ -28,6 +28,7 @@ from .testtype import TestType
 
 import testflows._core.contrib.rsa as rsa
 
+
 class Result(TestObject, ResultException):
     _fields = ("message", "reason", "type", "test")
     _defaults = (None,) * 6
@@ -50,8 +51,20 @@ class Result(TestObject, ResultException):
         def __repr__(self):
             return f"Result.Type.{self._name_}"
 
-    def __init__(self, message=None, reason=None, type=None, test=None, metrics=None, tickets=None, values=None, start_time=None, test_time=None):
+    def __init__(
+        self,
+        message=None,
+        reason=None,
+        type=None,
+        test=None,
+        metrics=None,
+        tickets=None,
+        values=None,
+        start_time=None,
+        test_time=None,
+    ):
         from .funcs import current
+
         self.test = test if test is not None else current().name
         if not isinstance(self.test, str):
             raise TypeError("test must be of 'str' type")
@@ -68,7 +81,20 @@ class Result(TestObject, ResultException):
         return super(Result, self).__init__()
 
     def __reduce__(self):
-        return (self.__class__, (self.message, self.reason, self.type, self.test, self.metrics, self.tickets, self.values, self.start_time, self.test_time))
+        return (
+            self.__class__,
+            (
+                self.message,
+                self.reason,
+                self.type,
+                self.test,
+                self.metrics,
+                self.tickets,
+                self.values,
+                self.start_time,
+                self.test_time,
+            ),
+        )
 
     @property
     def value(self):
@@ -102,14 +128,17 @@ class Result(TestObject, ResultException):
     def __ne__(self, o):
         return not self == o
 
+
 class XResult(Result):
     pass
+
 
 class OK(Result):
     type = Result.Type.OK
 
     def xout(self, reason):
         return self(XOK(test=self.test, message=self.message, reason=reason))
+
 
 class XOK(XResult):
     type = Result.Type.XOK
@@ -124,11 +153,14 @@ class Fail(Result):
     def __bool__(self):
         return False
 
+
 class XFail(XResult):
     type = Result.Type.XFail
 
+
 class Skip(Result):
     type = Result.Type.Skip
+
 
 class Error(Result):
     type = Result.Type.Error
@@ -139,8 +171,10 @@ class Error(Result):
     def __bool__(self):
         return False
 
+
 class XError(XResult):
     type = Result.Type.XError
+
 
 class Null(Result):
     type = Result.Type.Null
@@ -151,13 +185,16 @@ class Null(Result):
     def __bool__(self):
         return False
 
+
 class XNull(XResult):
     type = Result.Type.XNull
+
 
 XoutResults = (XOK, XFail, XError, XNull)
 FailResults = (Fail, Error, Null)
 PassResults = (OK,) + XoutResults
 NonFailResults = (Skip,) + PassResults
+
 
 class Node(TestObject):
     _fields = ("map", "name", "module", "uid", "nexts", "ins", "outs")
@@ -170,7 +207,7 @@ class Node(TestObject):
         self.uid = self.get_uid(None, module)
         self.nexts = get(nexts, [])
         self.ins = get(ins, [])
-        self.outs =get(outs, [])
+        self.outs = get(outs, [])
         return super(Node, self).__init__()
 
     @classmethod
@@ -178,6 +215,7 @@ class Node(TestObject):
         if module is None:
             module = test.module
         return hash(module, short=True)
+
 
 class Tag(TestObject):
     _fields = ("value",)
@@ -189,6 +227,7 @@ class Tag(TestObject):
 
     def __str__(self):
         return str(self.value)
+
 
 class Argument(TestObject):
     _fields = ("name", "value", "type", "group", "uid")
@@ -205,6 +244,7 @@ class Argument(TestObject):
         self.uid = get(uid, self.uid)
         return super(Argument, self).__init__()
 
+
 class Attribute(TestObject):
     _fields = ("name", "value", "type", "group", "uid")
     _defaults = (None,) * 3
@@ -220,9 +260,20 @@ class Attribute(TestObject):
         self.uid = get(uid, self.uid)
         return super(Attribute, self).__init__()
 
+
 class Requirement(TestObject):
-    _fields = ("name", "version", "description",
-            "link", "priority", "type", "group", "uid", "level", "num")
+    _fields = (
+        "name",
+        "version",
+        "description",
+        "link",
+        "priority",
+        "type",
+        "group",
+        "uid",
+        "level",
+        "num",
+    )
     _defaults = (None,) * 8
     uid = None
     link = None
@@ -230,8 +281,19 @@ class Requirement(TestObject):
     type = None
     group = None
 
-    def __init__(self, name, version, description=None, link=None,
-            priority=None, type=None, group=None, uid=None, level=None, num=None):
+    def __init__(
+        self,
+        name,
+        version,
+        description=None,
+        link=None,
+        priority=None,
+        type=None,
+        group=None,
+        uid=None,
+        level=None,
+        num=None,
+    ):
         self.name = name
         self.version = version
         self.description = get(description, self.__doc__)
@@ -246,8 +308,11 @@ class Requirement(TestObject):
 
     def __call__(self, *version):
         if not self.version in version:
-            raise RequirementError("requirement version %s is not in %s" % (self.version, list(version)))
+            raise RequirementError(
+                "requirement version %s is not in %s" % (self.version, list(version))
+            )
         return self
+
 
 class Metric(TestObject):
     _fields = ("name", "value", "units", "type", "group", "uid")
@@ -265,6 +330,7 @@ class Metric(TestObject):
         self.uid = get(uid, self.uid)
         return super(Metric, self).__init__()
 
+
 class Value(TestObject):
     _fields = ("name", "value", "type", "group", "uid")
     _defaults = (None,) * 3
@@ -279,6 +345,7 @@ class Value(TestObject):
         self.group = get(group, self.group)
         self.uid = get(uid, self.uid)
         return super(Value, self).__init__()
+
 
 class Ticket(TestObject):
     _fields = ("name", "link", "type", "group", "uid")
@@ -296,10 +363,28 @@ class Ticket(TestObject):
         self.uid = get(uid, self.uid)
         return super(Ticket, self).__init__()
 
+
 class Specification(TestObject):
-    _fields = ("name", "content", "description", "link", "author", "version",
-        "date", "status", "approved_by", "approved_date", "approved_version",
-        "type", "group", "uid", "parent", "children", "headings", "requirements")
+    _fields = (
+        "name",
+        "content",
+        "description",
+        "link",
+        "author",
+        "version",
+        "date",
+        "status",
+        "approved_by",
+        "approved_date",
+        "approved_version",
+        "type",
+        "group",
+        "uid",
+        "parent",
+        "children",
+        "headings",
+        "requirements",
+    )
     _defaults = (None,) * 16
     uid = None
     link = None
@@ -308,10 +393,27 @@ class Specification(TestObject):
 
     Heading = namedtuple("Heading", "name level num")
 
-    def __init__(self, name, content, description=None, link=None, author=None, version=None,
-        date=None, status=None, approved_by=None, approved_date=None, approved_version=None,
-        type=None, group=None, uid=None, parent=None, children=None, headings=None,
-        requirements=None):
+    def __init__(
+        self,
+        name,
+        content,
+        description=None,
+        link=None,
+        author=None,
+        version=None,
+        date=None,
+        status=None,
+        approved_by=None,
+        approved_date=None,
+        approved_version=None,
+        type=None,
+        group=None,
+        uid=None,
+        parent=None,
+        children=None,
+        headings=None,
+        requirements=None,
+    ):
         self.name = name
         self.content = content
         self.description = description
@@ -333,21 +435,26 @@ class Specification(TestObject):
 
     def __call__(self, *version):
         if not self.version in version:
-            raise SpecificationError("specification version %s is not in %s" % (self.version, list(version)))
+            raise SpecificationError(
+                "specification version %s is not in %s" % (self.version, list(version))
+            )
         return self
+
 
 class ExamplesRow(TestObject):
     _fields = ("row", "columns", "values", "row_format")
     _defaults = (None,)
+
     def __init__(self, row, columns, values, row_format=None):
         self.row = row
         self.columns = columns
         self.values = [str(value) for value in values]
         self.row_format = row_format
 
+
 class Secrets:
-    """Secrets registry.
-    """
+    """Secrets registry."""
+
     def __init__(self, secrets=None):
         self._secrets = secrets or {}
         self._filter_regex = re.compile(r"")
@@ -359,14 +466,12 @@ class Secrets:
         return (Secrets, (self._secrets,))
 
     def is_empty(self):
-        """Return True if registry is empty.
-        """
+        """Return True if registry is empty."""
         with self._lock:
             return not bool(self._filter_secrets)
 
     def register(self, secret):
-        """Register secret object.
-        """
+        """Register secret object."""
         with self._lock:
             if secret.name in self._secrets:
                 raise ValueError(f"secret '{secret.name}' already registered")
@@ -374,25 +479,29 @@ class Secrets:
             self._update_filter()
 
     def unregister(self, secret):
-        """Unregister secret object.
-        """
+        """Unregister secret object."""
         with self._lock:
             self._secrets.pop(secret.name, None)
             self._update_filter()
 
     def _update_filter(self):
-        """Update filter regex.
-        """
+        """Update filter regex."""
         self._filter_secrets = [s for s in self._secrets.values() if s.is_set()]
-        self._filter_regex = re.compile("|".join([f"(?P<{s.name}>{re.escape(s.value)})" for s in self._filter_secrets]))
+        self._filter_regex = re.compile(
+            "|".join(
+                [f"(?P<{s.name}>{re.escape(s.value)})" for s in self._filter_secrets]
+            )
+        )
 
     def filter(self, message):
-        """Filter all secret values from message.
-        """
+        """Filter all secret values from message."""
+
         def _filter(s):
             if not isinstance(s, str):
                 return message
-            return self._filter_regex.sub(lambda m: f"[masked]:{self._filter_secrets[m.lastindex-1]}", s)
+            return self._filter_regex.sub(
+                lambda m: f"[masked]:{self._filter_secrets[m.lastindex-1]}", s
+            )
 
         with self._lock:
             if isinstance(message, (list, tuple)):
@@ -406,9 +515,10 @@ class Secrets:
                 return _message
             return _filter(message)
 
+
 class Secret(TestObject):
-    """Secret value.
-    """
+    """Secret value."""
+
     _fields = ("name", "type", "group", "uid")
     _defaults = (None,) * 4
 
@@ -426,7 +536,9 @@ class Secret(TestObject):
             try:
                 re.compile(rf"(?P<{self.name}>)")
             except re.error as e:
-                raise ValueError("invalid secret name, " + str(e).replace("group name ", "")) from None
+                raise ValueError(
+                    "invalid secret name, " + str(e).replace("group name ", "")
+                ) from None
 
         self.type = get(type, self.type)
         self.group = get(group, self.group)
@@ -456,14 +568,12 @@ class Secret(TestObject):
         return self
 
     def is_set(self):
-        """Return true if value has been set.
-        """
+        """Return true if value has been set."""
         return self._value is not None
 
     @property
     def value(self):
-        """Return plaintext value of the secret.
-        """
+        """Return plaintext value of the secret."""
         if self._value is None:
             raise ValueError("no value")
         return self._value
@@ -472,8 +582,7 @@ class Secret(TestObject):
         return self.__repr__()
 
     def __repr__(self):
-        """Custom object representation.
-        """
+        """Custom object representation."""
         kwargs = []
         for field in self._fields:
             value = getattr(self, field)
@@ -483,10 +592,18 @@ class Secret(TestObject):
 
         return f"Secret({','.join(kwargs)})"
 
+
 class RSASecret(Secret):
-    """RSA encrypted secret value.
-    """
-    _fields = ("name", "type", "group", "uid", "code", "pubkey_id",)
+    """RSA encrypted secret value."""
+
+    _fields = (
+        "name",
+        "type",
+        "group",
+        "uid",
+        "code",
+        "pubkey_id",
+    )
     _defaults = (None,) * 6
     uid = None
     name = None
@@ -494,7 +611,9 @@ class RSASecret(Secret):
     group = None
     encoding = "utf-8"
 
-    def __init__(self, name=None, type=None, group=None, uid=None, code=None, pubkey_id=None):
+    def __init__(
+        self, name=None, type=None, group=None, uid=None, code=None, pubkey_id=None
+    ):
         self.name = get(name, None)
         self.type = get(type, self.type)
         self.group = get(group, self.group)
@@ -537,8 +656,7 @@ class RSASecret(Secret):
         return self
 
     def __repr__(self):
-        """Custom object representation.
-        """
+        """Custom object representation."""
         kwargs = []
         for field in self._fields:
             value = getattr(self, field)
@@ -550,6 +668,7 @@ class RSASecret(Secret):
                 kwargs.append(f"{field}={repr(value)}")
 
         return f"Secret({','.join(kwargs)})"
+
 
 class ExamplesTable(Table):
     _row_type_name = "Example"
@@ -572,7 +691,9 @@ class ExamplesTable(Table):
                 args = list(args)
                 len_header = len(header.split(" "))
                 if len(args) > len_header:
-                    _args = {k:v for arg in args[len_header:] for k, v in dict(arg).items()}
+                    _args = {
+                        k: v for arg in args[len_header:] for k, v in dict(arg).items()
+                    }
 
                     if "type" in args:
                         raise TypeError("can't specify 'type' using example arguments")
@@ -585,7 +706,9 @@ class ExamplesTable(Table):
                 obj._args = _args
                 return obj
 
-        obj = super(ExamplesTable, cls).__new__(cls, header, rows, row_format, ExampleRow)
+        obj = super(ExamplesTable, cls).__new__(
+            cls, header, rows, row_format, ExampleRow
+        )
 
         for idx, row in enumerate(obj):
             row._idx = idx
@@ -594,6 +717,7 @@ class ExamplesTable(Table):
         obj.args = args
 
         return obj
+
 
 class NamedValue(object):
     name = None
@@ -613,9 +737,11 @@ class NamedValue(object):
         setattr(func, self.name, self.value)
         return func
 
+
 class NamedString(NamedValue):
     def __str__(self):
         return str(self.value)
+
 
 class NamedList(list):
     name = None
@@ -635,6 +761,7 @@ class NamedList(list):
         setattr(func, self.name, list(self))
         return func
 
+
 class Onlys(NamedList):
     """only container.
 
@@ -645,10 +772,12 @@ class Onlys(NamedList):
     )
     ```
     """
+
     name = "only"
 
     def __init__(self, *items):
         super(Onlys, self).__init__(*items)
+
 
 class Skips(NamedList):
     """skip container.
@@ -660,14 +789,16 @@ class Skips(NamedList):
     )
     ```
     """
+
     name = "skip"
 
     def __init__(self, *items):
         super(Skips, self).__init__(*items)
 
+
 class _FilterTags(NamedValue):
-    """filter tags object.
-    """
+    """filter tags object."""
+
     def __init__(self, test=None, suite=None, module=None, any=None):
         test = set(test) if test is not None else set()
         suite = set(suite) if suite is not None else set()
@@ -677,7 +808,10 @@ class _FilterTags(NamedValue):
             test = test.union(any)
             suite = suite.union(any)
             module = module.union(any)
-        super(_FilterTags, self).__init__({TestType.Test: test, TestType.Suite: suite, TestType.Module: module})
+        super(_FilterTags, self).__init__(
+            {TestType.Test: test, TestType.Suite: suite, TestType.Module: module}
+        )
+
 
 class OnlyTags(_FilterTags):
     """only_tags filter object.
@@ -691,7 +825,9 @@ class OnlyTags(_FilterTags):
     )
     ```
     """
+
     name = "only_tags"
+
 
 class SkipTags(_FilterTags):
     """skip_tags filter object.
@@ -705,10 +841,13 @@ class SkipTags(_FilterTags):
     )
     ```
     """
+
     name = "skip_tags"
+
 
 class Setup(NamedValue):
     name = "setup"
+
 
 class XFails(NamedValue):
     """xfails container.
@@ -718,6 +857,7 @@ class XFails(NamedValue):
         ...
         }
     """
+
     name = "xfails"
 
     def __init__(self, value):
@@ -736,6 +876,7 @@ class XFails(NamedValue):
         self.value[pattern] = results
         return self
 
+
 class FFails(NamedValue):
     """ffails (forced fails) container.
 
@@ -744,6 +885,7 @@ class FFails(NamedValue):
         ...
         }
     """
+
     name = "ffails"
 
     def __init__(self, value):
@@ -767,9 +909,10 @@ class FFails(NamedValue):
         self.value[pattern] = (result, reason, when)
         return self
 
+
 class FFail(NamedValue):
-    """ffails (forced fails) container with single result.
-    """
+    """ffails (forced fails) container with single result."""
+
     name = "ffails"
 
     def __init__(self, result, reason, when=None, pattern=""):
@@ -782,41 +925,60 @@ class FFail(NamedValue):
 
         super(FFail, self).__init__({pattern: (result, reason, when)})
 
+
 class Skipped(FFail):
-    """ffails (forced fails) container with single Skip result.
-    """
+    """ffails (forced fails) container with single Skip result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(Skipped, self).__init__(reason=reason, when=when, pattern=pattern, result=Skip)
+        super(Skipped, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=Skip
+        )
+
 
 class Failed(FFail):
-    """ffails (forced fails) container with single Fail result.
-    """
+    """ffails (forced fails) container with single Fail result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(Failed, self).__init__(reason=reason, when=when, pattern=pattern, result=Fail)
+        super(Failed, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=Fail
+        )
+
 
 class XFailed(FFail):
-    """ffails (forced fails) container with single XFail result.
-    """
+    """ffails (forced fails) container with single XFail result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(XFailed, self).__init__(reason=reason, when=when, pattern=pattern, result=XFail)
+        super(XFailed, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=XFail
+        )
+
 
 class XErrored(FFail):
-    """ffails (forced fails) container with single XError result.
-    """
+    """ffails (forced fails) container with single XError result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(XErrored, self).__init__(reason=reason, when=when, pattern=pattern, result=XError)
+        super(XErrored, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=XError
+        )
+
 
 class Okayed(FFail):
-    """ffails (forced fails) container with single OK result.
-    """
+    """ffails (forced fails) container with single OK result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(Okayed, self).__init__(reason=reason, when=when, pattern=pattern, result=OK)
+        super(Okayed, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=OK
+        )
+
 
 class XOkayed(FFail):
-    """ffails (forced fails) container with single XOK result.
-    """
+    """ffails (forced fails) container with single XOK result."""
+
     def __init__(self, reason, when=None, pattern=""):
-        super(XOkayed, self).__init__(reason=reason, when=when, pattern=pattern, result=XOK)
+        super(XOkayed, self).__init__(
+            reason=reason, when=when, pattern=pattern, result=XOK
+        )
+
 
 class XFlags(NamedValue):
     """xflags container.
@@ -826,6 +988,7 @@ class XFlags(NamedValue):
         ...
     }
     """
+
     name = "xflags"
 
     def __init__(self, value):
@@ -845,6 +1008,7 @@ class XFlags(NamedValue):
         self.value[pattern] = [Flags(set_flags), Flags(clear_flags), when]
         return self
 
+
 class Repeats(NamedValue):
     """repeats containers.
 
@@ -853,6 +1017,7 @@ class Repeats(NamedValue):
         ...
     }
     """
+
     name = "repeats"
 
     def __init__(self, value):
@@ -860,12 +1025,15 @@ class Repeats(NamedValue):
         value = {p: list(Repeat(*r).value.values())[0] for p, r in value.items()}
         super(Repeats, self).__init__(value)
 
+
 class Repeat(NamedValue):
-    """single repetition container.
-    """
+    """single repetition container."""
+
     name = "repeats"
 
-    def __init__(self, count, until="complete", pattern="", delay=0, backoff=1, jitter=None):
+    def __init__(
+        self, count, until="complete", pattern="", delay=0, backoff=1, jitter=None
+    ):
         """
         :param count: number of iterations, default: None
         :param until: stop condition, either 'pass', 'fail', or 'complete', default: 'complete'
@@ -879,14 +1047,25 @@ class Repeat(NamedValue):
         self.until = str(until)
         self.delay = float(delay)
         self.backoff = float(backoff)
-        self.jitter =  tuple(jitter) if jitter else tuple([0, 0])
+        self.jitter = tuple(jitter) if jitter else tuple([0, 0])
 
         if self.count < 1:
             raise ValueError("count must be > 0")
         if self.until not in ("fail", "pass", "complete"):
             raise ValueError("invalid until value")
 
-        return super(Repeat, self).__init__({self.pattern: (self.count, self.until, self.delay, self.backoff, self.jitter)})
+        return super(Repeat, self).__init__(
+            {
+                self.pattern: (
+                    self.count,
+                    self.until,
+                    self.delay,
+                    self.backoff,
+                    self.jitter,
+                )
+            }
+        )
+
 
 class Retries(NamedValue):
     """retries containers.
@@ -896,6 +1075,7 @@ class Retries(NamedValue):
         ...
     }
     """
+
     name = "retries"
 
     def __init__(self, value):
@@ -903,12 +1083,22 @@ class Retries(NamedValue):
         value = {p: list(Retry(*r).value.values())[0] for p, r in value.items()}
         super(Retries, self).__init__(value)
 
+
 class Retry(NamedValue):
-    """single retry container.
-    """
+    """single retry container."""
+
     name = "retries"
 
-    def __init__(self, count=None, timeout=None, delay=0, backoff=1, jitter=None, pattern="", initial_delay=0):
+    def __init__(
+        self,
+        count=None,
+        timeout=None,
+        delay=0,
+        backoff=1,
+        jitter=None,
+        pattern="",
+        initial_delay=0,
+    ):
         """
         :param count: number of retries, default: None
         :param timeout: timeout in sec, default: None
@@ -933,7 +1123,19 @@ class Retry(NamedValue):
         if self.timeout is not None and self.timeout < 0:
             raise ValueError("timeout must be >= 0")
 
-        return super(Retry, self).__init__({self.pattern: (self.count, self.timeout, self.delay, self.backoff, self.jitter, self.initial_delay)})
+        return super(Retry, self).__init__(
+            {
+                self.pattern: (
+                    self.count,
+                    self.timeout,
+                    self.delay,
+                    self.backoff,
+                    self.jitter,
+                    self.initial_delay,
+                )
+            }
+        )
+
 
 class Args(dict):
     def __init__(self, **args):
@@ -945,11 +1147,13 @@ class Args(dict):
                 setattr(func, k, v)
         return func
 
+
 class Attributes(NamedList):
     name = "attributes"
 
     def __init__(self, *attributes):
         super(Attributes, self).__init__(*[Attribute(*a) for a in attributes])
+
 
 class Requirements(NamedList):
     name = "requirements"
@@ -957,11 +1161,15 @@ class Requirements(NamedList):
     def __init__(self, *requirements):
         super(Requirements, self).__init__(*[Requirement(*r) for r in requirements])
 
+
 class Specifications(NamedList):
     name = "specifications"
 
     def __init__(self, *specifications):
-        super(Specifications, self).__init__(*[Specification(*r) for r in specifications])
+        super(Specifications, self).__init__(
+            *[Specification(*r) for r in specifications]
+        )
+
 
 class Tags(NamedList):
     name = "tags"
@@ -969,8 +1177,10 @@ class Tags(NamedList):
     def __init__(self, *tags):
         super(Tags, self).__init__(*tags)
 
+
 class Uid(NamedString):
     name = "uid"
+
 
 class Parallel(NamedValue):
     name = "parallel"
@@ -978,11 +1188,13 @@ class Parallel(NamedValue):
     def __init__(self, value):
         self.value = bool(value)
 
+
 class Executor(NamedValue):
     name = "executor"
 
     def __init__(self, executor):
         self.value = executor
+
 
 class ArgumentParser(NamedValue):
     name = "argparser"
@@ -990,20 +1202,25 @@ class ArgumentParser(NamedValue):
     def __init__(self, parser):
         self.value = parser
 
+
 class Name(NamedString):
     name = "name"
+
 
 class Description(NamedString):
     name = "description"
 
+
 class Examples(ExamplesTable):
     def __new__(cls, header, rows, row_format=None, args=None):
-        return super(Examples, cls).__new__(cls, header=header,
-            rows=rows, row_format=row_format, args=args)
+        return super(Examples, cls).__new__(
+            cls, header=header, rows=rows, row_format=row_format, args=args
+        )
 
     def __call__(self, func):
         func.examples = self
         return func
+
 
 class Maps(NamedList):
     name = "maps"

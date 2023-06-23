@@ -21,17 +21,19 @@ from argparse import RawDescriptionHelpFormatter as HelpFormatterBase
 from testflows._core import __version__
 from testflows._core.cli.colors import color, white, blue, cyan
 
+
 class HelpFormatter(HelpFormatterBase):
     """
     Corrected _max_action_length for the indenting of subactions
     """
-    def __init__(self,
-            prog,
-            indent_increment=2,
-            max_help_position=50,
-            width=100):
-        super(HelpFormatter, self).__init__(prog=prog, indent_increment=indent_increment,
-            max_help_position=max_help_position, width=width)
+
+    def __init__(self, prog, indent_increment=2, max_help_position=50, width=100):
+        super(HelpFormatter, self).__init__(
+            prog=prog,
+            indent_increment=indent_increment,
+            max_help_position=max_help_position,
+            width=width,
+        )
 
     def add_argument(self, action):
         if action.help is not argparse.SUPPRESS:
@@ -43,18 +45,18 @@ class HelpFormatter(HelpFormatterBase):
             for subaction in self._iter_indented_subactions(action):
                 # compensate for the indent that will be added
                 indent_chg = self._current_indent - current_indent
-                added_indent = 'x'*indent_chg
-                invocations.append(added_indent+get_invocation(subaction))
+                added_indent = "x" * indent_chg
+                invocations.append(added_indent + get_invocation(subaction))
             # print('inv', invocations)
 
             # update the maximum item length
             invocation_length = max([len(s) for s in invocations])
             action_length = invocation_length + self._current_indent
-            self._action_max_length = max(self._action_max_length,
-                                          action_length)
+            self._action_max_length = max(self._action_max_length, action_length)
 
             # add the item to the list
             self._add_item(self._format_action, [action])
+
 
 def description(description=None, prog=None, version=None):
     if version is None:
@@ -84,20 +86,43 @@ def description(description=None, prog=None, version=None):
     if prog is None:
         prog = "Open-Source Software Testing Framework"
 
-    desc =  dim_white("  ---- ") + bold_blue("o o o") + dim_white(" ----") + "\n"
+    desc = dim_white("  ---- ") + bold_blue("o o o") + dim_white(" ----") + "\n"
     desc += dim_white(" |   ") + bold_blue("o       o") + dim_white("   |") + "\n"
-    desc += (dim_white(" | ") + bold_white("1") + bold_blue(" o ") + bold_white("10010")
-                + bold_blue(" o ") + bold_white("0 ") + dim_white("|") + "\n")
-    desc += (dim_white(" |   ") + bold_blue("o       o") + dim_white("   |")
-             + dim_white("    TestFlows.com %s v%s" % (prog, version)) + "\n")
-    desc += (dim_white("  ---  ") + bold_blue("o o o") + bold_cyan("xx ") + dim_white("--") + "\n")
-    desc += (dim_white(" /           ") + bold_cyan("xx") + dim_white("   \\") + "\n")
-    desc += (dim_white("/  ^^^        ") + bold_cyan("xx") + dim_white("   \\") + "\n")
-    desc += (dim_white(" ------------------") + "\n")
+    desc += (
+        dim_white(" | ")
+        + bold_white("1")
+        + bold_blue(" o ")
+        + bold_white("10010")
+        + bold_blue(" o ")
+        + bold_white("0 ")
+        + dim_white("|")
+        + "\n"
+    )
+    desc += (
+        dim_white(" |   ")
+        + bold_blue("o       o")
+        + dim_white("   |")
+        + dim_white("    TestFlows.com %s v%s" % (prog, version))
+        + "\n"
+    )
+    desc += (
+        dim_white("  ---  ")
+        + bold_blue("o o o")
+        + bold_cyan("xx ")
+        + dim_white("--")
+        + "\n"
+    )
+    desc += dim_white(" /           ") + bold_cyan("xx") + dim_white("   \\") + "\n"
+    desc += dim_white("/  ^^^        ") + bold_cyan("xx") + dim_white("   \\") + "\n"
+    desc += dim_white(" ------------------") + "\n"
     if description:
         desc += "\n\n" + description
     return desc
 
+
 def epilog():
     """Return argument parser epilog"""
-    return white(f"TestFlows.com Open-Source Software Testing Framework. Copyright (c) {datetime.now().year} Katteli Inc.\nSee contrib folder in sources for lincenses of each third-party module.", attrs=["dim"])
+    return white(
+        f"TestFlows.com Open-Source Software Testing Framework. Copyright (c) {datetime.now().year} Katteli Inc.\nSee contrib folder in sources for lincenses of each third-party module.",
+        attrs=["dim"],
+    )

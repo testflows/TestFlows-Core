@@ -13,10 +13,10 @@ from testflows.asserts import error, raises
 from testflows._core.parallel.service import BaseServiceObject, ServiceError
 from testflows._core.exceptions import exception as get_exception
 
+
 @TestScenario
 def my_scenario(self, count=1, sleep=0, force_fail=False):
-    """Simple scenario with 0 or more steps.
-    """
+    """Simple scenario with 0 or more steps."""
     for i in range(1):
         note(f"hello {os.getpid()}")
     for i in range(count):
@@ -28,41 +28,41 @@ def my_scenario(self, count=1, sleep=0, force_fail=False):
 
 
 def func_with_scenario():
-    """Simple function that runs a scenario.
-    """
+    """Simple function that runs a scenario."""
     Scenario(test=my_scenario)()
 
 
 def func_with_inline_scenario():
-    """Simple function that runs inline scenario.
-    """
+    """Simple function that runs inline scenario."""
     with Scenario("my test") as test:
         note(f"hi from test {test.name}")
 
 
 def simple(x, y):
-    """Simple function.
-    """
+    """Simple function."""
     print("foo", file=sys.stdout)
     print("boo", file=sys.stderr)
     for i in range(1):
         note(f"here {os.getpid()}")
     return x + y
 
+
 def simple_error():
-    """Simple function that raises error.
-    """
+    """Simple function that raises error."""
     raise ValueError("error")
+
 
 @TestScenario
 async def simple_async_test(self):
     note(f"hello {self.name} {os.getpid()}")
     time.sleep(random.random())
 
+
 @TestScenario
 def simple_test(self):
-    #note(f"hello {self.name} {os.getpid()}")
-    time.sleep(random.random()+2)
+    # note(f"hello {self.name} {os.getpid()}")
+    time.sleep(random.random() + 2)
+
 
 @TestScenario
 async def my_async_test(self):
@@ -80,11 +80,18 @@ async def my_async_test(self):
             #     for i in range(10):
             #         Scenario(name=f"test {i}", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)()
             #     await join()
-            
+
             for i in range(10):
-                Scenario(name=f"test {i}", test=simple_test, flags=XFAIL, parallel=True, executor=pool)()
+                Scenario(
+                    name=f"test {i}",
+                    test=simple_test,
+                    flags=XFAIL,
+                    parallel=True,
+                    executor=pool,
+                )()
 
         await join()
+
 
 @TestScenario
 def my_sync_test(self):
@@ -102,17 +109,22 @@ def my_sync_test(self):
             #     for i in range(10):
             #         Scenario(name=f"test {i}", test=my_scenario, flags=XFAIL, parallel=True, executor=pool)()
             #     await join()
-            
+
             for i in range(100):
-                Scenario(name=f"test {i}", test=simple_test, flags=XFAIL, parallel=True, executor=pool)()
+                Scenario(
+                    name=f"test {i}",
+                    test=simple_test,
+                    flags=XFAIL,
+                    parallel=True,
+                    executor=pool,
+                )()
 
             join()
 
 
 @TestFeature
 def suite(self):
-    """Test running tests in parallel processes.
-    """
+    """Test running tests in parallel processes."""
     # with Scenario("try using process pool"):
     #     with ProcessPool() as pool:
     #         pass
@@ -133,7 +145,7 @@ def suite(self):
     #                 for task in tasks:
     #                     r = task.result()
     #                     assert r == 4, error()
-            
+
     #         with Example("raises exception"):
     #             f = pool.submit(simple_error)
     #             with raises(ValueError):
@@ -143,15 +155,15 @@ def suite(self):
     #             f = pool.submit(simple, args=[2])
     #             with raises(TypeError):
     #                 f.result()
-            
+
     #         with Example("use non function"):
     #             f = pool.submit(None)
     #             with raises(TypeError):
     #                 f.result()
 
-    #with Scenario("run decorated tests in parallel"):
-        #with ProcessPool() as pool:
-        #    pass
+    # with Scenario("run decorated tests in parallel"):
+    # with ProcessPool() as pool:
+    #    pass
     #         with Scenario("multiple tests"):
     #             futures = []
     #             for i in range(10):
@@ -173,7 +185,7 @@ def suite(self):
     #             assert test.child_count == count + 2, error()
 
     #         with Scenario("failing parallel test"):
-    #             Scenario(name=f"test", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)(force_fail=True).result()         
+    #             Scenario(name=f"test", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)(force_fail=True).result()
 
     #         with Scenario("check if parallel test future is added to futures") as test:
     #             f1 = Scenario(name=f"test 0", test=my_scenario, parallel=True, flags=XFAIL, executor=pool)()
@@ -184,11 +196,12 @@ def suite(self):
     #             join()
     #             assert len(test.futures) == 0, error()
 
-        #with Scenario("sync test that runs parallel tests in a process pool"):
+    # with Scenario("sync test that runs parallel tests in a process pool"):
     Scenario(test=my_sync_test)()
 
-        #with Scenario("async test that runs parallel tests in a process pool"):
-        #    Scenario(test=my_async_test)()
+    # with Scenario("async test that runs parallel tests in a process pool"):
+    #    Scenario(test=my_async_test)()
+
 
 @TestFeature
 def feature(self):
@@ -199,6 +212,6 @@ def feature(self):
             Feature(name=f"tests #{i}", test=suite, parallel=False, executor=pool)()
         join()
 
+
 if main():
     feature()
-

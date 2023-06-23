@@ -25,15 +25,15 @@ from lzma import compress, decompress
 Compressor = lzma.LZMACompressor
 Decompressor = lzma.LZMADecompressor
 
-class TailingDecompressReader(_compression.DecompressReader):
 
+class TailingDecompressReader(_compression.DecompressReader):
     def __init__(self, *args, **kwargs):
         self._tail = kwargs.pop("tail", True)
         self._tail_sleep = float(kwargs.pop("tail_sleep", 0.15))
         # default compressed file marker '.7zXZ'
         self._COMPRESSED_FILE_MARKER = b"\xfd\x37\x7a\x58\x5a"
         # default uncompressed file marker is start of the message
-        self._UNCOMPRESSED_FILE_MARKER = "{\"message_keyword\"".encode("utf-8")
+        self._UNCOMPRESSED_FILE_MARKER = '{"message_keyword"'.encode("utf-8")
 
         super(TailingDecompressReader, self).__init__(*args, **kwargs)
 
@@ -48,16 +48,16 @@ class TailingDecompressReader(_compression.DecompressReader):
         # return any data. In this case, try again after reading another block.
         while True:
             if self._decompressor.eof:
-                self.rawblock = (self._decompressor.unused_data or
-                            self._fp.read1(_compression.BUFFER_SIZE))
+                self.rawblock = self._decompressor.unused_data or self._fp.read1(
+                    _compression.BUFFER_SIZE
+                )
                 if not self.rawblock:
                     if not self._tail:
                         break
                     time.sleep(self._tail_sleep)
                     continue
                 # Continue to next stream.
-                self._decompressor = self._decomp_factory(
-                    **self._decomp_args)
+                self._decompressor = self._decomp_factory(**self._decomp_args)
                 try:
                     data = self._decompressor.decompress(self.rawblock, size)
                 except self._trailing_error:
@@ -87,14 +87,22 @@ class TailingDecompressReader(_compression.DecompressReader):
                                     raise
                             self.rawblock += raw_data
                             # try to find compressed file marker
-                            compressed_file_marker_idx = self.rawblock.find(self._COMPRESSED_FILE_MARKER)
+                            compressed_file_marker_idx = self.rawblock.find(
+                                self._COMPRESSED_FILE_MARKER
+                            )
                             if compressed_file_marker_idx >= 0:
-                                self.rawblock = self.rawblock[compressed_file_marker_idx:]
+                                self.rawblock = self.rawblock[
+                                    compressed_file_marker_idx:
+                                ]
                                 break
                             # try to find uncompressed file marker
-                            uncompressed_file_marker_idx = self.rawblock.find(self._UNCOMPRESSED_FILE_MARKER)
+                            uncompressed_file_marker_idx = self.rawblock.find(
+                                self._UNCOMPRESSED_FILE_MARKER
+                            )
                             if uncompressed_file_marker_idx >= 0:
-                                self.rawblock = self.rawblock[uncompressed_file_marker_idx:]
+                                self.rawblock = self.rawblock[
+                                    uncompressed_file_marker_idx:
+                                ]
                                 raise
                         # decompress compressed raw block that we found
                         self._decompressor = self._decomp_factory(**self._decomp_args)
@@ -111,8 +119,17 @@ class TailingDecompressReader(_compression.DecompressReader):
 
 
 class CompressedFile(lzma.LZMAFile):
-    def __init__(self, filename=None, mode="r", *,
-            format=None, check=-1, preset=None, filters=None, tail=False):
+    def __init__(
+        self,
+        filename=None,
+        mode="r",
+        *,
+        format=None,
+        check=-1,
+        preset=None,
+        filters=None,
+        tail=False
+    ):
         self._fp = None
         self._closefp = False
         self._mode = lzma._MODE_CLOSED
@@ -121,11 +138,15 @@ class CompressedFile(lzma.LZMAFile):
 
         if mode in ("r", "rb"):
             if check != -1:
-                raise ValueError("Cannot specify an integrity check "
-                                 "when opening a file for reading")
+                raise ValueError(
+                    "Cannot specify an integrity check "
+                    "when opening a file for reading"
+                )
             if preset is not None:
-                raise ValueError("Cannot specify a preset compression "
-                                 "level when opening a file for reading")
+                raise ValueError(
+                    "Cannot specify a preset compression "
+                    "level when opening a file for reading"
+                )
             if format is None:
                 format = lzma.FORMAT_AUTO
             mode_code = lzma._MODE_READ
@@ -133,8 +154,9 @@ class CompressedFile(lzma.LZMAFile):
             if format is None:
                 format = lzma.FORMAT_XZ
             mode_code = lzma._MODE_WRITE
-            self._compressor = lzma.LZMACompressor(format=format, check=check,
-                preset=preset, filters=filters)
+            self._compressor = lzma.LZMACompressor(
+                format=format, check=check, preset=preset, filters=filters
+            )
             self._pos = 0
         else:
             raise ValueError("Invalid mode: {!r}".format(mode))
@@ -156,8 +178,14 @@ class CompressedFile(lzma.LZMAFile):
             raise TypeError("filename must be a str, bytes, file or PathLike object")
 
         if self._mode == lzma._MODE_READ:
-            self.raw = TailingDecompressReader(self._fp, lzma.LZMADecompressor,
-                trailing_error=lzma.LZMAError, format=format, filters=filters, tail=self._tail)
+            self.raw = TailingDecompressReader(
+                self._fp,
+                lzma.LZMADecompressor,
+                trailing_error=lzma.LZMAError,
+                format=format,
+                filters=filters,
+                tail=self._tail,
+            )
             self._buffer = io.BufferedReader(self.raw)
 
     @property

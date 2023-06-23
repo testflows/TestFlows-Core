@@ -13,15 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 def bytesize(nbytes):
-    '''Return human readable size in bytes in
+    """Return human readable size in bytes in
     short form using KB, MB, GB, or TB string.
 
     Credit: https://stackoverflow.com/questions/14996453/python-libraries-to-calculate-human-readable-filesize-from-bytes
-    '''
-    suffixes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB']
+    """
+    suffixes = ["B", "KB", "MB", "GB", "TB", "PB"]
     i = 0
-    while nbytes >= 1024 and i < len(suffixes)-1:
-        nbytes /= 1024.
+    while nbytes >= 1024 and i < len(suffixes) - 1:
+        nbytes /= 1024.0
         i += 1
-    f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
+    f = ("%.2f" % nbytes).rstrip("0").rstrip(".")
+    return "%s %s" % (f, suffixes[i])

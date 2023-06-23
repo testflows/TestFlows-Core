@@ -18,6 +18,7 @@ from testflows._core.cli.colors import color
 from testflows._core.utils.timefuncs import localfromtimestamp
 from testflows._core.message import Message
 
+
 def transform(stop, divider="\n"):
     """Transform parsed log line into a nice format.
 
@@ -35,7 +36,13 @@ def transform(stop, divider="\n"):
 
         if stop.is_set():
             if started is not None and version is not None:
-                line = color(f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}",
-                    "white", attrs=["dim"]) + "\n"
+                line = (
+                    color(
+                        f"{divider}Executed on {started:%b %d,%Y %-H:%M}\nTestFlows.com Open-Source Software Testing Framework v{version}",
+                        "white",
+                        attrs=["dim"],
+                    )
+                    + "\n"
+                )
 
         line = yield line

@@ -26,85 +26,98 @@ import testflows.settings as settings
 
 from testflows._core.contrib.x256 import x256
 
-__ALL__ = [ 'colored', 'cprint' ]
+__ALL__ = ["colored", "cprint"]
 
 ATTRIBUTES = dict(
-        list(zip([
-            'bold',
-            'dim',
-            '',
-            'underline',
-            'blink',
-            '',
-            'reverse',
-            'concealed'
-            ],
-            list(range(1, 9))
-            ))
+    list(
+        zip(
+            ["bold", "dim", "", "underline", "blink", "", "reverse", "concealed"],
+            list(range(1, 9)),
         )
-del ATTRIBUTES['']
+    )
+)
+del ATTRIBUTES[""]
 
 
 HIGHLIGHTS = dict(
-        list(zip([
-            'on_grey',
-            'on_red',
-            'on_green',
-            'on_yellow',
-            'on_blue',
-            'on_magenta',
-            'on_cyan',
-            'on_white'
+    list(
+        zip(
+            [
+                "on_grey",
+                "on_red",
+                "on_green",
+                "on_yellow",
+                "on_blue",
+                "on_magenta",
+                "on_cyan",
+                "on_white",
             ],
-            list(range(40, 48))
-            ))
+            list(range(40, 48)),
         )
+    )
+)
 
 
 COLORS = dict(
-        list(zip([
-            'grey',
-            'red',
-            'green',
-            'yellow',
-            'blue',
-            'magenta',
-            'cyan',
-            'white',
+    list(
+        zip(
+            [
+                "grey",
+                "red",
+                "green",
+                "yellow",
+                "blue",
+                "magenta",
+                "cyan",
+                "white",
             ],
-            list(range(30, 38))
-            ))
+            list(range(30, 38)),
         )
+    )
+)
+
 
 def reset(no_colors=False):
-    return '\033[0m' if not (no_colors and settings.no_colors) else ''
+    return "\033[0m" if not (no_colors and settings.no_colors) else ""
+
 
 def cursor_hide(no_colors=False):
-    return '\033[?25l' if not (no_colors and settings.no_colors) else ''
+    return "\033[?25l" if not (no_colors and settings.no_colors) else ""
+
 
 def cursor_up(no_colors=False):
-    return '\033[A' if not (no_colors and settings.no_colors) else ''
+    return "\033[A" if not (no_colors and settings.no_colors) else ""
+
 
 def clear_screen(no_colors=False):
-    return chr(27) + "[2J" + '\033[0;0H'  if not (no_colors and settings.no_colors) else ''
+    return (
+        chr(27) + "[2J" + "\033[0;0H" if not (no_colors and settings.no_colors) else ""
+    )
+
 
 def red(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "red", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
+
 def green(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "green", on_color=on_color, attrs=attrs, no_colors=no_colors)
+
 
 def yellow(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "yellow", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
+
 def blue(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "blue", on_color=on_color, attrs=attrs, no_colors=no_colors)
+
 
 def cyan(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "cyan", on_color=on_color, attrs=attrs, no_colors=no_colors)
 
+
 def white(text, on_color=None, attrs=None, no_colors=False):
     return color(text, "white", on_color=on_color, attrs=attrs, no_colors=no_colors)
+
 
 def color(text, color=None, on_color=None, attrs=None, no_colors=False):
     """Colorize text.
@@ -125,12 +138,12 @@ def color(text, color=None, on_color=None, attrs=None, no_colors=False):
     if no_colors or settings.no_colors:
         pass
     else:
-        fmt_str = '\033[%dm%s'
+        fmt_str = "\033[%dm%s"
         if color is not None:
             if type(color) in (tuple, list):
                 # convert RGB to closest x256
                 color_256 = x256.from_rgb(*color)
-                text = '\x1b[38;5;%dm%s' % (color_256, text)
+                text = "\x1b[38;5;%dm%s" % (color_256, text)
             else:
                 text = fmt_str % (COLORS[color], text)
 

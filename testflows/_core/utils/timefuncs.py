@@ -18,10 +18,11 @@ import time
 from datetime import timedelta
 from datetime import datetime
 
+
 def strftime(dt):
-    """Return string representation of datetime.
-    """
+    """Return string representation of datetime."""
     return f"{dt:%b %d,%Y %-H:%M:%S%z}"
+
 
 def localfromtimestamp(timestamp):
     """Convert UTC timestamp to local time.
@@ -32,9 +33,11 @@ def localfromtimestamp(timestamp):
     offset = datetime.fromtimestamp(timestamp) - utctime
     return utctime + offset
 
+
 def timestamp():
     """Return epoch timestamp."""
     return time.time()
+
 
 def timestampfromlocal(local):
     """Convert local date time to timestamp.
@@ -43,12 +46,14 @@ def timestampfromlocal(local):
     """
     return local.timestamp()
 
+
 def timestampfromutc(utc):
     """Convert UTC date time to timestamp.
 
     :param utc: UTC datetime
     """
     return (utc - datetime(1970, 1, 1)).total_seconds()
+
 
 def strftimedelta(td, format=None):
     """Return string representation of timedelta.
@@ -62,7 +67,7 @@ def strftimedelta(td, format=None):
     min, sec = divmod(left, 60)
     ms_float = (td.total_seconds() % 1) * 1000
     ms = int(ms_float)
-    us_float = ((ms_float % 1) * 1000)
+    us_float = (ms_float % 1) * 1000
     us = int(us_float)
 
     if format is None:
@@ -80,14 +85,10 @@ def strftimedelta(td, format=None):
         else:
             format = "{us}us"
 
-    return format.format(**{
-        "days": days,
-        "hours": hours,
-        "min": min,
-        "sec": sec,
-        "ms": ms,
-        "us": us
-    })
+    return format.format(
+        **{"days": days, "hours": hours, "min": min, "sec": sec, "ms": ms, "us": us}
+    )
+
 
 def strptimedelta(timelapse):
     """Parse string into timedelta.
@@ -97,14 +98,16 @@ def strptimedelta(timelapse):
 
     :param timelapse: timelapse string
     """
-    parser = re.compile(r'('
-        '((?P<days>\d+)d|day|days)?'
-        '((?P<hours>\d+)hr?)?'
-        '((?P<min>\d+)m(?!s))?'
-        '((?P<sec>(\d+.\d+)|(\d+))s)?'
-        '((?P<ms>\d+)ms)?'
-        '((?P<us>\d+)us)?'
-    ')?$')
+    parser = re.compile(
+        r"("
+        "((?P<days>\d+)d|day|days)?"
+        "((?P<hours>\d+)hr?)?"
+        "((?P<min>\d+)m(?!s))?"
+        "((?P<sec>(\d+.\d+)|(\d+))s)?"
+        "((?P<ms>\d+)ms)?"
+        "((?P<us>\d+)us)?"
+        ")?$"
+    )
 
     match = parser.match(s)
     if match is None:

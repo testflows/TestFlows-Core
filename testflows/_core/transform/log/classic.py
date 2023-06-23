@@ -26,17 +26,22 @@ from testflows._core.cli.colors import color, cursor_up
 
 indent = " " * 2
 
+
 def color_other(other):
     return color(other, "white", attrs=["dim"])
+
 
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["dim"])
 
+
 def color_secondary_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold", "dim"])
 
+
 def color_test_name(name):
     return color(name, "white", attrs=[])
+
 
 def color_result(result, icon=None):
     def result_icon(result):
@@ -67,6 +72,7 @@ def color_result(result, icon=None):
     # Null
     return color(icon, "cyan", attrs=["bold"])
 
+
 def format_prompt(msg, keyword):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -77,9 +83,11 @@ def format_prompt(msg, keyword):
         out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
     return out
 
+
 def format_input(msg, keyword):
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     return out
+
 
 def format_multiline(text, indent):
     first, rest = (text.rstrip() + "\n").split("\n", 1)
@@ -90,6 +98,7 @@ def format_multiline(text, indent):
     out = textwrap.indent(out, indent + "  ")
     return out
 
+
 def format_test(msg, keyword):
     flags = Flags(msg["test_flags"])
     if flags & SKIP and settings.show_skipped is False:
@@ -98,13 +107,14 @@ def format_test(msg, keyword):
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
         return
 
-    icon = '\u27A4'
+    icon = "\u27A4"
     time = f"{strftime(localfromtimestamp(msg['message_time'])):>20}"
 
     _name = color_test_name(msg["test_name"])
     out = f"{icon} {color_other(time)} {_name}\n"
 
     return out
+
 
 def format_result(msg):
     result = msg["result_type"]
@@ -120,11 +130,15 @@ def format_result(msg):
     _result = color_result(result, result)
     _test = color_test_name(f"{msg['result_test']}")
 
-    out = f"{_icon} "+ color_other(f"{strftimedelta(msg['message_rtime']):<10}") + f"[ {result.center(6, ' ')} ]".ljust(10, ' ').replace(result, _result)
+    out = (
+        f"{_icon} "
+        + color_other(f"{strftimedelta(msg['message_rtime']):<10}")
+        + f"[ {result.center(6, ' ')} ]".ljust(10, " ").replace(result, _result)
+    )
 
     _result_message = msg["result_message"]
     if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
-        _result_message = _result_message.strip().split("\n",1)[0].strip()
+        _result_message = _result_message.strip().split("\n", 1)[0].strip()
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
@@ -132,22 +146,23 @@ def format_result(msg):
             out += f"\n{indent}  {color(format_multiline(_result_message, indent).lstrip(), 'yellow', attrs=['bold'])}"
     elif result.startswith("X"):
         out += f" {_test}"
-        if msg['result_reason']:
+        if msg["result_reason"]:
             out += f"\n{indent}  {color(msg['result_reason'], 'blue', attrs=['bold'])}"
     else:
         out += f" {_test}"
     return out + "\n"
 
+
 formatters = {
     Message.INPUT.name: (format_input, f""),
     Message.PROMPT.name: (format_prompt, f""),
     Message.TEST.name: (format_test, f""),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
 }
 
+
 def transform(show_input=True):
-    """Transform parsed log line into a classic format.
-    """
+    """Transform parsed log line into a classic format."""
     line = None
     while True:
         if line is not None:

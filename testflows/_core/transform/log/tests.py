@@ -14,9 +14,9 @@
 # limitations under the License.
 from testflows._core.testtype import TestType
 
+
 def transform():
-    """Transform msg to test name.
-    """
+    """Transform msg to test name."""
     msg = None
 
     while True:

@@ -17,9 +17,10 @@ from .name import absname, match
 from .baseobject import TestObject
 from .testtype import TestType
 
+
 class The(TestObject):
-    """The `only`, `skip`, `start` and `end` test filer object.
-    """
+    """The `only`, `skip`, `start` and `end` test filer object."""
+
     _fields = ("pattern",)
 
     def __init__(self, pattern):
@@ -30,8 +31,7 @@ class The(TestObject):
         return self.pattern
 
     def at(self, at):
-        """Anchor filter by converting all patterns to be absolute.
-        """
+        """Anchor filter by converting all patterns to be absolute."""
         self.pattern = absname(self.pattern, at)
         return self
 

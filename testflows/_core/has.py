@@ -17,9 +17,10 @@ import operator
 
 from .flags import Flags
 
+
 class Filter:
-    """Base filter.
-    """
+    """Base filter."""
+
     def __init__(self, _op=None):
         self._op = _op
 
@@ -31,21 +32,25 @@ class Filter:
     def __or__(self, other):
         def op(test):
             return operator.or_(self(test), other(test))
+
         return Filter(_op=op)
 
     def __and__(self, other):
         def op(test):
             return operator.and_(self(test), other(test))
+
         return Filter(_op=op)
 
     def __invert__(self):
         def op(test):
             return operator.not_(self(test))
+
         return Filter(_op=op)
 
+
 class StringFilter(Filter):
-    """Generic filter for string types.
-    """
+    """Generic filter for string types."""
+
     parameter = None
 
     def __init__(self, s):
@@ -59,25 +64,30 @@ class StringFilter(Filter):
     def startingwith(cls, s):
         def op(test):
             return len([a for a in cls.getattr(test) if a.startswith(s)]) > 0
+
         return Filter(_op=op)
 
     @classmethod
     def endingwith(cls, s):
         def op(test):
             return len([a for a in cls.getattr(test) if a.endswith(s)]) > 0
+
         return Filter(_op=op)
 
     @classmethod
     def containing(cls, s):
         def op(test):
             return len([a for a in cls.getattr(test) if s in a]) > 0
+
         return Filter(_op=op)
 
     @classmethod
     def matching(cls, pattern):
         pattern = re.compile(pattern)
+
         def op(test):
             return len([a for a in cls.getattr(test) if pattern.match(a)]) > 0
+
         return Filter(_op=op)
 
     def __call__(self, test):
@@ -89,23 +99,24 @@ class has:
     to filter tests by their `name`, `flags`, `tags`,
     `attributes` and `requirements`.
     """
+
     class tag(StringFilter):
-        """Test tag filter.
-        """
+        """Test tag filter."""
+
         @staticmethod
         def getattr(test):
             return getattr(test, "tags", set())
 
     class name(StringFilter):
-        """Test name filter.
-        """
+        """Test name filter."""
+
         @staticmethod
         def getattr(test):
             return [getattr(test, "name")]
 
     class flag(Filter):
-        """Test flag filter.
-        """
+        """Test flag filter."""
+
         def __init__(self, flag):
             self.flag = Flags(flag)
 
@@ -113,69 +124,68 @@ class has:
             return self.flag in Flags(getattr(test, "flags", None))
 
     class attribute:
-        """Test attribute filter.
-        """
+        """Test attribute filter."""
+
         class BaseFilter(StringFilter):
             parameter = "attributes"
 
         class name(BaseFilter):
-            """Test attribute name filter.
-            """
+            """Test attribute name filter."""
+
             pass
 
         class uid(BaseFilter):
-            """Test attribute uid filter.
-            """
+            """Test attribute uid filter."""
+
             pass
 
         class value(BaseFilter):
-            """Test attribute value filter.
-            """
+            """Test attribute value filter."""
+
             pass
 
         class type(BaseFilter):
-            """Test attribute type filter.
-            """
+            """Test attribute type filter."""
+
             pass
 
         class group(BaseFilter):
-            """Test attribute group filter.
-            """
+            """Test attribute group filter."""
+
             pass
 
     class requirement:
-        """Test requirement filter.
-        """
+        """Test requirement filter."""
 
         class BaseFilter(StringFilter):
             parameter = "requirements"
 
         class name(BaseFilter):
-            """Test requirement name filter.
-            """
+            """Test requirement name filter."""
+
             pass
 
         class uid(BaseFilter):
-            """Test requirement uid filter.
-            """
+            """Test requirement uid filter."""
+
             pass
 
         class version(BaseFilter):
-            """Test requirement version filter.
-            """
+            """Test requirement version filter."""
+
             pass
 
         class priority(BaseFilter):
-            """Test requirement group filter.
-            """
+            """Test requirement group filter."""
+
             pass
 
         class type(BaseFilter):
-            """Test requirement type filter.
-            """
+            """Test requirement type filter."""
+
             pass
 
         class group(BaseFilter):
-            """Test requirement group filter.
-            """
+            """Test requirement group filter."""
+
             pass

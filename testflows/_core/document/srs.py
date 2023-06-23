@@ -63,6 +63,7 @@ requirement_template = """
 
 """
 
+
 class Visitor(PTNodeVisitor):
     def __init__(self, source_data, *args, **kwargs):
         self.source_data = source_data
@@ -71,11 +72,11 @@ class Visitor(PTNodeVisitor):
             "# from software requirements specification (SRS)\n"
             f"# document by TestFlows v{__version__}.\n"
             "# Do not edit by hand but re-generate instead\n"
-            "# using \'tfs requirements generate\' command.\n"
+            "# using 'tfs requirements generate' command.\n"
             "from testflows.core import Specification\n"
             "from testflows.core import Requirement\n\n"
             "Heading = Specification.Heading\n\n"
-            )
+        )
         self.levels = [0]
         self.current_level = 0
         self.requirements = []
@@ -92,12 +93,12 @@ class Visitor(PTNodeVisitor):
         # normalize header level
         level -= 1
         if self.current_level < level:
-            self.levels = self.levels[:level - 1]
+            self.levels = self.levels[: level - 1]
         if len(self.levels) < level:
             self.levels += [0] * (level - len(self.levels))
         self.current_level = level
         self.levels[self.current_level - 1] += 1
-        num = '.'.join([str(l) for l in self.levels[:self.current_level]])
+        num = ".".join([str(l) for l in self.levels[: self.current_level]])
         return level, num
 
     def visit_heading(self, node, children):
@@ -136,28 +137,48 @@ class Visitor(PTNodeVisitor):
         except:
             pass
         try:
-            status = str(node.specification_approval.specification_approval_status.words).strip()
+            status = str(
+                node.specification_approval.specification_approval_status.words
+            ).strip()
         except:
             pass
         try:
-            approved_version = str(node.specification_approval.specification_approval_version.words).strip()
+            approved_version = str(
+                node.specification_approval.specification_approval_version.words
+            ).strip()
         except:
             pass
         try:
-            approved_date = str(node.specification_approval.specification_approval_date.words).strip()
+            approved_date = str(
+                node.specification_approval.specification_approval_date.words
+            ).strip()
         except:
             pass
         try:
-            approved_by = str(node.specification_approval.specification_approval_by.words).strip()
+            approved_by = str(
+                node.specification_approval.specification_approval_by.words
+            ).strip()
         except:
             pass
 
         self.specification = Specification(
-            name=name, description=description, author=author,
-            date=date, status=status, approved_by=approved_by,
-            approved_date=approved_date, approved_version=approved_version,
-            version=version, group=group, type=type,
-            link=link, uid=uid, parent=parent, children=children, content=None)
+            name=name,
+            description=description,
+            author=author,
+            date=date,
+            status=status,
+            approved_by=approved_by,
+            approved_date=approved_date,
+            approved_version=approved_version,
+            version=version,
+            group=group,
+            type=type,
+            link=link,
+            uid=uid,
+            parent=parent,
+            children=children,
+            content=None,
+        )
 
     def visit_requirement(self, node, children):
         level, num = self.process_heading(node, children)
@@ -171,7 +192,13 @@ class Visitor(PTNodeVisitor):
         link = None
 
         try:
-            description = "\n".join([f'{"":8}{repr(line.value)}' for lines in node.requirement_description for line in lines])
+            description = "\n".join(
+                [
+                    f'{"":8}{repr(line.value)}'
+                    for lines in node.requirement_description
+                    for line in lines
+                ]
+            )
             description = wstrip(description, f"{'':8}'\\n'\n")
             description = f"(\n{description}\n{'':4})"
         except:
@@ -194,10 +221,20 @@ class Visitor(PTNodeVisitor):
             pass
 
         self.headings.append(Specification.Heading(name=name, level=level, num=num))
-        self.requirements.append(Requirement(
-            name=name, version=version, description=description,
-            priority=priority, group=group, type=type,
-            uid=uid, link=link, level=level, num=num))
+        self.requirements.append(
+            Requirement(
+                name=name,
+                version=version,
+                description=description,
+                priority=priority,
+                group=group,
+                type=type,
+                uid=uid,
+                link=link,
+                level=level,
+                num=num,
+            )
+        )
 
     def visit_document(self, node, children):
         requirements = []
@@ -216,7 +253,7 @@ class Visitor(PTNodeVisitor):
                 "uid": repr(rq.uid),
                 "link": repr(rq.link),
                 "level": repr(rq.level),
-                "num": repr(rq.num)
+                "num": repr(rq.num),
             }
 
             requirements.append(pyname)
@@ -224,7 +261,9 @@ class Visitor(PTNodeVisitor):
         sep = ",\n" + "    " * 2
 
         self.output += specification_template.lstrip() % {
-            "pyname": re.sub(r"_+", "_", self.pyname_fmt.sub("_", self.specification.name)),
+            "pyname": re.sub(
+                r"_+", "_", self.pyname_fmt.sub("_", self.specification.name)
+            ),
             "name": repr(self.specification.name),
             "description": repr(self.specification.description),
             "author": repr(self.specification.author),
@@ -242,14 +281,15 @@ class Visitor(PTNodeVisitor):
             "children": repr(self.specification.children),
             "headings": f"(\n{'    ' * 2}{sep.join(f'{heading}' for heading in self.headings)}{sep})",
             "requirements": f"(\n{'    ' * 2}{sep.join(rq for rq in requirements)}{sep})",
-            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "\'\'\'").rstrip()
+            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "'''").rstrip(),
         }
 
         return self.output.rstrip() + "\n"
 
+
 def Parser():
-    """Returns markdown requirements parser.
-    """
+    """Returns markdown requirements parser."""
+
     def line():
         return _(r"[^\n]*\n?")
 
@@ -263,7 +303,11 @@ def Parser():
         return heading()
 
     def toc_heading():
-        return _(r"#+[ \t]+"), _(r"[Tt][Aa][Bb][Ll][Ee] [Oo][Ff] [Cc][Oo][Nn][Tt][Ee][Nn][Tt][Ss]"), _(r"[ \t]*\n")
+        return (
+            _(r"#+[ \t]+"),
+            _(r"[Tt][Aa][Bb][Ll][Ee] [Oo][Ff] [Cc][Oo][Nn][Tt][Ee][Nn][Tt][Ss]"),
+            _(r"[ \t]*\n"),
+        )
 
     def heading_name():
         return _(r"[^\n]+")
@@ -338,30 +382,49 @@ def Parser():
         return _(r"\*?\*?[^\*\n]+:\*?\*?[ \t]*"), words, _(r"\n")
 
     def specification_approval():
-        return specification_approval_heading, ZeroOrMore([
-            specification_approval_status,
-            specification_approval_version,
-            specification_approval_by,
-            specification_approval_date,
-            specification_approval_other,
-            empty_line
-        ])
+        return specification_approval_heading, ZeroOrMore(
+            [
+                specification_approval_status,
+                specification_approval_version,
+                specification_approval_by,
+                specification_approval_date,
+                specification_approval_other,
+                empty_line,
+            ]
+        )
 
     def specification():
-        return specification_heading, ZeroOrMore(inline_heading), ZeroOrMore([
-            specification_author,
-            specification_date,
-            specification_version,
-            specification_other,
-            specification_approval,
-            empty_line,
-            _(r"[ \t]*[^\*#\n][^\n]*\n")
-        ]), [toc_heading, heading]
+        return (
+            specification_heading,
+            ZeroOrMore(inline_heading),
+            ZeroOrMore(
+                [
+                    specification_author,
+                    specification_date,
+                    specification_version,
+                    specification_other,
+                    specification_approval,
+                    empty_line,
+                    _(r"[ \t]*[^\*#\n][^\n]*\n"),
+                ]
+            ),
+            [toc_heading, heading],
+        )
 
     def requirement():
-        return requirement_heading, requirement_version, ZeroOrMore([
-                requirement_priority, requirement_type, requirement_group, requirement_uid
-            ]), Optional(requirement_description)
+        return (
+            requirement_heading,
+            requirement_version,
+            ZeroOrMore(
+                [
+                    requirement_priority,
+                    requirement_type,
+                    requirement_group,
+                    requirement_uid,
+                ]
+            ),
+            Optional(requirement_description),
+        )
 
     def document():
         return Optional(OneOrMore([specification, requirement, heading, line])), EOF

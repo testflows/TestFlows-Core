@@ -30,24 +30,25 @@ from .objects import XOK, XFail, XError, XNull
 from .objects import Value, Metric, Ticket, Attribute, Tag, Requirement, Node
 from .parallel import top, current, previous
 
+
 def current_dir(frame=None):
-    """Return directory of the current source file.
-    """
+    """Return directory of the current source file."""
     if frame is None:
         frame = inspect.currentframe().f_back
     return os.path.dirname(os.path.abspath(frame.f_globals["__file__"]))
 
+
 def current_module(frame=None):
-    """Return reference to the current module.
-    """
+    """Return reference to the current module."""
     if frame is None:
         frame = inspect.currentframe().f_back
     return sys.modules[frame.f_globals["__name__"]]
 
+
 def load_module(name, package=None):
-    """Load module by name.
-    """
+    """Load module by name."""
     return importlib.import_module(name, package=package)
+
 
 def load_submodules(name, package=None):
     """Load all submodules for a given module specified by name.
@@ -56,7 +57,11 @@ def load_submodules(name, package=None):
     :param package: package if module name is relative (optional)
     """
     module = load_module(name, package=package)
-    return [module_info[0].find_module(module_info[1]).load_module(module_info[1]) for module_info in pkgutil.iter_modules(module.__path__)]
+    return [
+        module_info[0].find_module(module_info[1]).load_module(module_info[1])
+        for module_info in pkgutil.iter_modules(module.__path__)
+    ]
+
 
 def load(name, test=None, package=None, frame=None):
     """Load test by name from module.
@@ -83,6 +88,7 @@ def load(name, test=None, package=None, frame=None):
         test = getattr(module, "Test", None)
     return test
 
+
 def append_path(pathlist, path, *rest, **kwargs):
     """Append path relative to the caller
     to the path list.
@@ -95,13 +101,16 @@ def append_path(pathlist, path, *rest, **kwargs):
     """
     pos = kwargs.pop("pos", None)
     frame = inspect.currentframe().f_back
-    dir = os.path.join(os.path.dirname(os.path.abspath(frame.f_globals["__file__"])), path, *rest)
+    dir = os.path.join(
+        os.path.dirname(os.path.abspath(frame.f_globals["__file__"])), path, *rest
+    )
     if dir not in pathlist:
         if pos is None:
             pathlist.append(dir)
         else:
             pathlist.insert(pos, dir)
     return pathlist
+
 
 def main(frame=None):
     """Return true if caller is the main module.
@@ -112,8 +121,10 @@ def main(frame=None):
         frame = inspect.currentframe().f_back
     return frame.f_globals["__name__"] == "__main__"
 
+
 class args(dict):
     pass
+
 
 def attribute(name, value, type=None, group=None, uid=None, base=Attribute, test=None):
     obj = base(name=name, value=value, type=type, group=group, uid=uid)
@@ -124,16 +135,36 @@ def attribute(name, value, type=None, group=None, uid=None, base=Attribute, test
     test.attributes[obj.name] = obj
     test.io.output.attribute(obj)
 
-def requirement(name, version, description=None, link=None,
-        priority=None, type=None, group=None, uid=None, base=Requirement, test=None):
-    obj = base(name=name, version=version, description=description, link=link,
-        priority=priority, type=type, group=group, uid=uid)
+
+def requirement(
+    name,
+    version,
+    description=None,
+    link=None,
+    priority=None,
+    type=None,
+    group=None,
+    uid=None,
+    base=Requirement,
+    test=None,
+):
+    obj = base(
+        name=name,
+        version=version,
+        description=description,
+        link=link,
+        priority=priority,
+        type=type,
+        group=group,
+        uid=uid,
+    )
     if test is None:
         test = current()
     if test.requirements.get(obj.name, None) is not None:
         raise NameError(f"requirement named '{obj.name}' already exists")
     test.requirements[obj.name] = obj
     test.io.output.requirement(obj)
+
 
 def tag(value, test=None):
     value = str(value)
@@ -142,12 +173,14 @@ def tag(value, test=None):
     test.tags.add(value)
     test.io.output.tag(Tag(value))
 
+
 def metric(name, value, units, type=None, group=None, uid=None, base=Metric, test=None):
     obj = base(name=name, value=value, units=units, type=type, group=group, uid=uid)
     if test is None:
         test = current()
     test.result.metrics.append(obj)
     test.io.output.metric(obj)
+
 
 def ticket(name, link=None, type=None, group=None, uid=None, base=Ticket, test=None):
     obj = base(name=name, link=link, type=type, group=group, uid=uid)
@@ -156,6 +189,7 @@ def ticket(name, link=None, type=None, group=None, uid=None, base=Ticket, test=N
     test.result.tickets.append(obj)
     test.io.output.ticket(obj)
 
+
 def value(name, value, type=None, group=None, uid=None, base=Value, test=None):
     obj = base(name=name, value=value, type=type, group=group, uid=uid)
     if test is None:
@@ -163,6 +197,7 @@ def value(name, value, type=None, group=None, uid=None, base=Value, test=None):
     test.result.values.append(obj)
     test.io.output.value(obj)
     return value
+
 
 def private_key(value=None, test=None):
     if test is None:
@@ -173,7 +208,17 @@ def private_key(value=None, test=None):
         value = test.private_key
     return value
 
-def text(*message, start="", end="\n", format=None, dedent=True, strip=False, file=None, test=None):
+
+def text(
+    *message,
+    start="",
+    end="\n",
+    format=None,
+    dedent=True,
+    strip=False,
+    file=None,
+    test=None,
+):
     if test is None:
         test = current()
 
@@ -198,30 +243,36 @@ def text(*message, start="", end="\n", format=None, dedent=True, strip=False, fi
 
     test.io.output.text(text)
 
+
 def note(message, test=None):
     if test is None:
         test = current()
     test.io.output.note(message)
+
 
 def debug(message, test=None):
     if test is None:
         test = current()
     test.io.output.debug(message)
 
+
 def trace(message, test=None):
     if test is None:
         test = current()
     test.io.output.trace(message)
+
 
 def message(message, test=None, stream=None):
     if test is None:
         test = current()
     test.io.output.message(Message.NONE, {"message": str(message)}, stream=stream)
 
+
 def exception(exc_type=None, exc_value=None, exc_traceback=None, test=None):
     if test is None:
         test = current()
     test.io.output.exception(exc_type, exc_value, exc_traceback)
+
 
 def result(type, *args, test=None):
     if type is OK:
@@ -242,6 +293,7 @@ def result(type, *args, test=None):
         return xnull(*args, test=test)
     raise TypeError(f"invalid result type {type}")
 
+
 def cleanup(func, *args, test=None, context=None, **kwargs):
     if context is None:
         if test is None:
@@ -249,11 +301,13 @@ def cleanup(func, *args, test=None, context=None, **kwargs):
         context = test.context
     context.cleanup(func, *args, **kwargs)
 
+
 def ok(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = test.result(OK(test=test.name, message=message, reason=reason))
     raise test.result
+
 
 def fail(message=None, reason=None, test=None, type=None):
     if test is None:
@@ -263,10 +317,11 @@ def fail(message=None, reason=None, test=None, type=None):
         if not message:
             raise ValueError("message must be specified")
         with type(message):
-           fail(reason=reason)
+            fail(reason=reason)
 
     test.result = test.result(Fail(test=test.name, message=message, reason=reason))
     raise test.result
+
 
 def skip(message=None, reason=None, test=None):
     if test is None:
@@ -274,11 +329,13 @@ def skip(message=None, reason=None, test=None):
     test.result = test.result(Skip(test=test.name, message=message, reason=reason))
     raise test.result
 
+
 def err(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = test.result(Error(test=test.name, message=message, reason=reason))
     raise test.result
+
 
 def null(message=None, reason=None, test=None):
     if test is None:
@@ -286,11 +343,13 @@ def null(message=None, reason=None, test=None):
     test.result = test.result(Null(test=test.name, message=message, reason=reason))
     raise test.result
 
+
 def xok(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = test.result(XOK(test=test.name, message=message, reason=reason))
     raise test.result
+
 
 def xfail(message=None, reason=None, test=None):
     if test is None:
@@ -298,17 +357,20 @@ def xfail(message=None, reason=None, test=None):
     test.result = test.result(XFail(test=test.name, message=message, reason=reason))
     raise test.result
 
+
 def xerr(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = test.result(XError(test=test.name, message=message, reason=reason))
     raise test.result
 
+
 def xnull(message=None, reason=None, test=None):
     if test is None:
         test = current()
     test.result = test.result(XNull(test=test.name, message=message, reason=reason))
     raise test.result
+
 
 def pause(message=None, test=None):
     if test is None:
@@ -321,6 +383,7 @@ def pause(message=None, test=None):
     test.io.output.prompt(f"Paused{message}nter any key to continue...")
     builtins.input()
     test.io.output.input("")
+
 
 def input(type, multiline=False, choices=None, confirm=True, test=None):
     nl = "\n"
@@ -342,12 +405,14 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
                 lines.append(builtins.input())
             except EOFError:
                 break
-        return '\n'.join(lines)
+        return "\n".join(lines)
 
     if builtins.type(type) is str:
         while True:
-            test.io.output.prompt(f"{type.strip()}{(nl + '(Press Enter then Ctrl-D to finish)') if multiline else ''}\n\n"
-                f"{('[' + ','.join([repr(c) for c in choices]) + ']' + nl*2) if choices else ''}")
+            test.io.output.prompt(
+                f"{type.strip()}{(nl + '(Press Enter then Ctrl-D to finish)') if multiline else ''}\n\n"
+                f"{('[' + ','.join([repr(c) for c in choices]) + ']' + nl*2) if choices else ''}"
+            )
             if multiline:
                 text = multilined()
             else:
@@ -405,23 +470,24 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
     else:
         raise ValueError(f"invalid type {type}")
 
+
 def getsattr(obj, name, *default):
-    """Get attribute or set it to the default value.
-    """
+    """Get attribute or set it to the default value."""
     value = getattr(obj, name, *default)
     setattr(obj, name, value)
     return value
 
+
 def current_time(test=None):
-    """Return current execution time.
-    """
+    """Return current execution time."""
     if test is None:
         test = current()
 
     if test.test_time is None:
-       return time.time() - test.start_time
+        return time.time() - test.start_time
     else:
-       return test.test_time
+        return test.test_time
+
 
 def aslice(iterator, *args, **kwargs):
     """Return an iterator whose next() method returns
@@ -441,6 +507,7 @@ def aslice(iterator, *args, **kwargs):
     :returns: islice object
     """
     return itertools.islice(iterator, *args, **kwargs)
+
 
 def chunks(iterator, n):
     """Converts iterator into an iterable over sub-iterables

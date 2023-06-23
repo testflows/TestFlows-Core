@@ -21,8 +21,10 @@ from testflows._core.cli.colors import color
 from testflows._core.document.srs import Parser, visit_parse_tree
 from testflows._core.document.toc import Visitor as VisitorBase
 
+
 def color_line(line):
     return color(line, "white", attrs=["dim"])
+
 
 def color_counts(result):
     if result == "Satisfied":
@@ -32,17 +34,20 @@ def color_counts(result):
     # Untested
     return functools.partial(color, color="yellow", attrs=["bold"])
 
+
 class Heading(object):
     def __init__(self, name, level, num):
         self.name = name
         self.level = level
         self.num = num
 
+
 class Requirement(Heading):
     def __init__(self, name, version, uid, level, num):
         self.version = version
         self.uid = uid
         return super(Requirement, self).__init__(name, level, num)
+
 
 class Visitor(VisitorBase):
     def __init__(self, *args, **kwargs):
@@ -58,11 +63,11 @@ class Visitor(VisitorBase):
         uid = None
         version = None
         try:
-            uid = f"\"{node.uid.word}\""
+            uid = f'"{node.uid.word}"'
         except:
             pass
         try:
-            version = f"\"{node.version.word}\""
+            version = f'"{node.version.word}"'
         except:
             pass
         res = self.process_heading(node, children)
@@ -80,6 +85,7 @@ class Visitor(VisitorBase):
     def visit_document(self, node, children):
         return self.headings
 
+
 class Counts(object):
     def __init__(self, name, units, ok, nok, untested):
         self.name = name
@@ -96,20 +102,35 @@ class Counts(object):
         s = color(s, "white", attrs=["bold"])
         r = []
         if self.ok > 0:
-            r.append(color_counts("Satisfied")(f"{self.ok} satisfied {(self.ok / self.units) * 100:.1f}%"))
+            r.append(
+                color_counts("Satisfied")(
+                    f"{self.ok} satisfied {(self.ok / self.units) * 100:.1f}%"
+                )
+            )
         if self.nok > 0:
-            r.append(color_counts("Unsatisfied")(f"{self.nok} unsatisfied {(self.nok / self.units) * 100:.1f}%"))
+            r.append(
+                color_counts("Unsatisfied")(
+                    f"{self.nok} unsatisfied {(self.nok / self.units) * 100:.1f}%"
+                )
+            )
         if self.untested > 0:
-            r.append(color_counts("Untested")(f"{self.untested} untested {(self.untested / self.units) * 100:.1f}%"))
+            r.append(
+                color_counts("Untested")(
+                    f"{self.untested} untested {(self.untested / self.units) * 100:.1f}%"
+                )
+            )
         s += color(", ", "white", attrs=["bold"]).join(r)
         s += color(")\n", "white", attrs=["bold"])
         return s
+
 
 class Coverage:
     def __init__(self, specification):
         self.specification = specification
         self.requirements = self.parse_requirements(self.specification)
-        self.counts = Counts("requirements", units=len(self.requirements), ok=0, nok=0, untested=0)
+        self.counts = Counts(
+            "requirements", units=len(self.requirements), ok=0, nok=0, untested=0
+        )
 
     @staticmethod
     def parse_requirements(specification):
@@ -124,25 +145,38 @@ class Coverage:
         return requirements
 
     def calculate(self):
-        """Calculate coverage.
-        """
+        """Calculate coverage."""
         for requirement, tests in self.requirements.items():
             if not tests:
                 self.counts.untested += 1
             else:
-                if sum([0 if test["result"] is not None and test["result"]["result_type"] == "OK" else 1 for test in tests]) == 0:
+                if (
+                    sum(
+                        [
+                            0
+                            if test["result"] is not None
+                            and test["result"]["result_type"] == "OK"
+                            else 1
+                            for test in tests
+                        ]
+                    )
+                    == 0
+                ):
                     self.counts.ok += 1
                 else:
                     self.counts.nok += 1
         return self
 
     def __str__(self):
-        s = color(self.specification["specification_name"], "white", attrs=["bold", "dim"])
+        s = color(
+            self.specification["specification_name"], "white", attrs=["bold", "dim"]
+        )
         s += f"\n  {self.counts}"
         return s
 
     def __contains__(self, requirement_name):
         return requirement_name in self.requirements
+
 
 def format_test(msg, coverages, results):
     flags = Flags(msg["test_flags"])
@@ -150,15 +184,17 @@ def format_test(msg, coverages, results):
         return
     results[msg["test_id"]] = {"test": msg, "requirements": [], "result": None}
 
+
 def format_specification(msg, coverages, results):
-    flags =  Flags(msg["test_flags"])
-    if flags  & SKIP and settings.show_skipped is False:
+    flags = Flags(msg["test_flags"])
+    if flags & SKIP and settings.show_skipped is False:
         return
     coverages.append(Coverage(msg))
 
+
 def format_requirement(msg, coverages, results):
-    flags =  Flags(msg["test_flags"])
-    if flags  & SKIP and settings.show_skipped is False:
+    flags = Flags(msg["test_flags"])
+    if flags & SKIP and settings.show_skipped is False:
         return
     test_id = msg["test_id"]
     requirement_name = msg["requirement_name"]
@@ -171,6 +207,7 @@ def format_requirement(msg, coverages, results):
     for coverage in coverages:
         if requirement_name in coverage.requirements:
             coverage.requirements[requirement_name].append(results[test_id])
+
 
 def format_result(msg, coverages, results):
     flags = Flags(msg["test_flags"])
@@ -186,16 +223,17 @@ def format_result(msg, coverages, results):
     else:
         results[test_id]["result"] = msg
 
+
 formatters = {
     Message.TEST.name: (format_test,),
     Message.SPECIFICATION.name: (format_specification,),
     Message.REQUIREMENT.name: (format_requirement,),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
 }
 
+
 def generate(coverages, divider):
-    """Generate report.
-    """
+    """Generate report."""
     report = ""
     total_counts = Counts("requirements", units=0, ok=0, nok=0, untested=0)
 
@@ -215,6 +253,7 @@ def generate(coverages, divider):
         report += f"\n{s}"
 
     return report or None
+
 
 def transform(stop, divider="\n"):
     """Totals report.

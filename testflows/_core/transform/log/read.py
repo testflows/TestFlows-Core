@@ -16,6 +16,7 @@ import time
 
 from testflows._core.message import Message
 
+
 def transform(file, tail=False, offset=False, stop=None):
     """Read lines from a file-like object.
 

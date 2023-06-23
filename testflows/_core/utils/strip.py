@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
 def wstrip(s, word, left=True, right=True):
     """Strip word from the beginning or the end of the string.
     By default strips from both sides.
@@ -41,12 +42,12 @@ def wstrip(s, word, left=True, right=True):
 
     return s[start_pos:end_pos]
 
+
 def lwstrip(s, word):
-    """Strip word only from the left side.
-    """
+    """Strip word only from the left side."""
     return wstrip(s, word, right=False)
 
+
 def rwstrip(s, word):
-    """Strip word only from the right side.
-    """
+    """Strip word only from the right side."""
     return wstrip(s, word, left=False)

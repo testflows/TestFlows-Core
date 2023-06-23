@@ -17,10 +17,15 @@ import datetime
 from testflows._core.utils.format import bytesize
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
-from testflows._core.cli.arg.handlers.report.compare.command import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.report.compare.command import Formatter as FormatterBase
+from testflows._core.cli.arg.handlers.report.compare.command import (
+    Handler as HandlerBase,
+)
+from testflows._core.cli.arg.handlers.report.compare.command import (
+    Formatter as FormatterBase,
+)
 from testflows._core.cli.arg.handlers.report.compare.command import template, testflows
 from testflows._core.utils.timefuncs import localfromtimestamp, strftimedelta
+
 
 class Formatter(FormatterBase):
     def format_metadata(self, data):
@@ -28,7 +33,7 @@ class Formatter(FormatterBase):
         s = (
             "\n\n"
             f"||**Date**||{localfromtimestamp(metadata['date']):%b %d, %Y %-H:%M}||\n"
-            f'||**Framework**||'
+            f"||**Framework**||"
             f'{testflows} {metadata["version"]}||\n'
         )
         if metadata.get("metrics"):
@@ -50,9 +55,20 @@ class Formatter(FormatterBase):
         span = '<span class="result result-%(cls)s">%(value)s</span>'
         for row in table["rows"]:
             name, *results = row
-            s += " | ".join([name] + [
-                span % {'cls': result["result_type"].lower() if result else 'na', 'value': table["value"](result) if result else '-'} for result in results
-            ]) + "\n"
+            s += (
+                " | ".join(
+                    [name]
+                    + [
+                        span
+                        % {
+                            "cls": result["result_type"].lower() if result else "na",
+                            "value": table["value"](result) if result else "-",
+                        }
+                        for result in results
+                    ]
+                )
+                + "\n"
+            )
         return s
 
     def format_chart(self, data):
@@ -68,20 +84,31 @@ class Formatter(FormatterBase):
             "logo": self.format_logo(data),
             "confidential": self.format_confidential(data),
             "copyright": self.format_copyright(data),
-            "body": body
+            "body": body,
         }
+
 
 class Handler(HandlerBase):
     Formatter = Formatter
 
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("metrics", help="metrics report", epilog=epilog(),
+        parser = commands.add_parser(
+            "metrics",
+            help="metrics report",
+            epilog=epilog(),
             description="Generate metrics comparison report.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
         cls.add_arguments(parser)
-        parser.add_argument("--name", metavar="name", type=str,
-            nargs="+", help="metrics name, default: test-time", default=["test-time"])
+        parser.add_argument(
+            "--name",
+            metavar="name",
+            type=str,
+            nargs="+",
+            help="metrics name, default: test-time",
+            default=["test-time"],
+        )
         parser.set_defaults(func=cls())
 
     def metadata(self, only, order_by, direction, metrics):
@@ -103,16 +130,22 @@ class Handler(HandlerBase):
             metrics = []
             for name in args.name:
                 if name == "test-time":
-                   metrics.append(strftimedelta(result["message_rtime"]))
+                    metrics.append(strftimedelta(result["message_rtime"]))
                 else:
                     for metric in result["metrics"]:
                         if metric["metric_name"] == name:
                             if metric["metric_units"] == "ms":
-                                metrics.append(f'{(int(metric["metric_value"]) / 1000.0)}s')
+                                metrics.append(
+                                    f'{(int(metric["metric_value"]) / 1000.0)}s'
+                                )
                             elif metric["metric_units"] == "bytes":
-                                metrics.append(f'{bytesize(int(metric["metric_value"]))}')
+                                metrics.append(
+                                    f'{bytesize(int(metric["metric_value"]))}'
+                                )
                             else:
-                                metrics.append(f'{metric["metric_value"]} {metric["metric_units"]}')
+                                metrics.append(
+                                    f'{metric["metric_value"]} {metric["metric_units"]}'
+                                )
             return str("<br>".join(metrics)) if metrics else "-"
 
         d["table"]["value"] = table_value

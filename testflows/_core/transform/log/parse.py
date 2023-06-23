@@ -17,9 +17,9 @@ import testflows.settings as settings
 from testflows._core.constants import id_sep
 from testflows._core.message import Message, loads
 
+
 def transform():
-    """Transform log line by parsing it.
-    """
+    """Transform log line by parsing it."""
     msg = None
     parsed_msg = None
 

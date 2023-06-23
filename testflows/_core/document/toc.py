@@ -19,6 +19,7 @@ from testflows._core.contrib.arpeggio import OneOrMore, ZeroOrMore, EOF, Optiona
 from testflows._core.contrib.arpeggio import ParserPython as PEGParser
 from testflows._core.contrib.arpeggio import PTNodeVisitor, visit_parse_tree
 
+
 class Visitor(PTNodeVisitor):
     def __init__(self, *args, **kwargs):
         self.header_ids = {}
@@ -45,12 +46,12 @@ class Visitor(PTNodeVisitor):
         # normalize header level
         level -= 1
         if self.current_level < level:
-            self.levels = self.levels[:level - 1]
+            self.levels = self.levels[: level - 1]
         if len(self.levels) < level:
             self.levels += [0] * (level - len(self.levels))
         self.current_level = level
         self.levels[self.current_level - 1] += 1
-        num = '.'.join([str(l) for l in self.levels[:self.current_level]])
+        num = ".".join([str(l) for l in self.levels[: self.current_level]])
         return level, num
 
     def visit_heading(self, node, children):
@@ -67,7 +68,9 @@ class Visitor(PTNodeVisitor):
             anchor = f"{anchor}{str(self.header_ids[anchor])}"
             self.header_ids[anchor] += 1
         indent = "  " * (level - 1)
-        self.output.append(f"{indent}* {'.'.join([str(l) for l in self.levels[:self.current_level]])} [{name}](#{anchor})")
+        self.output.append(
+            f"{indent}* {'.'.join([str(l) for l in self.levels[:self.current_level]])} [{name}](#{anchor})"
+        )
 
     def visit_document(self, node, children):
         self.output = "\n".join(self.output)
@@ -107,15 +110,15 @@ class UpdateVisitor(PTNodeVisitor):
 
 
 def Parser():
-    """Returns markdown heading parser.
-    """
+    """Returns markdown heading parser."""
+
     def line():
         return _(r"[^\n]*\n")
 
     def heading():
         return [
             (_(r"\s*#+\s+"), heading_name, _(r"\n?")),
-            (heading_name, _(r"\n?[-=]+\n?"))
+            (heading_name, _(r"\n?[-=]+\n?")),
         ]
 
     def heading_name():
@@ -141,7 +144,9 @@ def generate(source, destination, heading, update=False):
     toc = visit_parse_tree(tree, Visitor(start_after=heading))
     destination_data = ""
     if update:
-        destination_data = visit_parse_tree(tree, UpdateVisitor(heading=heading, toc=toc))
+        destination_data = visit_parse_tree(
+            tree, UpdateVisitor(heading=heading, toc=toc)
+        )
     else:
         destination_data = toc
     if destination_data:

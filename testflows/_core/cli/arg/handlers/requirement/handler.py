@@ -15,16 +15,24 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.requirement.generate import Handler as generate_handler
+from testflows._core.cli.arg.handlers.requirement.generate import (
+    Handler as generate_handler,
+)
+
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("requirements", help="requirement processing", epilog=epilog(),
+        parser = commands.add_parser(
+            "requirements",
+            help="requirement processing",
+            epilog=epilog(),
             description="Work with requirements.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        requirement_commands = parser.add_subparsers(title="commands", metavar="command",
-            description=None, help=None)
+        requirement_commands = parser.add_subparsers(
+            title="commands", metavar="command", description=None, help=None
+        )
         requirement_commands.required = True
         generate_handler.add_command(requirement_commands)

@@ -15,11 +15,13 @@
 # to the end flag
 from concurrent.futures import Future as _FutureBase
 
+
 class Future(_FutureBase):
     """concurrent.futures.Future that
     fixes __get_result() when exception
     implements its own custom __bool__()
     """
+
     def __get_result(self):
         if self._exception is not None:
             try:

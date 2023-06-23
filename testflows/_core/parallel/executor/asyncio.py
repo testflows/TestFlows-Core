@@ -22,27 +22,37 @@ import concurrent.futures.thread as _base
 
 from .future import Future
 from .. import _get_parallel_context
-from ..asyncio import is_running_in_event_loop, asyncio, Event as asyncio_Event, Queue as asyncio_Queue
+from ..asyncio import (
+    is_running_in_event_loop,
+    asyncio,
+    Event as asyncio_Event,
+    Queue as asyncio_Queue,
+)
 from .. import current, join as parallel_join
 
 _tasks_queues = weakref.WeakKeyDictionary()
 _shutdown = False
 
+
 def _python_exit():
     global _shutdown
     _shutdown = True
     # FIXME: debug leaked
-    #import sys
-    #import gc
-    #for k in (list(_tasks_queues.keys())):
+    # import sys
+    # import gc
+    # for k in (list(_tasks_queues.keys())):
     #    print(f"{k} {sys.getrefcount(k)} {gc.get_referrers(k)}")
     for work_queue in _tasks_queues.values():
         if work_queue._get_loop().is_running():
-            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=work_queue._get_loop())
+            asyncio.run_coroutine_threadsafe(
+                work_queue.put(None), loop=work_queue._get_loop()
+            )
     for task in _tasks_queues.keys():
         task.result()
 
+
 atexit.register(_python_exit)
+
 
 class _AsyncWorkItem(_base._WorkItem):
     async def run(self):
@@ -83,8 +93,7 @@ async def _worker(executor_weakref, work_queue):
 
 
 async def _loop_send_stop_event(stop_event):
-    """Set stop event to stop event loop.
-    """
+    """Set stop event to stop event loop."""
     stop_event.set()
 
 
@@ -96,8 +105,7 @@ async def _loop_main(stop_event):
 
 
 def _async_loop_thread(loop, stop_event):
-    """Async loop thread.
-    """
+    """Async loop thread."""
     asyncio.set_event_loop(loop)
 
     loop.run_until_complete(_loop_main(stop_event))
@@ -111,12 +119,18 @@ def _async_loop_thread(loop, stop_event):
 
 
 class AsyncPoolExecutor(_base._base.Executor):
-    """Async pool executor.
-    """
+    """Async pool executor."""
+
     _counter = itertools.count().__next__
 
-    def __init__(self, max_workers=1024, task_name_prefix="",
-            loop=None, _check_max_workers=True, join_on_shutdown=True):
+    def __init__(
+        self,
+        max_workers=1024,
+        task_name_prefix="",
+        loop=None,
+        _check_max_workers=True,
+        join_on_shutdown=True,
+    ):
         if _check_max_workers and int(max_workers) <= 0:
             raise ValueError("max_workers must be greater than 0")
         self._open = False
@@ -127,8 +141,9 @@ class AsyncPoolExecutor(_base._base.Executor):
         self._tasks = set()
         self._shutdown = False
         self._shutdown_lock = threading.Lock()
-        self._task_name_prefix = (task_name_prefix or
-            ("AsyncPoolExecutor-%d" % self._counter()))
+        self._task_name_prefix = task_name_prefix or (
+            "AsyncPoolExecutor-%d" % self._counter()
+        )
         self._async_loop_thread = None
         self._uid = str(uuid.uuid1())
         self._join_on_shutdown = join_on_shutdown
@@ -140,9 +155,11 @@ class AsyncPoolExecutor(_base._base.Executor):
     def __enter__(self):
         with self._shutdown_lock:
             if not self._open:
-                self._async_loop_thread = threading.Thread(target=_async_loop_thread,
+                self._async_loop_thread = threading.Thread(
+                    target=_async_loop_thread,
                     kwargs={"loop": self._loop, "stop_event": self._loop_stop_event},
-                    daemon=True)
+                    daemon=True,
+                )
                 self._async_loop_thread.start()
                 self._open = True
             return self
@@ -159,7 +176,9 @@ class AsyncPoolExecutor(_base._base.Executor):
             if self._shutdown:
                 raise RuntimeError("cannot schedule new futures after shutdown")
             if _shutdown:
-                raise RuntimeError("cannot schedule new futures after interpreter shutdown")
+                raise RuntimeError(
+                    "cannot schedule new futures after interpreter shutdown"
+                )
 
             future = Future()
             future._executor_uid = self._uid
@@ -171,9 +190,14 @@ class AsyncPoolExecutor(_base._base.Executor):
             idle_workers = self._adjust_task_count()
 
             if (idle_workers or block) and self._max_workers > 0:
-                if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
+                if (
+                    is_running_in_event_loop()
+                    and asyncio.get_event_loop() is self._loop
+                ):
                     raise RuntimeError("deadlock detected")
-                asyncio.run_coroutine_threadsafe(self._work_queue.put(work_item), loop=self._loop).result()
+                asyncio.run_coroutine_threadsafe(
+                    self._work_queue.put(work_item), loop=self._loop
+                ).result()
 
         if (not block and not idle_workers) or self._max_workers < 1:
             if is_running_in_event_loop() and asyncio.get_event_loop() is self._loop:
@@ -191,12 +215,17 @@ class AsyncPoolExecutor(_base._base.Executor):
             return True
 
         def weakref_cb(_, work_queue=self._work_queue):
-            asyncio.run_coroutine_threadsafe(work_queue.put(None), loop=self._loop).result()
+            asyncio.run_coroutine_threadsafe(
+                work_queue.put(None), loop=self._loop
+            ).result()
 
         num_tasks = len(self._tasks)
         if num_tasks < self._max_workers:
             task_name = "%s_%d" % (self._task_name_prefix or self, num_tasks)
-            task = asyncio.run_coroutine_threadsafe(_worker(weakref.ref(self, weakref_cb), self._work_queue), loop=self._loop)
+            task = asyncio.run_coroutine_threadsafe(
+                _worker(weakref.ref(self, weakref_cb), self._work_queue),
+                loop=self._loop,
+            )
             self._tasks.add(task)
             _tasks_queues[task] = self._work_queue
             return True
@@ -211,7 +240,8 @@ class AsyncPoolExecutor(_base._base.Executor):
             if not self._loop.is_running():
                 return
             asyncio.run_coroutine_threadsafe(
-                self._work_queue.put(None), loop=self._loop).result()
+                self._work_queue.put(None), loop=self._loop
+            ).result()
 
         if wait:
             if test is None:
@@ -219,7 +249,13 @@ class AsyncPoolExecutor(_base._base.Executor):
             try:
                 if test:
                     if self._join_on_shutdown:
-                        parallel_join(no_async=True, test=test, filter=lambda future: hasattr(future, "_executor_uid") and future._executor_uid == self._uid, cancel_pending=True)
+                        parallel_join(
+                            no_async=True,
+                            test=test,
+                            filter=lambda future: hasattr(future, "_executor_uid")
+                            and future._executor_uid == self._uid,
+                            cancel_pending=True,
+                        )
             finally:
                 exc = None
                 for task in self._tasks:
@@ -232,26 +268,31 @@ class AsyncPoolExecutor(_base._base.Executor):
                         raise exc
                 finally:
                     asyncio.run_coroutine_threadsafe(
-                            _loop_send_stop_event(self._loop_stop_event), loop=self._loop
-                        ).result()
+                        _loop_send_stop_event(self._loop_stop_event), loop=self._loop
+                    ).result()
                     if self._async_loop_thread is not None:
                         self._async_loop_thread.join()
 
 
 class SharedAsyncPoolExecutor(AsyncPoolExecutor):
-    """Shared async pool executor.
-    """
+    """Shared async pool executor."""
+
     def __init__(self, max_workers, task_name_prefix="", join_on_shutdown=True):
         self.initargs = (max_workers, task_name_prefix, join_on_shutdown)
 
         if int(max_workers) < 0:
             raise ValueError("max_workers must be positive or 0")
         super(SharedAsyncPoolExecutor, self).__init__(
-            max_workers=max_workers-1, task_name_prefix=task_name_prefix,
-            _check_max_workers=False, join_on_shutdown=join_on_shutdown)
+            max_workers=max_workers - 1,
+            task_name_prefix=task_name_prefix,
+            _check_max_workers=False,
+            join_on_shutdown=join_on_shutdown,
+        )
 
     def submit(self, fn, args=None, kwargs=None, block=False):
-        return super(SharedAsyncPoolExecutor, self).submit(fn=fn, args=args, kwargs=kwargs, block=block)
+        return super(SharedAsyncPoolExecutor, self).submit(
+            fn=fn, args=args, kwargs=kwargs, block=block
+        )
 
 
 GlobalAsyncPoolExecutor = SharedAsyncPoolExecutor

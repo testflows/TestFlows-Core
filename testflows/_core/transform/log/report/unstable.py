@@ -23,10 +23,11 @@ from testflows._core.transform.log.report.totals import Counts, color_result
 
 indent = " " * 2
 
+
 class UnstableCounts(Counts):
     def __str__(self):
         icon = "\u25D4"
-        fail_rate = (self.fail + self.error + self.null)/self.units * 100
+        fail_rate = (self.fail + self.error + self.null) / self.units * 100
         if fail_rate in (0, 100):
             return ""
         fail_rate = color(f"{fail_rate:.2f}%", "cyan", attrs=["bold"])
@@ -57,6 +58,7 @@ class UnstableCounts(Counts):
         s += color(")\n", "white", attrs=["bold"])
         return s
 
+
 def add_result(msg, results):
     flags = Flags(msg["test_flags"])
     cflags = Flags(msg["test_cflags"])
@@ -64,21 +66,21 @@ def add_result(msg, results):
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if (getattr(TestType, msg["test_type"]) == TestType.Iteration
-            and not cflags & RETRY):
+    if getattr(TestType, msg["test_type"]) == TestType.Iteration and not cflags & RETRY:
         result = msg["result_type"]
         parent_id, test_id = split(msg["test_id"])
         if results.get(parent_id) is None:
             results[parent_id] = []
         results[parent_id].append((msg, result))
 
+
 processors = {
     Message.RESULT.name: (add_result,),
 }
 
+
 def generate(results, divider):
-    """Generate report.
-    """
+    """Generate report."""
     if not results:
         return
 
@@ -98,11 +100,16 @@ def generate(results, divider):
         unstable += _counts
 
     if unstable:
-        unstable = color(f"{divider}Unstable\n\n", "white", attrs=["bold"]) + unstable.rstrip() + "\n"
+        unstable = (
+            color(f"{divider}Unstable\n\n", "white", attrs=["bold"])
+            + unstable.rstrip()
+            + "\n"
+        )
 
     report = f"{unstable}"
 
     return report or None
+
 
 def transform(stop, divider="\n"):
     """Generate unstable report.

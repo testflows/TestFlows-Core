@@ -17,16 +17,18 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.message import Message
 
+
 def format_metric(msg, metrics):
     metrics.append(msg)
+
 
 formatters = {
     Message.METRIC.name: (format_metric,),
 }
 
+
 def transform(metrics):
-    """Transform parsed log into metrics.
-    """
+    """Transform parsed log into metrics."""
     line = None
     while True:
         if line is not None:

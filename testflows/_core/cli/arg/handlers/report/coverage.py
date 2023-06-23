@@ -84,24 +84,21 @@ window.onload = function(){
 }
 """
 
+
 class Formatter:
-    utf_icons = {
-        "satisfied": "\u2714",
-        "unsatisfied": "\u2718",
-        "untested": "\u270E"
-    }
+    utf_icons = {"satisfied": "\u2714", "unsatisfied": "\u2718", "untested": "\u270E"}
 
     icon_colors = {
         "satisfied": "color-ok",
         "unsatisfied": "color-fail",
-        "untested": "color-error"
+        "untested": "color-error",
     }
 
     def format_logo(self, data):
         if not data["company"].get("logo"):
             return ""
         data = base64.b64encode(data["company"]["logo"]).decode("utf-8")
-        return '\n<p>' + logo % {"data": data} + "</p>\n"
+        return "\n<p>" + logo % {"data": data} + "</p>\n"
 
     def format_confidential(self, data):
         if not data["company"].get("confidential"):
@@ -111,16 +108,18 @@ class Formatter:
     def format_copyright(self, data):
         if not data["company"].get("name"):
             return ""
-        return (f'\n<p class="copyright">\n'
+        return (
+            f'\n<p class="copyright">\n'
             f'{copyright(data["company"]["name"])}\n'
-            "</p>\n")
+            "</p>\n"
+        )
 
     def format_metadata(self, data):
         metadata = data["metadata"]
         s = (
             "\n\n"
             f"||**Date**||{localfromtimestamp(metadata['date']):%b %d, %Y %-H:%M}||\n"
-            f'||**Framework**||'
+            f"||**Framework**||"
             f'{testflows} {metadata["version"]}||\n'
         )
         return s + "\n"
@@ -136,13 +135,14 @@ class Formatter:
                 value = f"<1%"
             return (
                 f'<div class="c100 p{math.floor(p_value):.0f} {color} smaller-title">'
-                    f'<span>{value}</span>'
-                    f'<span class="title">{title}</span>'
-                    '<div class="slice">'
-                        '<div class="bar"></div>'
-                        '<div class="fill"></div>'
-                    '</div>'
-                '</div>\n')
+                f"<span>{value}</span>"
+                f'<span class="title">{title}</span>'
+                '<div class="slice">'
+                '<div class="bar"></div>'
+                '<div class="fill"></div>'
+                "</div>"
+                "</div>\n"
+            )
 
         s = "\n## Summary\n"
         if counts.units <= 0:
@@ -155,24 +155,40 @@ class Formatter:
                 s += template(counts.unsatisfied, counts.units, "Unsatisfied", "red")
             if counts.untested > 0:
                 s += template(counts.untested, counts.units, "Untested", "orange")
-            s += '</div>\n'
+            s += "</div>\n"
         return s
 
     def format_statistics(self, data):
         counts = data["counts"]
-        result_map = {
-            "OK": "Satisfied",
-            "Fail": "Unsatisfied",
-            "Error": "Untested"
-        }
+        result_map = {"OK": "Satisfied", "Fail": "Unsatisfied", "Error": "Untested"}
         s = "\n\n## Statistics\n"
-        s += "||" + "||".join(
-            ["<span></span>", "Units"]
-            + [f'<span class="result result-{k.lower()}">{v}</span>' for k, v in result_map.items()]
-        ) + "||\n"
-        s += "||" + "||".join([f"<center>{i}</center>" for i in ["**Requirements**",
-                str(counts.units), str(counts.satisfied),
-                str(counts.unsatisfied), str(counts.untested)]]) + "||\n"
+        s += (
+            "||"
+            + "||".join(
+                ["<span></span>", "Units"]
+                + [
+                    f'<span class="result result-{k.lower()}">{v}</span>'
+                    for k, v in result_map.items()
+                ]
+            )
+            + "||\n"
+        )
+        s += (
+            "||"
+            + "||".join(
+                [
+                    f"<center>{i}</center>"
+                    for i in [
+                        "**Requirements**",
+                        str(counts.units),
+                        str(counts.satisfied),
+                        str(counts.unsatisfied),
+                        str(counts.untested),
+                    ]
+                ]
+            )
+            + "||\n"
+        )
         return s + "\n"
 
     def format_table(self, data):
@@ -180,7 +196,7 @@ class Formatter:
         s = "\n\n## Coverage\n"
         for r in reqs.values():
             s += f'\n<section class="requirement"><span class="requirement-inline"><i class="utf-icon {self.icon_colors[r["status"]]}">{self.utf_icons[r["status"]]}</i>{r["requirement"].name}</span></section>'
-            description = r["requirement"].description.replace("\\n","\n")
+            description = r["requirement"].description.replace("\\n", "\n")
             if description:
                 s += f'\n<div markdown="1" class="requirement-description hidden">\n{description}\n</div>'
             for test in r["tests"]:
@@ -210,8 +226,9 @@ class Formatter:
             "copyright": self.format_copyright(data),
             "body": body,
             "script": script,
-            "title": self.format_title(data)
+            "title": self.format_title(data),
         }
+
 
 class Counts(object):
     def __init__(self, name, units, satisfied, unsatisfied, untested):
@@ -224,36 +241,90 @@ class Counts(object):
     def __bool__(self):
         return self.units > 0
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("coverage", help="requirements coverage report", epilog=epilog(),
+        parser = commands.add_parser(
+            "coverage",
+            help="requirements coverage report",
+            epilog=epilog(),
             description="Generate requirements coverage report.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("requirements", metavar="requirements", type=partial(argtype.path, special=["-"]),
-                help="requirements source file, default: '-' (from input log)", nargs="?", default="-")
-        parser.add_argument("input", metavar="input", type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
-                nargs="?", help="input log, default: stdin", default="-")
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
-                nargs="?", help='output file, default: stdout', default="-")
-        parser.add_argument("--show", metavar="status", type=str, nargs="+", help="verification status. Choices: 'satisfied', 'unsatisfied', 'untested'",
+        parser.add_argument(
+            "requirements",
+            metavar="requirements",
+            type=partial(argtype.path, special=["-"]),
+            help="requirements source file, default: '-' (from input log)",
+            nargs="?",
+            default="-",
+        )
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="input log, default: stdin",
+            default="-",
+        )
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.file("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
+        parser.add_argument(
+            "--show",
+            metavar="status",
+            type=str,
+            nargs="+",
+            help="verification status. Choices: 'satisfied', 'unsatisfied', 'untested'",
             choices=["satisfied", "unsatisfied", "untested"],
-            default=["satisfied", "unsatisfied", "untested"])
-        parser.add_argument("--input-link", metavar="attribute",
+            default=["satisfied", "unsatisfied", "untested"],
+        )
+        parser.add_argument(
+            "--input-link",
+            metavar="attribute",
             help="attribute that is used as a link to the input log, default: job.url",
-            type=str, default="job.url")
-        parser.add_argument("--format", metavar="type", type=str,
-            help="output format, default: md (Markdown)", choices=["md"], default="md")
-        parser.add_argument("--copyright", metavar="name", help="add copyright notice", type=str)
-        parser.add_argument("--confidential", help="mark as confidential", action="store_true")
-        parser.add_argument("--logo", metavar="path", type=argtype.file("rb"),
-                help='use logo image (.png)')
+            type=str,
+            default="job.url",
+        )
+        parser.add_argument(
+            "--format",
+            metavar="type",
+            type=str,
+            help="output format, default: md (Markdown)",
+            choices=["md"],
+            default="md",
+        )
+        parser.add_argument(
+            "--copyright", metavar="name", help="add copyright notice", type=str
+        )
+        parser.add_argument(
+            "--confidential", help="mark as confidential", action="store_true"
+        )
+        parser.add_argument(
+            "--logo",
+            metavar="path",
+            type=argtype.file("rb"),
+            help="use logo image (.png)",
+        )
         parser.add_argument("--title", metavar="name", help="custom title", type=str)
-        parser.add_argument("--only", metavar="name", type=str, default=[], nargs="+",
-                help=("name of one or more specifications for which to generate coverage report"
-                    ", default: include all specifications. Only a unique part of the name can be specified."
-            ))
+        parser.add_argument(
+            "--only",
+            metavar="name",
+            type=str,
+            default=[],
+            nargs="+",
+            help=(
+                "name of one or more specifications for which to generate coverage report"
+                ", default: include all specifications. Only a unique part of the name can be specified."
+            ),
+        )
 
         parser.set_defaults(func=cls())
 
@@ -300,7 +371,10 @@ class Handler(HandlerBase):
                         continue
                 _specs.append(spec)
                 for req in spec["specification_requirements"]:
-                    _requirements[req["name"]] = {"requirement": Requirement(**req), "tests": []}
+                    _requirements[req["name"]] = {
+                        "requirement": Requirement(**req),
+                        "tests": [],
+                    }
         else:
             spec = importlib.util.spec_from_file_location("requirements", path)
             module = importlib.util.module_from_spec(spec)
@@ -317,28 +391,39 @@ class Handler(HandlerBase):
         started = test["test"]["message_time"]
         ended = test["result"]["message_time"]
 
-        messages = [format_test(test["test"], "", tests_by_parent, tests_by_id, no_colors=True)]
+        messages = [
+            format_test(test["test"], "", tests_by_parent, tests_by_id, no_colors=True)
+        ]
 
         if getattr(TestType, test["test"]["test_type"]) > TestType.Test:
-            for t in tests[idx + 1:]:
+            for t in tests[idx + 1 :]:
                 flags = Flags(t["test"]["test_flags"])
                 if flags & SKIP and settings.show_skipped is False:
                     continue
                 if t["test"]["message_time"] > ended:
                     break
-                if getattr(TestType, t["test"]["test_type"]) >= TestType.Test \
-                        and t["test"]["test_id"].startswith(test["test"]["test_id"]):
-                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id, no_colors=True))
+                if getattr(TestType, t["test"]["test_type"]) >= TestType.Test and t[
+                    "test"
+                ]["test_id"].startswith(test["test"]["test_id"]):
+                    messages.append(
+                        format_test(
+                            t["test"], "", tests_by_parent, tests_by_id, no_colors=True
+                        )
+                    )
                     messages.append(format_result(t["result"], no_colors=True))
         else:
-            for t in tests[idx + 1:]:
+            for t in tests[idx + 1 :]:
                 flags = Flags(t["test"]["test_flags"])
                 if flags & SKIP and settings.show_skipped is False:
                     continue
                 if t["test"]["message_time"] > ended:
                     break
                 if t["test"]["test_id"].startswith(test["test"]["test_id"]):
-                    messages.append(format_test(t["test"], "", tests_by_parent, tests_by_id, no_colors=True))
+                    messages.append(
+                        format_test(
+                            t["test"], "", tests_by_parent, tests_by_id, no_colors=True
+                        )
+                    )
                     messages.append(format_result(t["result"], no_colors=True))
 
         messages.append(format_result(test["result"], no_colors=True))
@@ -357,7 +442,15 @@ class Handler(HandlerBase):
 
             for requirement in test["test"]["requirements"]:
                 if requirement["requirement_name"] in requirements:
-                    requirements[requirement["requirement_name"]]["tests"].append(self.add_test_messages(test, i, tests, results["tests_by_parent"], results["tests_by_id"]))
+                    requirements[requirement["requirement_name"]]["tests"].append(
+                        self.add_test_messages(
+                            test,
+                            i,
+                            tests,
+                            results["tests_by_parent"],
+                            results["tests_by_id"],
+                        )
+                    )
 
         return requirements
 
@@ -412,9 +505,7 @@ class Handler(HandlerBase):
 
     def generate(self, formatter, results, args):
         output = args.output
-        output.write(
-            formatter.format(self.data(args.requirements, results, args))
-        )
+        output.write(formatter.format(self.data(args.requirements, results, args)))
         output.write("\n")
 
     def handle(self, args):

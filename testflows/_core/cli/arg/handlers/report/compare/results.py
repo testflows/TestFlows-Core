@@ -14,9 +14,14 @@
 # limitations under the License.
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
-from testflows._core.cli.arg.handlers.report.compare.command import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.report.compare.command import Formatter as FormatterBase
+from testflows._core.cli.arg.handlers.report.compare.command import (
+    Handler as HandlerBase,
+)
+from testflows._core.cli.arg.handlers.report.compare.command import (
+    Formatter as FormatterBase,
+)
 from testflows._core.cli.arg.handlers.report.compare.command import template
+
 
 class Formatter(FormatterBase):
     def format(self, data):
@@ -29,16 +34,21 @@ class Formatter(FormatterBase):
             "logo": self.format_logo(data),
             "confidential": self.format_confidential(data),
             "copyright": self.format_copyright(data),
-            "body": body
+            "body": body,
         }
+
 
 class Handler(HandlerBase):
     Formatter = Formatter
 
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("results", help="results report", epilog=epilog(),
+        parser = commands.add_parser(
+            "results",
+            help="results report",
+            epilog=epilog(),
             description="Generate results comparison report.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
         cls.add_arguments(parser)
         parser.set_defaults(func=cls())

@@ -20,29 +20,66 @@ from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 
+
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
-        parser = commands.add_parser("requirements", help="software requirements specification", epilog=epilog(),
+        parser = commands.add_parser(
+            "requirements",
+            help="software requirements specification",
+            epilog=epilog(),
             description="Create new software requirements specification document.",
-            formatter_class=HelpFormatter)
+            formatter_class=HelpFormatter,
+        )
 
-        parser.add_argument("output", metavar="output", type=argtype.file("w", bufsize=1, encoding="utf-8"),
-            nargs="?", help='output file, default: stdout', default="-")
-        parser.add_argument("--number", metavar="number", type=str, help="document number", default="001")
-        parser.add_argument("--title", metavar="name", type=str, help="document title", default="Template")
-        parser.add_argument("--author", metavar="name", type=str, help="name of the author", default="*[author]*")
-        parser.add_argument("--date", metavar="date", type=str, help="document date", default=f"{datetime.datetime.now():%B %d, %Y}")
+        parser.add_argument(
+            "output",
+            metavar="output",
+            type=argtype.file("w", bufsize=1, encoding="utf-8"),
+            nargs="?",
+            help="output file, default: stdout",
+            default="-",
+        )
+        parser.add_argument(
+            "--number",
+            metavar="number",
+            type=str,
+            help="document number",
+            default="001",
+        )
+        parser.add_argument(
+            "--title",
+            metavar="name",
+            type=str,
+            help="document title",
+            default="Template",
+        )
+        parser.add_argument(
+            "--author",
+            metavar="name",
+            type=str,
+            help="name of the author",
+            default="*[author]*",
+        )
+        parser.add_argument(
+            "--date",
+            metavar="date",
+            type=str,
+            help="document date",
+            default=f"{datetime.datetime.now():%B %d, %Y}",
+        )
         parser.set_defaults(func=cls())
 
     def handle(self, args):
-        template_dir = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "document", "new")
+        template_dir = os.path.join(
+            os.path.dirname(__file__), "..", "..", "..", "..", "..", "document", "new"
+        )
 
         with open(os.path.join(template_dir, "requirements.md")) as fd:
             template = fd.read()
 
-        args.output.write(template.format(
-            number=args.number,
-            title=args.title,
-            author=args.author,
-            date=args.date))
+        args.output.write(
+            template.format(
+                number=args.number, title=args.title, author=args.author, date=args.date
+            )
+        )

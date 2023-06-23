@@ -27,17 +27,19 @@ from .asyncio import is_running_in_event_loop
 from .asyncio import TimeoutError as AsyncTimeoutError
 from .asyncio import CancelledError as AsyncCancelledError
 
+
 def Context(**kwargs):
     """Convenience function to create
     a namedtuple to store parallel context variables.
     """
     return namedtuple("ParallelContext", " ".join(kwargs.keys()))(*kwargs.values())
 
+
 context = Context(
-    current=contextvars.ContextVar('_testflows_current', default=None),
-    previous=contextvars.ContextVar('_testflows_previous', default=None),
-    top=contextvars.ContextVar('_testflows_top', default=None),
-    is_valid=contextvars.ContextVar('_testflows_is_valid', default=None),
+    current=contextvars.ContextVar("_testflows_current", default=None),
+    previous=contextvars.ContextVar("_testflows_previous", default=None),
+    top=contextvars.ContextVar("_testflows_top", default=None),
+    is_valid=contextvars.ContextVar("_testflows_is_valid", default=None),
 )
 
 # set current parallel context as valid
@@ -46,9 +48,9 @@ context.is_valid.set(True)
 ContextVar = contextvars.ContextVar
 copy_context = contextvars.copy_context
 
+
 def convert_result_to_concurrent_future(fn, args=None, kwargs=None):
-    """Make concurrent future out of result of a function call.
-    """
+    """Make concurrent future out of result of a function call."""
     if args is None:
         args = ()
     if kwargs is None:
@@ -62,6 +64,7 @@ def convert_result_to_concurrent_future(fn, args=None, kwargs=None):
         future.set_exception(exc)
 
     return future
+
 
 def _get_parallel_context():
     """Return parallel context based on contextvars
@@ -78,37 +81,46 @@ def _get_parallel_context():
             var.set(None)
     return ctx
 
+
 def _check_parallel_context():
-    """Check if parallel parallel context is valid.
-    """
+    """Check if parallel parallel context is valid."""
     if not context.is_valid.get():
         raise RuntimeError("parallel context was not set")
 
+
 def top(value=None):
-    """Highest level test.
-    """
+    """Highest level test."""
     if value is not None:
         context.top.set(value)
     return context.top.get()
 
+
 def current(value=None, set_value=False):
-    """Currently executing test.
-    """
+    """Currently executing test."""
     if value is not None or set_value:
         context.current.set(value)
     return context.current.get()
 
+
 def previous(value=None):
-    """Last executed test.
-    """
+    """Last executed test."""
     if value is not None:
         context.previous.set(value)
     return context.previous.get()
 
-def join(*future, futures=None, test=None, filter=None, all=False, no_async=False, cancel_pending=False):
+
+def join(
+    *future,
+    futures=None,
+    test=None,
+    filter=None,
+    all=False,
+    no_async=False,
+    cancel_pending=False
+):
     """Wait for parallel test futures to complete.
     Returns a list of completed tests.
-    
+
     Terminates current test if any of the parallel
     tests raise an exception.
 
@@ -124,7 +136,14 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
     :param cancel_pending: cancel any pending futures
     """
     if no_async is False and is_running_in_event_loop():
-        return _async_join(*future, futures=futures, test=test, filter=filter, all=all, cancel_pending=cancel_pending)
+        return _async_join(
+            *future,
+            futures=futures,
+            test=test,
+            filter=filter,
+            all=all,
+            cancel_pending=cancel_pending
+        )
 
     if test is None:
         test = current()
@@ -178,10 +197,13 @@ def join(*future, futures=None, test=None, filter=None, all=False, no_async=Fals
         raise exception
     return tests
 
-async def _async_join(*future, futures=None, test=None, filter=None, all=False, cancel_pending=False):
+
+async def _async_join(
+    *future, futures=None, test=None, filter=None, all=False, cancel_pending=False
+):
     """Wait for async parallel test futures to complete.
     Returns a list of completed tests.
-    
+
     Terminates current test if any of the parallel
     tests raise an exception.
 

@@ -96,28 +96,99 @@ XRESULT = XOK | XFAIL | XERROR | XNULL
 NOT_COUNTED = FAIL_NOT_COUNTED
 NOT_COUNTED_ANY = FAIL_NOT_COUNTED | ERROR_NOT_COUNTED | NULL_NOT_COUNTED
 # cumulative flags
-CFLAGS = UT | MANDATORY | MANUAL | PARALLEL | NO_PARALLEL | NOT_REPEATABLE | RETRY | NESTED_RETRY | SETUP | CLEANUP
+CFLAGS = (
+    UT
+    | MANDATORY
+    | MANUAL
+    | PARALLEL
+    | NO_PARALLEL
+    | NOT_REPEATABLE
+    | RETRY
+    | NESTED_RETRY
+    | SETUP
+    | CLEANUP
+)
+
 
 class Flags(object):
     """Test flags."""
+
     all = [
-            TE, UT, SKIP, EOK, EFAIL, EERROR, ESKIP,
-            XOK, XFAIL, XERROR, XNULL,
-            FAIL_NOT_COUNTED, ERROR_NOT_COUNTED, NULL_NOT_COUNTED,
-            PAUSE_BEFORE, PAUSE_AFTER, MANUAL, AUTO,
-            REPORT, DOCUMENT, MANDATORY, PARALLEL, NO_PARALLEL, CLEAR,
-            ASYNC, REPEATED, NOT_REPEATABLE, RETRIED, LAST_RETRY,
-            PAUSE_ON_PASS, PAUSE_ON_FAIL, REMOTE, SETUP, CLEANUP, RETRY, NESTED_RETRY
-        ]
+        TE,
+        UT,
+        SKIP,
+        EOK,
+        EFAIL,
+        EERROR,
+        ESKIP,
+        XOK,
+        XFAIL,
+        XERROR,
+        XNULL,
+        FAIL_NOT_COUNTED,
+        ERROR_NOT_COUNTED,
+        NULL_NOT_COUNTED,
+        PAUSE_BEFORE,
+        PAUSE_AFTER,
+        MANUAL,
+        AUTO,
+        REPORT,
+        DOCUMENT,
+        MANDATORY,
+        PARALLEL,
+        NO_PARALLEL,
+        CLEAR,
+        ASYNC,
+        REPEATED,
+        NOT_REPEATABLE,
+        RETRIED,
+        LAST_RETRY,
+        PAUSE_ON_PASS,
+        PAUSE_ON_FAIL,
+        REMOTE,
+        SETUP,
+        CLEANUP,
+        RETRY,
+        NESTED_RETRY,
+    ]
     all_str = [
-            "TE", "UT", "SKIP", "EOK", "EFAIL", "EERROR", "ESKIP",
-            "XOK", "XFAIL", "XERROR", "XNULL",
-            "FAIL_NOT_COUNTED", "ERROR_NOT_COUNTED", "NULL_NOT_COUNTED",
-            "PAUSE_BEFORE", "PAUSE_AFTER", "MANUAL", "AUTO",
-            "REPORT", "DOCUMENT", "MANDATORY", "PARALLEL", "NO_PARALLEL", "CLEAR",
-            "ASYNC", "REPEATED", "NOT_REPEATABLE", "RETRIED", "LAST_RETRY",
-            "PAUSE_ON_PASS", "PAUSE_ON_FAIL", "REMOTE", "SETUP", "CLEANUP", "RETRY", "NESTED_RETRY"
-        ]
+        "TE",
+        "UT",
+        "SKIP",
+        "EOK",
+        "EFAIL",
+        "EERROR",
+        "ESKIP",
+        "XOK",
+        "XFAIL",
+        "XERROR",
+        "XNULL",
+        "FAIL_NOT_COUNTED",
+        "ERROR_NOT_COUNTED",
+        "NULL_NOT_COUNTED",
+        "PAUSE_BEFORE",
+        "PAUSE_AFTER",
+        "MANUAL",
+        "AUTO",
+        "REPORT",
+        "DOCUMENT",
+        "MANDATORY",
+        "PARALLEL",
+        "NO_PARALLEL",
+        "CLEAR",
+        "ASYNC",
+        "REPEATED",
+        "NOT_REPEATABLE",
+        "RETRIED",
+        "LAST_RETRY",
+        "PAUSE_ON_PASS",
+        "PAUSE_ON_FAIL",
+        "REMOTE",
+        "SETUP",
+        "CLEANUP",
+        "RETRY",
+        "NESTED_RETRY",
+    ]
 
     def __init__(self, flags=0):
         if flags is None:

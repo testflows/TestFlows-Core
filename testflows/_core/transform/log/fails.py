@@ -25,17 +25,22 @@ from testflows._core.cli.colors import color, cursor_up
 
 indent = " " * 2
 
+
 def color_other(other):
     return color(other, "white", attrs=["dim"])
+
 
 def color_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["dim"])
 
+
 def color_secondary_keyword(keyword):
     return color(split(keyword)[-1], "white", attrs=["bold", "dim"])
 
+
 def color_test_name(name):
     return color(name, "white", attrs=[])
+
 
 def color_result(result, icon=None):
     def result_icon(result):
@@ -66,6 +71,7 @@ def color_result(result, icon=None):
     # Null
     return color(icon, "cyan", attrs=["bold"])
 
+
 def format_prompt(msg, keyword):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -76,9 +82,11 @@ def format_prompt(msg, keyword):
         out += "\n" + color("\n".join(lines[1:]), "white", attrs=["dim"])
     return out
 
+
 def format_input(msg, keyword):
-    out = color(msg['message'], "white") + "\n"
+    out = color(msg["message"], "white") + "\n"
     return out
+
 
 def format_multiline(text, indent):
     first, rest = (text.rstrip() + "\n").split("\n", 1)
@@ -88,6 +96,7 @@ def format_multiline(text, indent):
     out = f"{first}{textwrap.dedent(rest.rstrip())}".rstrip()
     out = textwrap.indent(out, indent + "  ")
     return out
+
 
 def format_result(msg, only_new):
     result = msg["result_type"]
@@ -103,11 +112,15 @@ def format_result(msg, only_new):
     _result = color_result(result, result)
     _test = color_test_name(f"{msg['result_test']}")
 
-    out = f"{_icon} "+ color_other(f"{strftimedelta(msg['message_rtime']):<10}") + f"[ {result.center(6, ' ')} ]".ljust(10, ' ').replace(result, _result)
+    out = (
+        f"{_icon} "
+        + color_other(f"{strftimedelta(msg['message_rtime']):<10}")
+        + f"[ {result.center(6, ' ')} ]".ljust(10, " ").replace(result, _result)
+    )
 
     _result_message = msg["result_message"]
     if _result_message and settings.trim_results and int(msg["test_level"]) > 1:
-        _result_message = _result_message.strip().split("\n",1)[0].strip()
+        _result_message = _result_message.strip().split("\n", 1)[0].strip()
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
@@ -116,7 +129,7 @@ def format_result(msg, only_new):
         out += "\n"
     elif not only_new and result.startswith("X"):
         out += f" {_test}"
-        if msg['result_reason']:
+        if msg["result_reason"]:
             out += f"\n{indent}  {color(msg['result_reason'], 'blue', attrs=['bold'])}"
         out += "\n"
     else:
@@ -124,11 +137,13 @@ def format_result(msg, only_new):
 
     return out
 
+
 formatters = {
     Message.INPUT.name: (format_input, f""),
     Message.PROMPT.name: (format_prompt, f""),
-    Message.RESULT.name: (format_result,)
+    Message.RESULT.name: (format_result,),
 }
+
 
 def transform(only_new=False, show_input=True):
     """Transform parsed log line into a fails format.

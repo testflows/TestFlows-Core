@@ -4,10 +4,12 @@ from testflows.core import *
 
 pool = Pool(3)
 
+
 @TestScenario
 def subtest(self):
     with Step("step"):
         time.sleep(1)
+
 
 @TestScenario
 def test1(self):
@@ -15,8 +17,9 @@ def test1(self):
         note(f"{self.name} note1")
     pool.submit(Scenario(test=subtest)).result()
 
-        #if self.name.endswith("test1"):
-        #    fail(f"{self.name} failed")
+    # if self.name.endswith("test1"):
+    #    fail(f"{self.name} failed")
+
 
 @TestScenario
 @Parallel(True)
@@ -27,6 +30,7 @@ def ptest(self):
     note("parallel test done")
     fail(f"{self.name} failed")
 
+
 @TestScenario
 def ptest2(self):
     note("parallel test")
@@ -34,15 +38,16 @@ def ptest2(self):
         try:
             for i in range(10):
                 with Step("step"):
-                   time.sleep(0.1)
+                    time.sleep(0.1)
         finally:
             note("tryin to cleanup")
             with Given("I try to do some setup"):
                 pass
-    finally:    
+    finally:
         with Finally("clean up"):
             note(f"{self.name} clean up")
     note("parallel test done")
+
 
 @TestScenario
 def ptest3(self):
@@ -55,12 +60,13 @@ def suite(self):
 
     tasks = []
     with pool:
-       
-       for i in range(3):
-           tasks.append(Scenario(name=f"ptest2-{i}", run=ptest2, parallel=True))
-           tasks.append(Scenario(run=ptest3, parallel=True))
-       
-       join(*tasks)
+
+        for i in range(3):
+            tasks.append(Scenario(name=f"ptest2-{i}", run=ptest2, parallel=True))
+            tasks.append(Scenario(run=ptest3, parallel=True))
+
+        join(*tasks)
+
 
 if main():
     suite()

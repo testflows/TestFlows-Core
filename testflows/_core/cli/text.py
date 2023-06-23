@@ -14,6 +14,7 @@
 # limitations under the License.
 from testflows._core.cli.colors import color
 
+
 def primary(text, eol="\n", bold=True, dim=False):
     attrs = []
     if bold:
@@ -21,6 +22,7 @@ def primary(text, eol="\n", bold=True, dim=False):
     if dim:
         attrs.append("dim")
     return color(text + eol, "white", attrs=attrs)
+
 
 def secondary(text, eol="\n", bold=False, dim=True):
     attrs = []
@@ -30,6 +32,7 @@ def secondary(text, eol="\n", bold=False, dim=True):
         attrs.append("dim")
     return color(text + eol, "white", attrs=attrs)
 
+
 def danger(text, eol="\n", bold=True, dim=False):
     attrs = []
     if bold:
@@ -37,6 +40,7 @@ def danger(text, eol="\n", bold=True, dim=False):
     if dim:
         attrs.append("dim")
     return color(text + eol, "red", attrs=attrs)
+
 
 def success(text, eol="\n", bold=True, dim=False):
     attrs = []
@@ -46,6 +50,7 @@ def success(text, eol="\n", bold=True, dim=False):
         attrs.append("dim")
     return color(text + eol, "green", attrs=attrs)
 
+
 def warning(text, eol="\n", bold=True, dim=False):
     attrs = []
     if bold:
@@ -53,6 +58,7 @@ def warning(text, eol="\n", bold=True, dim=False):
     if dim:
         attrs.append("dim")
     return color(text + eol, "yellow", attrs=attrs)
+
 
 def info(text, eol="\n", bold=True, dim=False):
     attrs = []

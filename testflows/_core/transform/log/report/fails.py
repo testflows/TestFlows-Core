@@ -23,6 +23,7 @@ from testflows._core.utils.timefuncs import strftimedelta
 
 indent = " " * 2
 
+
 def color_result(result, attrs=None):
     if attrs is None:
         attrs = ["bold"]
@@ -41,6 +42,7 @@ def color_result(result, attrs=None):
     else:
         raise ValueError(f"unknown result {result}")
 
+
 def add_result(msg, results):
     flags = Flags(msg["test_flags"])
     cflags = Flags(msg["test_cflags"])
@@ -57,9 +59,11 @@ def add_result(msg, results):
     if not result in ("OK", "Skip"):
         results[msg["test_id"]] = (msg, result)
 
+
 processors = {
     Message.RESULT.name: (add_result,),
 }
+
 
 def generate(results, divider, only_new=False):
     """Generate report"""
@@ -77,7 +81,9 @@ def generate(results, divider, only_new=False):
         out = _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}"
         if msg["result_reason"]:
             out += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
-        out += " " + color("(" + strftimedelta(msg['message_rtime']) + ")", "white", attrs=["dim"])
+        out += " " + color(
+            "(" + strftimedelta(msg["message_rtime"]) + ")", "white", attrs=["dim"]
+        )
         out += "\n"
 
         if result.startswith("X"):
@@ -102,6 +108,7 @@ def generate(results, divider, only_new=False):
     report = f"{retries}{xfails}{fails}"
 
     return report or None
+
 
 def transform(stop, divider="\n", only_new=False):
     """Transform parsed log line into a short format.
