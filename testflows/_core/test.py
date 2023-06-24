@@ -3218,7 +3218,14 @@ class TestDecorator(object):
 
         _type = self.type
         functools.update_wrapper(self, self.func)
+
         self.type = _type
+
+        action = getattr(self.func, "action", None)
+        if action is not None:
+            _, _, action_map = action
+            if action_map is not None:
+                action_map.add(self)
 
     def __call__(self, *pargs, **args):
         if pargs:
