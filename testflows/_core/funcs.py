@@ -524,3 +524,8 @@ def chunks(iterator, n):
             break
         finally:
             yield chunk
+
+
+def always(test):
+    """Always True condition that can be used with 'when' clauses."""
+    return True

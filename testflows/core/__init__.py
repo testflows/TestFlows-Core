@@ -110,7 +110,17 @@ from testflows._core.funcs import metric, ticket, value, note, debug, trace, tex
 from testflows._core.funcs import attribute, requirement, tag
 from testflows._core.funcs import input, current_time
 from testflows._core.funcs import message, exception, ok, fail, skip, err
-from testflows._core.funcs import result, null, xok, xfail, xerr, xnull, pause, getsattr
+from testflows._core.funcs import (
+    result,
+    null,
+    xok,
+    xfail,
+    xerr,
+    xnull,
+    pause,
+    getsattr,
+    always,
+)
 from testflows._core.funcs import (
     current_dir,
     current_module,

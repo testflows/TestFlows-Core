@@ -20,7 +20,8 @@ import tempfile
 
 def parser(extension="log"):
     return re.compile(
-        r".*testflows\.(?P<ppid>\d+)\.(?P<ts>\d+)\.(?P<tss>\d+)\.(?P<pid>\d+)\.{extension}"
+        r".*testflows\.(?P<ppid>\d+)\.(?P<ts>\d+)\.(?P<tss>\d+)\.(?P<pid>\d+)\."
+        + extension
     )
 
 
@@ -36,7 +37,7 @@ def dirname():
     return tempfile.gettempdir()
 
 
-def filename(extenstion="log"):
+def filename(extension="log"):
     """Return temporary file name."""
     return os.path.join(
         tempfile.gettempdir(),

@@ -85,7 +85,7 @@ from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
 from .constants import name_sep, id_sep
 from .io import TestIO
-from .name import join, depth, match, absname, isabs
+from .name import join, depth, match, absname, isabs, basename
 from .funcs import exception, pause, result, value, input
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
@@ -437,6 +437,8 @@ class TestBase(object):
         test_to_end=None,
         parallel_pool_size=None,
         module=None,
+        action=None,
+        behavior=None,
     ):
 
         self.lock = threading.Lock()
@@ -454,7 +456,6 @@ class TestBase(object):
         self.name = name
         if self.name is None:
             raise TypeError("name must be specified")
-        self.name = self.name
         self.child_count = 0
         self.start_time = time.time()
         self.test_time = None
@@ -465,6 +466,7 @@ class TestBase(object):
         self.id_str = id_sep + id_sep.join(str(n) for n in self.id)
         self.maps = get(maps, list(self.maps))
         self.module = module
+        self.action = action
         self.type = get(type, self.type)
         self.subtype = get(subtype, self.subtype)
         self.context = get(
@@ -473,6 +475,14 @@ class TestBase(object):
             if current_test and self.type < TestType.Iteration
             else (Context(current_test.context if current_test else None)),
         )
+        self.behavior = get(
+            behavior,
+            current_test.behavior
+            if current_test and self.type < TestType.Iteration
+            else [],
+        )
+        if action is not None:
+            self.behavior.append(basename(self.name))
         self.tags = tags
         self.specifications = {
             s.name: s
