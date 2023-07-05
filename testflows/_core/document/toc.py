@@ -67,7 +67,7 @@ class Visitor(PTNodeVisitor):
         else:
             anchor = f"{anchor}{str(self.header_ids[anchor])}"
             self.header_ids[anchor] += 1
-        indent = "  " * (level - 1)
+        indent = " " * 4 * (level - 1)
         self.output.append(
             f"{indent}* {'.'.join([str(l) for l in self.levels[:self.current_level]])} [{name}](#{anchor})"
         )
