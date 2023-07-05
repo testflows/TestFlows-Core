@@ -526,6 +526,12 @@ def chunks(iterator, n):
             yield chunk
 
 
-def always(test):
+def always(*args, **kwargs):
     """Always True condition that can be used with 'when' clauses."""
     return True
+
+
+def noop(*args, **kwargs):
+    """No operation function call."""
+    return None
+
