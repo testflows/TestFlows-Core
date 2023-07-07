@@ -490,26 +490,6 @@ def current_time(test=None):
         return test.test_time
 
 
-def shuffle(start=None, stop=None, step=None):
-    """Returns a shuffling function that take a sequence.
-
-    Shuffles either the whole or only a slice of a sequence one item at a time.
-
-    Slice can be specified using `start`, `stop`, `step`.
-    """
-
-    def _shuffle(sequence):
-        while deck := list(itertools.islice(sequence, start, stop, step)):
-            while len(deck):
-                i = random.randint(0, len(deck) - 1)
-                card = deck[i]
-                deck[i] = deck[-1]
-                deck.pop()
-                yield card
-
-    return _shuffle
-
-
 def aslice(iterator, *args, **kwargs):
     """Return an iterator whose next() method returns
     a slice that only contains selected  values from an iterable.

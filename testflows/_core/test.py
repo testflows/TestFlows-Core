@@ -88,7 +88,6 @@ from .constants import name_sep, id_sep
 from .io import TestIO
 from .name import join, depth, match, absname, isabs, basename
 from .funcs import exception, pause, result, value, input
-from .funcs import shuffle as default_shuffle
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
@@ -3479,21 +3478,11 @@ class TestDecorator(object):
 
                         # clean up all the fixed choices
                         for k in reversed(list(pattern.keys())):
-                            values, limit = pattern[k]
-                            if limit is not None and limit < 2:
+                            if len(pattern[k]) == 1:
                                 pattern.pop(k)
                                 continue
-                            try:
-                                value = next(values)
-                                next_value = next(values)
-                                pattern[k] = (
-                                    itertools.chain(iter([value, next_value]), values),
-                                    limit,
-                                )
-                                break
-                            except StopIteration:
-                                pattern.pop(k)
-                                continue
+                            break
+
                         if not pattern:
                             break
 
@@ -3993,7 +3982,7 @@ def either(
     value=None,
     i=None,
     random=False,
-    shuffle=None,
+    shuffle=random.shuffle,
     limit=None,
     frame=None,
     test=None,
@@ -4009,12 +3998,10 @@ def either(
     This function must be called only once for each line of code in the same source file or
     a unique identifier `i` must be specified.
 
-    If `random` is True, then all values will be shuffled using a default shuffle function
-    that will convert all values from an iterator into a list which must fit into memory.
+    If `random` is True, then all values will be shuffled using a default shuffle function.
 
-    Optionally, you can pass a custom `shuffle` function that takes values iterator as an argument
-    and produces a modified sequence. For example, standard `shuffle(start, stop, step)` function
-    can be used to randomly shuffle values a slice at a time.
+    Optionally, you can pass a custom `shuffle` function that takes values as an argument
+    and modifies the sequence in-place. By default, random.shuffle() is used.
 
     Use `limit` to limit number of values to choose.
 
@@ -4032,10 +4019,15 @@ def either(
         if limit < 1:
             raise ValueError(f"limit {limit} must be 1 or greater")
 
-    if not values and value is None:
-        values = (True, False)
+    values = list(values)
 
-    if values and value is None and len(values) == 1:
+    if value is not None:
+        values += list(value)
+
+    if not values:
+        values = [True, False]
+
+    if len(values) == 1:
         return values[0]
 
     if frame is None:
@@ -4046,36 +4038,23 @@ def either(
 
     uid = frame.f_code.co_filename + str(frame.f_lineno) + str(i)
 
-    values = itertools.chain(iter(values), value if value is not None else iter([]))
-
     if random:
-        shuffle = default_shuffle()
+        shuffle(values)
 
-    if shuffle:
-        values = shuffle(values)
-
-    value = next(values)
+    values = values[:limit]
+    value = values[0]
 
     if test.pattern.get(uid, None):
-        values, limit = test.pattern[uid]
-        value = next(values)
+        values = test.pattern[uid]
+        value = values[0]
 
         if list(test.pattern.keys())[-1] == uid:
-            # we are at the bottom of the stack; dict is ordered
-            try:
-                if limit is not None:
-                    limit -= 1
-                    if limit < 1:
-                        raise StopIteration("max limit reached")
-                value = next(values)
-                test.pattern[uid] = (itertools.chain(iter([value]), values), limit)
-            except StopIteration:
+            if values[1:]:
+                value = values[1]
+                test.pattern[uid] = values[1:]
+            else:
                 test.pattern.pop(uid)
-        else:
-            # put back the value
-            test.pattern[uid] = (itertools.chain(iter([value]), values), limit)
     else:
-        if limit is None or limit > 1:
-            test.pattern[uid] = (itertools.chain(iter([value]), values), limit)
+        test.pattern[uid] = values
 
     return value
