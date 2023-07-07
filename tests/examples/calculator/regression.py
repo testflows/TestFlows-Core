@@ -70,7 +70,7 @@ def regression(self, local=False, local_webdriver_path=None):
     with And("open calculator"):
         open_calculator()
 
-    check_basic_operations()
+    Scenario(run=check_basic_operations)
 
 
 if main():

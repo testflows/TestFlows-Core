@@ -173,6 +173,14 @@ rerun_results = [
 settings.secrets_registry = Secrets()
 
 
+def ifsubclass(obj, type_or_types):
+    """Check if object is a subclass irrespective of the object type."""
+    try:
+        return issubclass(obj, type_or_types)
+    except TypeError:
+        return False
+
+
 async def run_async_generator(generator, consume=False):
     """Run async generator."""
     if consume:
@@ -439,6 +447,7 @@ class TestBase(object):
         module=None,
         action=None,
         behavior=None,
+        pattern=None,
     ):
 
         self.lock = threading.Lock()
@@ -480,6 +489,12 @@ class TestBase(object):
             current_test.behavior
             if current_test and self.type < TestType.Iteration
             else [],
+        )
+        self.pattern = get(
+            pattern,
+            current_test.pattern
+            if current_test and self.type < TestType.Iteration
+            else {},
         )
         if action is not None:
             self.behavior.append(basename(self.name))
@@ -1836,11 +1851,13 @@ class TestDefinition(object):
     """
 
     type = TestType.Test
+    subtype = None
 
     def __new__(cls, name=None, **kwargs):
         kwargs = {
             k: v.value if isinstance(v, NamedValue) else v for k, v in kwargs.items()
         }
+
         run = kwargs.pop("run", None)
         test = kwargs.pop("test", None)
         no_arguments = None
@@ -2398,6 +2415,10 @@ class TestDefinition(object):
                 self.test._run_outline_with_no_arguments = self.no_arguments
                 self.test._run_outline = True
 
+            # indicate that parent is running a pattern
+            if isinstance(kwargs_test, TestPattern):
+                self.test._run_pattern = True
+
             if self.rerun_individually is not None:
                 self.trace = sys.gettrace()
                 sys.settrace(lambda *args, **kwargs: None)
@@ -2556,6 +2577,9 @@ class TestDefinition(object):
         elif int(parent_type) < int(type):
             type = parent_type
             subtype = parent_subtype
+
+        elif subtype is TestSubType.Pattern:
+            type = parent_type
 
         elif subtype is TestSubType.Example:
             type = parent_type
@@ -2732,6 +2756,8 @@ class TestDefinition(object):
                                 self.no_arguments
                             )
                             retry_iteration._run_outline = True
+                        elif isinstance(self.repeatable_func, TestPattern):
+                            retry_iteration._run_pattern = True
                         self.repeatable_func(**args, __run_as_func__=True)
                     if not retry:
                         break
@@ -2793,6 +2819,8 @@ class TestDefinition(object):
                                 self.no_arguments
                             )
                             retry_iteration._run_outline = True
+                        elif isinstance(self.repeatable_func, TestPattern):
+                            retry_iteration._run_pattern = True
                         await self.repeatable_func(**args, __run_as_func__=True)
 
                     if not retry:
@@ -2846,6 +2874,8 @@ class TestDefinition(object):
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
+                elif isinstance(self.repeatable_func, TestPattern):
+                    iteration._run_pattern = True
                 self.repeatable_func(**args)
 
     async def __exit_async_process_test_rerun_individually(self, exc_value):
@@ -2874,6 +2904,8 @@ class TestDefinition(object):
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
+                elif isinstance(self.repeatable_func, TestPattern):
+                    iteration._run_pattern = True
                 await self.repeatable_func(**args)
 
     def __exit_common(self, exc_type, exc_value, exc_traceback, test__exit__):
@@ -3006,7 +3038,7 @@ class Module(TestDefinition):
     type = TestType.Module
 
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.Module
+        kwargs["type"] = cls.type
         return super(Module, cls).__new__(cls, name, **kwargs)
 
 
@@ -3016,7 +3048,7 @@ class Suite(TestDefinition):
     type = TestType.Suite
 
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.Suite
+        kwargs["type"] = cls.type
         return super(Suite, cls).__new__(cls, name, **kwargs)
 
 
@@ -3025,8 +3057,12 @@ class Outline(TestDefinition):
 
     type = TestType.Outline
 
-    def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = kwargs.pop("type", cls.type)
+    def __new__(cls, name=None, type=None, **kwargs):
+        kwargs["type"] = (
+            (type.type if ifsubclass(type, TestDefinition) else type)
+            if type is not None
+            else cls.type
+        )
         return super(Outline, cls).__new__(cls, name, **kwargs)
 
 
@@ -3036,8 +3072,25 @@ class Test(TestDefinition):
     type = TestType.Test
 
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.Test
+        kwargs["type"] = cls.type
         return super(Test, cls).__new__(cls, name, **kwargs)
+
+
+class Pattern(TestDefinition):
+    """Pattern definition."""
+
+    type = TestType.Test
+    subtype = TestSubType.Pattern
+
+    def __new__(cls, name=None, type=None, subtype=None, **kwargs):
+        kwargs["type"] = (
+            (type.type if ifsubclass(type, TestDefinition) else type)
+            if type is not None
+            else cls.type
+        )
+        kwargs["subtype"] = cls.subtype
+        self = super(Pattern, cls).__new__(cls, name, **kwargs)
+        return self
 
 
 class Iteration(TestDefinition):
@@ -3046,9 +3099,11 @@ class Iteration(TestDefinition):
     type = TestType.Iteration
 
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.Iteration
+        kwargs["type"] = cls.type
+
         parent_type = kwargs.pop("parent_type", TestType.Test)
         parent_subtype = kwargs.pop("parent_subtype", None)
+
         self = super(Iteration, cls).__new__(
             cls, name, **kwargs, parent_type=parent_type, parent_subtype=parent_subtype
         )
@@ -3061,9 +3116,11 @@ class RetryIteration(TestDefinition):
     type = TestType.RetryIteration
 
     def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = TestType.RetryIteration
+        kwargs["type"] = cls.type
+
         parent_type = kwargs.pop("parent_type", TestType.Test)
         parent_subtype = kwargs.pop("parent_subtype", None)
+
         self = super(RetryIteration, cls).__new__(
             cls, name, **kwargs, parent_type=parent_type, parent_subtype=parent_subtype
         )
@@ -3073,9 +3130,16 @@ class RetryIteration(TestDefinition):
 class Example(TestDefinition):
     """Example definition."""
 
-    def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = kwargs.pop("type", cls.type)
-        kwargs["subtype"] = TestSubType.Example
+    type = TestType.Test
+    subtype = TestSubType.Example
+
+    def __new__(cls, name=None, type=None, **kwargs):
+        kwargs["type"] = (
+            (type.type if ifsubclass(type, TestDefinition) else type)
+            if type is not None
+            else cls.type
+        )
+        kwargs["subtype"] = cls.subtype
         self = super(Example, cls).__new__(cls, name, **kwargs)
         return self
 
@@ -3086,46 +3150,71 @@ class Step(TestDefinition):
     type = TestType.Step
     subtype = None
 
-    def __new__(cls, name=None, **kwargs):
-        kwargs["type"] = kwargs.pop("type", cls.type)
-        kwargs["subtype"] = kwargs.pop("subtype", cls.subtype)
+    def __new__(cls, name=None, type=None, subtype=None, **kwargs):
+        kwargs["type"] = (
+            (type.type if ifsubclass(type, TestDefinition) else type)
+            if type is not None
+            else cls.type
+        )
+        kwargs["subtype"] = (
+            subtype
+            if subtype is not None
+            else (
+                type.subtype
+                if type is not None and ifsubclass(type, TestDefinition)
+                else cls.subtype
+            )
+        )
         return super(Step, cls).__new__(cls, name, **kwargs)
 
 
 # support for BDD
 class Feature(Suite):
+
+    subtype = TestSubType.Feature
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Feature
+        kwargs["subtype"] = cls.subtype
         return super(Feature, cls).__new__(cls, name, **kwargs)
 
 
 class Scenario(Test):
+    subtype = TestSubType.Scenario
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Scenario
+        kwargs["subtype"] = cls.subtype
         return super(Scenario, cls).__new__(cls, name, **kwargs)
 
 
 class Check(Test):
+    subtype = TestSubType.Check
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Check
+        kwargs["subtype"] = cls.subtype
         return super(Check, cls).__new__(cls, name, **kwargs)
 
 
 class Critical(Test):
+    subtype = TestSubType.Critical
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Critical
+        kwargs["subtype"] = cls.subtype
         return super(Critical, cls).__new__(cls, name, **kwargs)
 
 
 class Major(Test):
+    subtype = TestSubType.Major
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Major
+        kwargs["subtype"] = cls.subtype
         return super(Major, cls).__new__(cls, name, **kwargs)
 
 
 class Minor(Test):
+    subtype = TestSubType.Minor
+
     def __new__(cls, name=None, **kwargs):
-        kwargs["subtype"] = TestSubType.Minor
+        kwargs["subtype"] = cls.subtype
         return super(Minor, cls).__new__(cls, name, **kwargs)
 
 
@@ -3295,17 +3384,24 @@ class TestDecorator(object):
             return process_func_result(self.func(test, **args))
 
         test_running_outline = getattr(test, "_run_outline", False)
+        test_running_pattern = getattr(test, "_run_pattern", False)
 
         if (
-            test is None
-            or (
-                test
-                and test.type > self.type.type
-                and self.type.type != TestType.Outline
+            (
+                test is None
+                or (
+                    test
+                    and test.type > self.type.type
+                    and self.type.type != TestType.Outline
+                    and test.subtype != TestSubType.Pattern
+                )
             )
+            and not (test and _run_as_func)
             or (test and test_running_outline)
-        ) and not (test and _run_as_func):
+            or (test and test_running_pattern)
+        ):
             kwargs = dict(self.func.kwargs)
+            kwargs.pop("test", None)
 
             if isinstance(self, TestOutline):
                 no_arguments = not args or getattr(
@@ -3317,7 +3413,6 @@ class TestDecorator(object):
 
                 if no_arguments and examples:
                     kwargs["args"] = {}
-                    kwargs.pop("test", None)
 
                     _test_type = self.type(**kwargs, test=self)
 
@@ -3332,17 +3427,10 @@ class TestDecorator(object):
                             _kwargs.pop("type", None)
                             _kwargs.pop("examples", None)
 
-                            if _test.type in (
-                                TestType.Iteration,
-                                TestType.RetryIteration,
-                            ):
-                                type = _test.parent_type
-                            else:
-                                type = _test.type
-
-                            _example_type = Example(type=type, **_kwargs)
+                            _example_type = Example(**_kwargs)
 
                             def execute_example(**args):
+                                args.pop("__run_as_func__", None)
                                 process_func_result(self.func(current(), **args))
 
                             _example_type.repeatable_func = execute_example
@@ -3353,21 +3441,57 @@ class TestDecorator(object):
                     _test_type.repeatable_func = execute_examples
 
                     if test and test_running_outline:
-                        _test = test
                         execute_examples()
                     else:
-                        with _test_type as _test:
+                        with _test_type:
                             execute_examples()
-
-                    return _test
                 else:
                     if test and test_running_outline:
                         return run(test)
                     else:
-                        kwargs.pop("test", None)
                         return self.type(**kwargs, test=self)(**args)
+
+            elif isinstance(self, TestPattern):
+                _test_type = self.type(**kwargs, test=self)
+
+                def execute_patterns():
+                    pattern_num = -1
+                    pattern = {}
+                    _kwargs = dict(self.func.kwargs)
+                    _kwargs["pattern"] = pattern
+                    _kwargs.pop("subtype", None)
+
+                    while True:
+                        pattern_num += 1
+                        _kwargs["name"] = f"pattern #{pattern_num}"
+
+                        def execute_pattern(**args):
+                            args.pop("__run_as_func__", None)
+                            process_func_result(self.func(current(), **args))
+
+                        _pattern_type = Pattern(**_kwargs, subtype=TestSubType.Pattern)
+                        _pattern_type.repeatable_func = execute_pattern
+
+                        with _pattern_type as _pattern:
+                            execute_pattern(**args)
+
+                        # clean up all the fixed choices
+                        for k in reversed(list(pattern.keys())):
+                            if len(pattern[k]) == 1:
+                                pattern.pop(k)
+                                continue
+                            break
+                        if not pattern:
+                            break
+
+                _test_type.repeatable_func = execute_patterns
+
+                if test and test_running_pattern:
+                    execute_patterns()
+                else:
+                    with _test_type:
+                        execute_patterns()
             else:
-                kwargs.pop("test", None)
                 return self.type(**kwargs, test=self)(**args)
         else:
             return run(test)
@@ -3427,6 +3551,29 @@ class TestOutline(TestDecorator):
             return self
 
         return super(TestOutline, self).__call__(*args, **kwargs)
+
+
+class TestPattern(TestDecorator):
+    type = Test
+
+    def __init__(self, func_or_type=None):
+        self.func = None
+
+        if inspect.isfunction(func_or_type):
+            self.func = func_or_type
+        elif func_or_type is not None:
+            self.type = func_or_type
+
+        if self.func:
+            TestDecorator.__init__(self, self.func)
+
+    def __call__(self, *args, **kwargs):
+        if not self.func:
+            self.func = args[0]
+            TestDecorator.__init__(self, self.func)
+            return self
+
+        return super(TestPattern, self).__call__(*args, **kwargs)
 
 
 class TestCase(TestDecorator):
@@ -3826,3 +3973,73 @@ def define(name, value, encoder=str, type=By, name_prefix="defining "):
     """
     with type(f"{name_prefix}{name}", description=f"{encoder(value)}"):
         return value
+
+
+def either(*values, start=None, stop=None, step=1, i=None, frame=None, test=None):
+    """Select choices for a pattern one at a time until all choices are consumed.
+
+    If start is specified then set choices to an inclusive range of numbers
+    from `start` to `stop` in `step` increments.
+
+    If neither `values` or `start` is explicitly specified then set choices
+    to `(True, False)` tuple.
+
+    Function must be called only once for each line of code in the same source file or
+    unique identifier `i` must be specified.
+
+    :param *values: other zero or more of values to choose from
+    :param start: range start
+    :param stop: range stop
+    :param step: range step
+    :param i: (optional) unique identifier, default: None
+    :param frame: (optional) caller frame, default: currentframe().f_back
+    :param test: (optional) current test, default: current()
+    """
+    if not values and start is None:
+        values = (True, False)
+
+    if values and start is not None:
+        raise ValueError("can't specify both values and start")
+
+    if start is not None:
+        if start < 0:
+            raise ValueError(f"start {start} must be >= 0")
+
+        if stop is None:
+            stop = start + 1
+
+        if stop < 0:
+            raise ValueError(f"stop {stop} must be >= 0")
+
+        values = range(start, stop + 1, step)
+
+        if not values:
+            return 0
+
+    if values and len(values) == 1:
+        return values[0]
+
+    if frame is None:
+        frame = inspect.currentframe().f_back
+
+    if test is None:
+        test = current()
+
+    uid = frame.f_code.co_filename + str(frame.f_lineno) + str(i)
+
+    value = values[0]
+
+    if test.pattern.get(uid, None):
+        values = test.pattern[uid]
+        value = values[0]
+        # if we are at the bottom of the stack
+        if list(test.pattern.keys())[-1] == uid:
+            if values[1:]:
+                value = values[1]
+                test.pattern[uid] = values[1:]
+            else:
+                test.pattern.pop(uid)
+    else:
+        test.pattern[uid] = list(values)
+
+    return value

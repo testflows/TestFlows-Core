@@ -21,6 +21,7 @@ from testflows._core.test import (
     TestModule,
     TestBackground,
     TestOutline,
+    TestPattern,
 )
 from testflows._core.test import Context, SharedContext
 from testflows._core.test import Feature, Background, Scenario, Example, Outline
@@ -39,7 +40,16 @@ from testflows._core.test import (
     Cleanup,
 )
 from testflows._core.test import TestFeature, TestScenario, TestCheck
-from testflows._core.test import loads, ordered, retry, retries, repeat, repeats, define
+from testflows._core.test import (
+    loads,
+    ordered,
+    retry,
+    retries,
+    repeat,
+    repeats,
+    define,
+    either,
+)
 from testflows._core.has import has
 from testflows._core.flags import Flags
 from testflows._core.objects import (

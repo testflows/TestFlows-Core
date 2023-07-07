@@ -149,6 +149,8 @@ def format_test(msg, counts):
 
     if test_subtype == TestSubType.Example:
         counts["example"].units += 1
+    elif test_subtype == TestSubType.Pattern:
+        counts["pattern"].units += 1
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             counts["book"].units += 1
@@ -212,6 +214,8 @@ def format_result(msg, counts):
 
     if test_subtype == TestSubType.Example:
         setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
+    elif test_subtype == TestSubType.Pattern:
+        setattr(counts["pattern"], _name, getattr(counts["pattern"], _name) + 1)
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             setattr(counts["book"], _name, getattr(counts["book"], _name) + 1)
@@ -283,6 +287,7 @@ def all_counts():
         "document": Counts("documents", *([0] * 11)),
         "page": Counts("pages", *([0] * 11)),
         "section": Counts("sections", *([0] * 11)),
+        "pattern": Counts("patterns", *([0] * 11)),
         "example": Counts("examples", *([0] * 11)),
     }
 
@@ -336,6 +341,8 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["page"])
             if counts["section"]:
                 line += line_icon + str(counts["section"])
+            if counts["pattern"]:
+                line += line_icon + str(counts["pattern"])
             if counts["example"]:
                 line += line_icon + str(counts["example"])
             if counts["outline"]:

@@ -534,4 +534,3 @@ def always(*args, **kwargs):
 def noop(*args, **kwargs):
     """No operation function call."""
     return None
-

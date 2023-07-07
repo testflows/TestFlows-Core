@@ -28,7 +28,7 @@ class TestType(IntEnum):
 
 
 class TestSubType(IntEnum):
-    """Test behaviour subtype."""
+    """Test subtype."""
 
     Book = 70
     Feature = 60
@@ -38,6 +38,7 @@ class TestSubType(IntEnum):
     Section = 47
     Page = 46
     Example = 45
+    Pattern = 44
     Background = 40
     Recipe = 35
     Critical = 34
