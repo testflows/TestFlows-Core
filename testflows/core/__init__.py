@@ -118,7 +118,7 @@ from testflows._core.funcs import load, append_path, cleanup
 from testflows._core.funcs import main, args, private_key
 from testflows._core.funcs import metric, ticket, value, note, debug, trace, text
 from testflows._core.funcs import attribute, requirement, tag
-from testflows._core.funcs import input, current_time
+from testflows._core.funcs import input, current_time, shuffle
 from testflows._core.funcs import message, exception, ok, fail, skip, err
 from testflows._core.funcs import (
     result,
