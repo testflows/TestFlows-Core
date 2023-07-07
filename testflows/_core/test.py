@@ -449,6 +449,8 @@ class TestBase(object):
         action=None,
         behavior=None,
         pattern=None,
+        random=False,
+        limit=None,
     ):
 
         self.lock = threading.Lock()
@@ -497,6 +499,13 @@ class TestBase(object):
             if current_test and self.type < TestType.Iteration
             else {},
         )
+        self.random = get(
+            random,
+            current_test.random
+            if current_test and self.type < TestType.Iteration
+            else False,
+        )
+        self.limit = limit
         if action is not None:
             self.behavior.append(basename(self.name))
         self.tags = tags
@@ -3458,13 +3467,21 @@ class TestDecorator(object):
                 def execute_patterns():
                     pattern_num = -1
                     pattern = {}
+                    limit = current().limit
+
                     _kwargs = dict(self.func.kwargs)
                     _kwargs["pattern"] = pattern
+                    _kwargs["random"] = current().random
                     _kwargs.pop("subtype", None)
 
                     while True:
                         pattern_num += 1
                         _kwargs["name"] = f"pattern #{pattern_num}"
+
+                        if limit is not None:
+                            limit -= 1
+                            if limit < 0:
+                                break
 
                         def execute_pattern(**args):
                             args.pop("__run_as_func__", None)
@@ -3558,8 +3575,15 @@ class TestOutline(TestDecorator):
 class TestPattern(TestDecorator):
     type = Test
 
-    def __init__(self, func_or_type=None):
+    def __init__(self, func_or_type=None, random=False, limit=None):
         self.func = None
+        self.random = random
+        self.limit = limit
+
+        if self.limit is not None:
+            self.limit = int(self.limit)
+            if self.limit < 1:
+                raise ValueError(f"limit {self.limit} must be 1 or greater")
 
         if inspect.isfunction(func_or_type):
             self.func = func_or_type
@@ -3567,11 +3591,17 @@ class TestPattern(TestDecorator):
             self.type = func_or_type
 
         if self.func:
+            self._init_func()
             TestDecorator.__init__(self, self.func)
+
+    def _init_func(self):
+        self.func.random = self.random
+        self.func.limit = self.limit
 
     def __call__(self, *args, **kwargs):
         if not self.func:
             self.func = args[0]
+            self._init_func()
             TestDecorator.__init__(self, self.func)
             return self
 
@@ -3618,16 +3648,19 @@ class TestBackground(TestDecorator):
     type = Background
 
 
-def ordered(tests):
+def ordered(tests, random=False, test=None):
     """Return ordered list of tests."""
-    if settings.random_order:
+    if test is None:
+        test = current()
+
+    if random or test.random or settings.random_order:
         random.shuffle(tests)
     else:
         human_sort(tests, key=lambda test: test.__name__)
     return tests
 
 
-def loads(name, *types, package=None, frame=None, filter=None):
+def loads(name, *types, package=None, frame=None, filter=None, random=False):
     """Load multiple tests from module.
 
     :param name: module name or module
@@ -3635,6 +3668,7 @@ def loads(name, *types, package=None, frame=None, filter=None):
     :param package: package name if module name is relative (optional)
     :param frame: caller frame if module name is not specified (optional)
     :param filter: filter function
+    :param random: random order (optional), default `False`
     :return: list of tests
     """
     if name is None or name == ".":
@@ -3652,7 +3686,9 @@ def loads(name, *types, package=None, frame=None, filter=None):
                 return True
             return member.type in types
 
-    tests = ordered([test for name, test in inspect.getmembers(module, is_type)])
+    tests = ordered(
+        [test for name, test in inspect.getmembers(module, is_type)], random=True
+    )
 
     if filter:
         return builtins.filter(filter, tests)
@@ -4038,7 +4074,7 @@ def either(
 
     uid = frame.f_code.co_filename + str(frame.f_lineno) + str(i)
 
-    if random:
+    if random or test.random or settings.random_order:
         shuffle(values)
 
     values = values[:limit]
