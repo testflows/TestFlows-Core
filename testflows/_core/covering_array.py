@@ -165,6 +165,7 @@ def horizontal_extension(t, i, tests, π, parameters_set):
         # choose a value vi of Pi and replace τ with τ’ = (v1, v2, …, vi-1, vi) so that τ’ covers the
         # most number of combinations of values in π
         best = None
+        # FIXME: if bitmap is all empty set value to don't care and don't try to pick any value
         for value in parameters_set[i]:
             new_test = test + (value,)
             coverage, bitmap = calculate_coverage(t, new_test, π, parameters_set)
@@ -176,9 +177,40 @@ def horizontal_extension(t, i, tests, π, parameters_set):
     return tests, π
 
 
-def vertical_extension():
+def vertical_extension(t, i, tests, π, parameters_set):
     """Vertical extension for parameter Pi"""
-    raise NotImplementedError
+
+    # for each combination of σ in π
+    for combination in π.combinations:
+        index = combination_index(t, combination)
+        bitmap = π.bitmap[index]
+        bitmap_index = -1
+
+        if bitmap == 0:
+            continue
+
+        while bitmap:
+            print(bin(bitmap))
+            bitmap_index += 1
+            if not bitmap & 1:
+                bitmap >>= 1
+                continue
+            bitmap >>= 1
+
+            values = bitmap_index_combination_values(
+                bitmap_index, combination, parameters_set
+            )
+            for test in tests:
+                test_values = combination_values(test, combination)
+                if values == test_values:
+                    # already covered
+                    continue
+
+            # not covered, so either change an existing test, if possible,
+            # or otherwise add a new test to cover σ and remove it from π
+            raise NotImplementedError(f"{bitmap_index} {values} {combination}")
+
+    return tests
 
 
 def convert_tests_to_covering_array(tests, parameters_map):
@@ -252,10 +284,8 @@ def covering_array(parameters, strength=2):
 
     for i in range(t, len(parameters_set)):
         π = construct_π(i=i, t=t, parameters_set=parameters_set)
-        print("before:", π)
         tests, π = horizontal_extension(t, i, tests, π, parameters_set)
-        print("after:", π)
-        # vertical_extension()
+        tests = vertical_extension(t, i, tests, π, parameters_set)
 
     return tests
 
