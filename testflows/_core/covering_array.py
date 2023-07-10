@@ -24,6 +24,10 @@ class X:
     pass
 
 
+BestTest = namedtuple("BestTest", "test coverage bitmap")
+Π = namedtuple("Π", "combinations bitmap")
+
+
 def prepare(parameters):
     """Returns parameters set and its map.
 
@@ -88,7 +92,7 @@ def combination_values_bitmap_index(combination, values, parameters_set):
     :param combination: combination of parameters
     :param values: specific combination of values for the parameters
     """
-    value_lengths = (len(parameters_set[p]) for p in combination)
+    value_lengths = [len(parameters_set[p]) for p in combination]
 
     index = 0
     for i, value in enumerate(values):
@@ -115,7 +119,7 @@ def bitmap_index_combination_values(index, combination, parameters_set):
     :param index: bitmap index
     :param combination: combination of parameters
     """
-    value_lengths = (len(parameters_set[p]) for p in combination)
+    value_lengths = [len(parameters_set[p]) for p in combination]
 
     value = [0] * len(combination)
 
@@ -128,7 +132,7 @@ def bitmap_index_combination_values(index, combination, parameters_set):
     return value
 
 
-def construct_pi(i, t, parameters_set):
+def construct_π(i, t, parameters_set):
     """Construct a set t-way combinations of values
     involving parameter Pi and t-1 parameters among
     the first i-1 parameters.
@@ -141,17 +145,35 @@ def construct_pi(i, t, parameters_set):
     # create all t-way combinations of Pi with P0 to Pi-1 columns
     t_way_combinations = [c + (i,) for c in combinations(range(i), t - 1)]
 
-    # return pi of bitmaps for each indexed combination of parameters
     # FIXME: value_lengths should be stored
     # FIXME: value coefficients should be stored
-    return t_way_combinations, [
-        (1 << math.prod([len(parameters_set[p]) for p in combination])) - 1
-        for combination in t_way_combinations
-    ]
+    return Π(
+        t_way_combinations,
+        [
+            (1 << math.prod([len(parameters_set[p]) for p in combination])) - 1
+            for combination in t_way_combinations
+        ],
+    )
 
-def horizontal_extension():
+
+def horizontal_extension(t, i, tests, π, parameters_set):
     """Horizontal extension for parameter Pi."""
-    raise NotImplementedError
+
+    # for each test τ = (v1, v2, …, vi-1) in tests
+    for τ in range(len(tests)):
+        test = tests[τ]
+        # choose a value vi of Pi and replace τ with τ’ = (v1, v2, …, vi-1, vi) so that τ’ covers the
+        # most number of combinations of values in π
+        best = None
+        for value in parameters_set[i]:
+            new_test = test + (value,)
+            coverage, bitmap = calculate_coverage(t, new_test, π, parameters_set)
+            if best is None or coverage > best.coverage:
+                best = BestTest(new_test, coverage, bitmap)
+        tests[τ] = best.test
+        π = Π(π.combinations, best.bitmap)
+
+    return tests, π
 
 
 def vertical_extension():
@@ -168,6 +190,36 @@ def convert_tests_to_covering_array(tests, parameters_map):
     parameters.
     """
     raise NotImplementedError
+
+
+def combination_values(test, combination):
+    """Return values of the combination covered by a given test."""
+    values = [0] * len(combination)
+
+    for i, parameter in enumerate(combination):
+        values[i] = test[parameter]
+
+    return values
+
+
+def calculate_coverage(t, test, π, parameters_set):
+    """Calculate coverage of the test for a given π combinations."""
+    coverage = 0
+    new_bitmap = [0] * len(π.combinations)
+
+    for combination in π.combinations:
+        index = pi_combination_index(t, combination)
+        bitmap = π.bitmap[index]
+        current_coverage = (~π.bitmap[index]).bit_count()
+        values = combination_values(test, combination)
+        bitmap_index = combination_values_bitmap_index(
+            combination, values, parameters_set
+        )
+        bitmap = bitmap & ~(1 << bitmap_index)
+        coverage += (~π.bitmap[index]).bit_count() - current_coverage
+        new_bitmap[index] = bitmap
+
+    return coverage, new_bitmap
 
 
 def covering_array(parameters, strength=2):
@@ -195,14 +247,15 @@ def covering_array(parameters, strength=2):
     print("Parameters set: ", parameters_set)
 
     # construct first tests using all possible combinations of values
-    # for first t-strength parameters
+    # for the first t-strength parameters
     tests = list(product(*parameters_set[:t]))
 
     for i in range(t, len(parameters_set)):
-        pi_combinations, pi_bitmaps = construct_pi(i=i, t=t, parameters_set=parameters_set)
-        print("pi: ", pi_combinations, pi_bitmaps)
-    #    #horizontal_extension()
-    #    #vertical_extension()
+        π = construct_π(i=i, t=t, parameters_set=parameters_set)
+        print("before:", π)
+        tests, π = horizontal_extension(t, i, tests, π, parameters_set)
+        print("after:", π)
+        # vertical_extension()
 
     return tests
 
