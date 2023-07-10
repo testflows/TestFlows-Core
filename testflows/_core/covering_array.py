@@ -54,8 +54,8 @@ def prepare(parameters):
     return parameters_set, parameters_map
 
 
-def pi_combination_index(t, combination):
-    """Return an index for a given combination.
+def combination_index(t, combination):
+    """Return an index for a given combination in π.
     Combination is represented by a tuple containing
     parameters referenced by their indexes.
 
@@ -208,7 +208,7 @@ def calculate_coverage(t, test, π, parameters_set):
     new_bitmap = [0] * len(π.combinations)
 
     for combination in π.combinations:
-        index = pi_combination_index(t, combination)
+        index = combination_index(t, combination)
         bitmap = π.bitmap[index]
         current_coverage = (~π.bitmap[index]).bit_count()
         values = combination_values(test, combination)
