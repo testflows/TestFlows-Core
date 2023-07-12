@@ -18,6 +18,17 @@ from collections import namedtuple
 from itertools import product, islice, combinations
 
 
+class CoveringArrayError(Exception):
+    """Covering array error."""
+
+    def __init__(self, combination, values):
+        self.combination = combination
+        self.values = values
+
+    def __str__(self):
+        return f"missing combination={self.combination},values={self.values}"
+
+
 class X:
     """Don't care value."""
 
@@ -348,16 +359,42 @@ def covering_array(parameters, strength=2):
     return convert_tests_to_covering_array(tests, parameters_map)
 
 
+def check(parameters, covering_array, strength=2):
+    """Returns True if covering array covers all t-strength
+    combination of the parameters or raises an error."""
+    t = strength
+
+    if not covering_array:
+        raise ValueError("covering array is empty")
+
+    parameter_names = list(parameters.keys())
+
+    for combination in combinations(parameter_names, strength):
+        for values in product(*[parameters[parameter] for parameter in combination]):
+            covered = True
+            for test in covering_array:
+                covered = True
+                for i, parameter in enumerate(combination):
+                    if test[parameter] != values[i]:
+                        covered = False
+                        break
+                if covered:
+                    break
+            if not covered:
+                raise CoveringArrayError(combination, values)
+
+    return True
+
+
 if __name__ == "__main__":
-    parameters = {
-        "a": [1, 2],
-        "b": ["a", "b"],
-        "c": [10, 11],
-        "d": [1, 2],
-        "e": [1, 2],
-        "f": [10, 11],
-        "g": [1, 2],
-        "h": [1, 2],
-    }
-    ca = covering_array(parameters=parameters, strength=2)
+    t = 2
+    k = 5
+    v = 3
+    parameters = {}
+    for i in range(k):
+        parameters[i] = list(range(v))
+
+    ca = covering_array(parameters=parameters, strength=t)
     print(ca)
+    print(len(ca))
+    print("is covering array:", check(parameters, ca, t))
