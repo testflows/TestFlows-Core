@@ -181,10 +181,11 @@ def horizontal_extension(t, i, tests, π, parameters_set):
         # most number of combinations of values in π
         best = None
         # FIXME: if bitmap is all empty set value to don't care and don't try to pick any value
+
         for value in parameters_set[i]:
             new_test = test + [value]
             coverage, bitmap = calculate_coverage(t, i, new_test, π, parameters_set)
-            if best is None or coverage > best.coverage:
+            if best is None or coverage >= best.coverage:
                 best = BestTest(new_test, coverage, bitmap)
         tests[τ] = best.test
         π = Π(π.combinations, best.bitmap)
@@ -303,21 +304,28 @@ def set_combination_values(test, values, combination):
 def calculate_coverage(t, i, test, π, parameters_set):
     """Calculate coverage of the test for a given π combinations."""
     coverage = 0
-    new_bitmap = [0] * len(π.combinations)
+
+    new_bitmap = list(π.bitmap)
 
     for combination in π.combinations:
         index = combination_index(t, i, combination)
         bitmap = π.bitmap[index]
-        current_coverage = (~π.bitmap[index]).bit_count()
+
+        current_coverage = (bitmap).bit_count()
+
         values = combination_values(test, combination)
+
         bitmap_index = combination_values_bitmap_index(
             combination, values, parameters_set
         )
+
         bitmap = bitmap & ~(1 << bitmap_index)
-        coverage += (~π.bitmap[index]).bit_count() - current_coverage
+        new_coverage = (bitmap).bit_count()
+        coverage += current_coverage - new_coverage
+
         new_bitmap[index] = bitmap
 
-    return coverage, new_bitmap
+    return coverage - current_coverage, new_bitmap
 
 
 def covering_array(parameters, strength=2):
@@ -340,9 +348,6 @@ def covering_array(parameters, strength=2):
     # convert parameters dictionary into a parameters set
     # which uses only indexes for parameter names and values
     parameters_set, parameters_map = prepare(parameters)
-
-    print("Parameters map: ", parameters_map)
-    print("Parameters set: ", parameters_set)
 
     # construct first tests using all possible combinations of values
     # for the first t-strength parameters
@@ -386,15 +391,28 @@ def check(parameters, covering_array, strength=2):
     return True
 
 
+def dump(ca):
+    """Dump covering array representation to string."""
+    lines = [f"{len(ca)}"]
+    header = " ".join(str(v) for v in ca[0].keys())
+
+    lines.append(header)
+    lines.append("-" * len(header))
+
+    for test in ca:
+        lines.append(" ".join(str(v) for v in test.values()))
+
+    return "\n".join(lines)
+
+
 if __name__ == "__main__":
     t = 2
-    k = 5
+    k = 4
     v = 3
     parameters = {}
     for i in range(k):
         parameters[i] = list(range(v))
 
     ca = covering_array(parameters=parameters, strength=t)
-    print(ca)
-    print(len(ca))
-    print("is covering array:", check(parameters, ca, t))
+    assert check(parameters, ca, t), "generated invalid covering array"
+    print(dump(ca))
