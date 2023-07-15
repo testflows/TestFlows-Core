@@ -38,6 +38,7 @@ setup(
         "testflows.core",
         "testflows.exceptions",
         "testflows.settings",
+        "testflows.combinatorics",
         "testflows._core",
         "testflows._core.contrib",
         "testflows._core.contrib.arpeggio",
@@ -80,6 +81,7 @@ setup(
         "testflows._core.cli.arg.handlers.document.new",
         "testflows._core.cli.arg.handlers.requirement",
         "testflows._core.cli.arg.handlers.show",
+        "testflows._core.combinatorics",
     ],
     package_data={
         "testflows._core.document": ["*.css"],
