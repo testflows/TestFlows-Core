@@ -91,10 +91,10 @@ def heterogeneous(self):
 
 @TestFeature
 def covering_arrays(self):
-    """Covering arrays regression tests."""
+    """Regression tests for covering arrays."""
     for scenario in loads(current_module(), Scenario):
         scenario()
 
 
 if main():
-    covering_array()
+    covering_arrays()
