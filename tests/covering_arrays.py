@@ -4,8 +4,15 @@ from testflows.combinatorics import CoveringArray, product
 
 @TestPattern(Scenario)
 def homogeneous(self):
-    """Check different configurations of covering arrays for homogeneous values
-    where each parameter has the same number of values.
+    """Check generating covering arrays for different strength and
+    different number of parameters with different number of homogeneous values
+    where homogeneous values means that each parameter has the same number of values.
+
+    Where,
+
+    *  number of values for each parameter is either 1,2,3
+    *  number of parameters is either 1,2,3,4,5,6
+    *  strength is either 1,2,3,4,5
     """
     with Given("I choose values for each parameter"):
         values = choose("values", list(range(either(1, 2, 3))))
@@ -35,8 +42,15 @@ def homogeneous(self):
 
 @TestPattern(Scenario)
 def heterogeneous(self):
-    """Check different configurations of covering arrays with heterogeneous values
-    where each parameter has different number of values.
+    """Check generating covering arrays for different strength and
+    different number of parameters with different number of heterogeneous values
+    where heterogeneous values means that different parameters have different number of values.
+
+    Where,
+
+    *  number of parameters is either 2,3,4
+    *  number of values for each parameter is either 1,2,3
+    *  strength is either 1,2,3,4,5
     """
     with Given("I choose number of parameters"):
         number_of_parameters = choose("number of parameters", either(2, 3, 4))
