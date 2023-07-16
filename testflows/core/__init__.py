@@ -48,6 +48,7 @@ from testflows._core.test import (
     repeat,
     repeats,
     define,
+    choose,
     either,
 )
 from testflows._core.has import has

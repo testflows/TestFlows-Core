@@ -31,6 +31,7 @@ import testflows._core.tracing as tracing
 import testflows._core.contrib.yaml as yaml
 import testflows._core.contrib.schema as schema
 
+from random import shuffle as random_shuffle
 from .parallel.asyncio import asyncio
 from .temp import filename as temp_filename
 from .exceptions import (
@@ -3654,7 +3655,7 @@ def ordered(tests, random=False, test=None):
         test = current()
 
     if random or test.random or settings.random_order:
-        random.shuffle(tests)
+        random_shuffle(tests)
     else:
         human_sort(tests, key=lambda test: test.__name__)
     return tests
@@ -3687,7 +3688,7 @@ def loads(name, *types, package=None, frame=None, filter=None, random=False):
             return member.type in types
 
     tests = ordered(
-        [test for name, test in inspect.getmembers(module, is_type)], random=True
+        [test for name, test in inspect.getmembers(module, is_type)], random=random
     )
 
     if filter:
@@ -4007,6 +4008,20 @@ def define(name, value, encoder=str, type=By, name_prefix="defining "):
     :param encoder: string encoder, default: str() function
     :param type: test type, default: By
     :param name_prefix: name prefix, default: 'defining '
+    :return: value
+    """
+    with type(f"{name_prefix}{name}", description=f"{encoder(value)}"):
+        return value
+
+
+def choose(name, value, encoder=str, type=By, name_prefix="choosing "):
+    """Adds `By` step to define chosen value.
+
+    :param name: name of the value
+    :param value: value
+    :param encoder: string encoder, default: str() function
+    :param type: test type, default: By
+    :param name_prefix: name prefix, default: 'choosing '
     :return: value
     """
     with type(f"{name_prefix}{name}", description=f"{encoder(value)}"):
