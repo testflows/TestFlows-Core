@@ -1,5 +1,7 @@
 from testflows.core import *
 from testflows.combinatorics import CoveringArray, product
+from testflows.asserts import snapshot, error
+from testflows.asserts import values as assert_values
 
 
 @TestPattern(Scenario)
@@ -38,6 +40,16 @@ def homogeneous(self):
 
     with Then("it should cover all t-way combinations"):
         covering_array.check()
+
+    with And("it should match the snapshot"):
+        with assert_values() as that:
+            assert that(
+                snapshot(
+                    covering_array,
+                    name=f"t={strength},k={number_of_parameters},v={len(values)}",
+                    encoder=str,
+                )
+            ), error()
 
 
 @TestPattern(Scenario)
@@ -87,6 +99,16 @@ def heterogeneous(self):
 
     with Then("it should cover all t-way combinations"):
         covering_array.check()
+
+    with And("it should match the snapshot"):
+        with assert_values() as that:
+            assert that(
+                snapshot(
+                    covering_array,
+                    name=f"t={strength},k={number_of_parameters},v={value_counts}",
+                    encoder=str,
+                )
+            ), error()
 
 
 @TestFeature
