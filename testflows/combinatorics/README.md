@@ -1,8 +1,8 @@
 ## [TestFlows.com Open-Source Software Testing Framework] Combinatorics
 
 
-A convenient collection of tools used for combinatorial testing to check
-different combinations of the input parameters.
+The `testflows.combinatorics` module provides a convenient collection of tools
+used for combinatorial testing to check different combinations of the input parameters.
 
 ## Why
 
@@ -19,6 +19,16 @@ Provides support for calculating the following:
 * cartesian product of input iterables
 
 * binomial coefficients
+
+## Installation
+
+When used with [TestFlows.com Open-Source Software Testing Framework] the `testflows.combinatorics` module
+comes by default as a part of the `testflows.core` module. However, if you would like to use
+it with other test frameworks, it can be installed separately as follows:
+
+```bash
+pip3 install --update testflows.combinatorics
+```
 
 ## Usage
 
