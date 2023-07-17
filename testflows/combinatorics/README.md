@@ -103,7 +103,6 @@ a b c d
 
 ### Binomial Coefficients
 
-[IPOG]: (https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a)
-[IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.](https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a)
-
-[TestFlows.com Open-Source Software Testing Framework](https://testflows.com)
+[IPOG]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
+[IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
+[TestFlows.com Open-Source Software Testing Framework]: https://testflows.com
