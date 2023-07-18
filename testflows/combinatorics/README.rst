@@ -64,10 +64,12 @@ The **Covering(parameters, strength=2)** takes the following arguments
 
 where,
 
-* **parameters** specifies parameter names and their possible values and
+* **parameters**
+   specifies parameter names and their possible values and
    is specified as a **dict[str, list[value]]**, where key is the parameter name and
    value is a list of possible values for a given parameter.
-* **strength** specifies the strength **t** of the covering array that indicates the number of parameters
+* **strength**
+   specifies the strength **t** of the covering array that indicates the number of parameters
    in each combination, for which all possible interactions will be checked.
    If **strength** equals the number of parameters, then you get the exhaustive case.
 
