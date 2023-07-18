@@ -13,4 +13,5 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from testflows._core.combinatorics import product, permutations, combinations, binomial
-from testflows._core.combinatorics import CoveringArray, CoveringArrayError, covering
+from testflows._core.combinatorics import CoveringArray, CoveringArrayError
+from testflows._core.combinatorics import CoveringArray as Covering
