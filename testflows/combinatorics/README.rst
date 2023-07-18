@@ -52,7 +52,9 @@ Given that exhaustive testing might not be practical, a covering array could giv
 number of tests if we choose to check all possible interactions only between some fixed number
 of parameters at least once, where an interaction is some specific combination, where order does not matter,
 of some **t** number of parameters, covering all possible values that each selected parameter could have.
-  
+
+..
+
    You can find out more about covering array by visiting the US National Institute of Standards and Technology's (NIST)
    `Introduction to Covering Arrays <https://math.nist.gov/coveringarrays/coveringarray.html>`_ page.
 
@@ -193,7 +195,7 @@ For example,
 
    [('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
 
-
+..
 
    This function is equivalent to the `itertools.combinations <https://docs.python.org/3/library/itertools.html#itertools.combinations>`_.
 
@@ -217,7 +219,7 @@ For example,
 
    [('a', 'a'), ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'b'), ('b', 'c'), ('b', 'd'), ('c', 'c'), ('c', 'd'), ('d', 'd')]
 
-
+..
 
    The `with_replacement=True` option is equivalent to `itertools.combinations_with_replacement <https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement>`_.
 
@@ -242,7 +244,7 @@ For example,
 
    [(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
 
-
+..
 
    This function is equivalent to the `itertools.product <https://docs.python.org/3/library/itertools.html#itertools.product>`_.
 
@@ -274,6 +276,7 @@ For example,
 
 and as we can see, both **('a', 'b')** and **('b', 'a')** elements are present.
 
+..
 
    This function is equivalent to the `itertools.permutations <https://docs.python.org/3/library/itertools.html#itertools.permutations>`_.
 
@@ -302,6 +305,7 @@ For example,
 
 which means that there are 6 ways to choose 2 elements out of 4.
 
+..
 
    This function is equivalent to the  `math.comb <https://docs.python.org/3/library/math.html#math.comb>`_.
 
