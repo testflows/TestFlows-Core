@@ -37,8 +37,8 @@ it with other test frameworks, it can be installed separately as follows:
    pip3 install --update testflows.combinatorics
 
 
-Covering Arrays
-***************
+Covering Arrays - (Pairwise, N-wise) Testing
+********************************************
 
 The **Covering(parameters, strength=2)** or **CoveringArray(parameters, strength=2)** class allows you to calculate a covering array
 for some **k** parameters having the same or different number of possible values.
