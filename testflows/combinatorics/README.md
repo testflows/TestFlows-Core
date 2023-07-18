@@ -115,7 +115,7 @@ Examining the covering array above, we can see that all possible interactions of
 #### Checking Covering Array
 
 The `check()` method of the `CoveringArray` can be used to verify that the tests
-inside the covering array, verify all possible t-way interactions at least once, and thus
+inside the covering array cover all possible t-way interactions at least once, and thus
 meet the definition of a covering array.
 
 For example,
