@@ -46,8 +46,8 @@ for some **k** parameters having the same or different number of possible values
 The class uses `IPOG`_, an in-parameter-order, algorithm as described in `IPOG: A General Strategy for T-Way Software Testing`_ paper by Yu Lei et al.
 
 For any non-trivial number of parameters, exhaustively testing all possibilities is not feasible.
-For example, if we have **10** parameters that each has **10** possible values **(k=10, v=10)**, the
-number of all possibilities is **10^10 = 10 billion** thus requiring **10 billion** tests for complete coverage.
+For example, if we have **10** parameters that each has **10** possible values $(k=10, v=10)$, the
+number of all possibilities is $10^{10} = {10}_{billion}$ thus requiring 10 billion tests for complete coverage.
 
 Given that exhaustive testing might not be practical, a covering array could give us a much smaller
 number of tests if we choose to check all possible interactions only between some fixed number
