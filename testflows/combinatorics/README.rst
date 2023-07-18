@@ -55,10 +55,10 @@ number of tests if we choose to check all possible interactions only between som
 of parameters at least once, where an interaction is some specific combination, where order does not matter,
 of some **t** number of parameters, covering all possible values that each selected parameter could have.
 
-..
-
+:Note:
    You can find out more about covering array by visiting the US National Institute of Standards and Technology's (NIST)
    `Introduction to Covering Arrays <https://math.nist.gov/coveringarrays/coveringarray.html>`_ page.
+ 
 
 The **Covering(parameters, strength=2)** takes the following arguments
 
@@ -197,8 +197,7 @@ For example,
 
    [('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
 
-..
-
+:Note:
    This function is equivalent to the `itertools.combinations <https://docs.python.org/3/library/itertools.html#itertools.combinations>`_.
 
 With Replacement
@@ -221,9 +220,8 @@ For example,
 
    [('a', 'a'), ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'b'), ('b', 'c'), ('b', 'd'), ('c', 'c'), ('c', 'd'), ('d', 'd')]
 
-..
-
-   The `with_replacement=True` option is equivalent to `itertools.combinations_with_replacement <https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement>`_.
+:Note:
+   The **with_replacement=True** option is equivalent to `itertools.combinations_with_replacement <https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement>`_.
 
 Cartesian Product
 *****************
@@ -246,8 +244,7 @@ For example,
 
    [(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
 
-..
-
+:Note:
    This function is equivalent to the `itertools.product <https://docs.python.org/3/library/itertools.html#itertools.product>`_.
 
 
@@ -278,8 +275,7 @@ For example,
 
 and as we can see, both **('a', 'b')** and **('b', 'a')** elements are present.
 
-..
-
+:Note:
    This function is equivalent to the `itertools.permutations <https://docs.python.org/3/library/itertools.html#itertools.permutations>`_.
 
 Binomial Coefficients
@@ -309,8 +305,7 @@ For example,
 
 which means that there are 6 ways to choose 2 elements out of 4.
 
-..
-
+:Note:
    This function is equivalent to the  `math.comb <https://docs.python.org/3/library/math.html#math.comb>`_.
 
 .. _`IPOG`: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
