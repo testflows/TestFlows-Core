@@ -34,7 +34,7 @@ pip3 install --update testflows.combinatorics
 The `covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows to calculate a covering array
 for some `k` parameters having the same or different number of possible values.
 
-The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]
+The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing] paper by Yu Lei et al.
 
 For any non-trivial number of parameters exhaustively testing all possibilities is not feasible.
 For example, if we have `10` parameters that each has `10` possible values `(k=10, v=10)`, the
@@ -254,5 +254,5 @@ which means that there are 6 ways to choose 2 elements out of 4.
 > This function is equivalent to the [math.comb](https://docs.python.org/3/library/math.html#math.comb).
 
 [IPOG]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
-[IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
+[IPOG: A General Strategy for T-Way Software Testing]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
 [TestFlows.com Open-Source Software Testing Framework]: https://testflows.com
