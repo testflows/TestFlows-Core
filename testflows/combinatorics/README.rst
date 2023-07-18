@@ -33,7 +33,7 @@ When used with `TestFlows.com Open-Source Software Testing Framework`_ the **tes
 comes by default as a part of the **testflows.core** module. However, if you would like to use
 it with other test frameworks, it can be installed separately as follows:
 
-::
+.. code-block:: bash
 
    pip3 install --update testflows.combinatorics
 
