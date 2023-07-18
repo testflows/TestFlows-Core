@@ -11,13 +11,9 @@ Provides support for calculating the following:
 * covering arrays based on the [IPOG] algorithm.
   Covering arrays are a generalization of pairwise testing also known as all-pairs testing.
   Also known as n-wise testing.
-
 * permutations of input parameters
-
 * combinations with and without replacement
-
 * cartesian product of input iterables
-
 * binomial coefficients
 
 ## Installation
@@ -55,7 +51,6 @@ where,
 * `parameters` specifies parameter names as their possible values.
    Specified as a `dict[str, list[value]]` where key is the parameter name and
    value is a list of possible values for a given parameter.
-
 * `strength` specifies the strength `t` of the covering array that indicates number of columns
    in each combination for which all possible interactions will be checked.
    If `strength` equals number of parameters, then you get the exhaustive case.
