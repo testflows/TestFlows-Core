@@ -31,7 +31,7 @@ pip3 install --update testflows.combinatorics
 
 ### Covering Arrays
 
-The `covering(parameters, strength=2)` class allows to calculate a covering array
+The `covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows to calculate a covering array
 for some `k` parameters having the same or different number of possible values.
 
 The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]
