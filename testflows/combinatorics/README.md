@@ -109,8 +109,8 @@ all possible interactions are the following:
 where the first element of each tuple corresponds to the value of the parameter `a`, and the second
 element corresponds to the value of the parameter `b`.
 
-Examining the covering array above we can see that all possible interactions of parameters
-`a` and `b` are indeed covered at least once. The same check can be done for other parameter combination.
+Examining the covering array above, we can see that all possible interactions of parameters
+`a` and `b` are indeed covered at least once. The same check can be done for other parameter combinations.
 
 #### Checking Covering Array
 
