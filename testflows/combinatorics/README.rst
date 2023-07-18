@@ -10,8 +10,12 @@
 The **testflows.combinatorics** module provides a convenient collection of tools
 used for combinatorial testing to check different combinations of the input parameters.
 
-Why
-****
+.. contents:: Read more about:
+   :backlinks: top
+   :depth: 2
+
+Features
+********
 
 Provides support for calculating the following:
 
