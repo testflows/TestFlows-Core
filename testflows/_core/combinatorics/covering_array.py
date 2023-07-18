@@ -400,7 +400,3 @@ class CoveringArray:
         lines.append("]")
 
         return "\n".join(lines)
-
-
-#: short-hand form
-covering = CoveringArray
