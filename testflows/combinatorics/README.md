@@ -29,7 +29,7 @@ pip3 install --update testflows.combinatorics
 
 ### Covering Arrays
 
-The `covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows to calculate a covering array
+The `Covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows to calculate a covering array
 for some `k` parameters having the same or different number of possible values.
 
 The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing] paper by Yu Lei et al.
@@ -46,7 +46,7 @@ of some `t` number of parameters covering all possible values that each selected
 > You can find out more about covering array by visiting US National Institute of Standards and Technology's (NIST)
 > [Introduction to Covering Arrays](https://math.nist.gov/coveringarrays/coveringarray.html) page.
 
-The `covering(parameters, strength=2)` takes the following arguments
+The `Covering(parameters, strength=2)` takes the following arguments
 
 where,
 
@@ -57,18 +57,18 @@ where,
    in each combination for which all possible interactions will be checked.
    If `strength` equals the number of parameters, then you get the exhaustive case.
 
-The return value of the `covering(parameters, strength=2)` is a `CoveringArray` object that is an iterable
+The return value of the `Covering(parameters, strength=2)` is a `CoveringArray` object that is an iterable
 of tests, where each test is a dictionary with each key being the parameter name and its value
 being the parameter value.
 
 For example,
 
 ```python
-from testflows.combinatorics import covering
+from testflows.combinatorics import Covering
 
 parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
 
-print(covering(parameters, strength=2)
+print(Covering(parameters, strength=2)
 ```
 
 gives the following output
@@ -121,10 +121,10 @@ meet the definition of a covering array.
 For example,
 
 ```python
-from testflows.combinatorics import covering
+from testflows.combinatorics import Covering
 
 parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
-tests = covering(parameters, strength=2)
+tests = Covering(parameters, strength=2)
 
 print(tests.check())
 ```
