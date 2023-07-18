@@ -256,8 +256,9 @@ Permutations
 The **permutations(iterable, r=None)** function can be used to calculate
 the r-length permutations of elements for a given iterable.
 
-> Permutations are different from **combinations**. In a combination, the elements
-> don't have any order, but in a permutation, elements order is important.
+:Note:
+   Permutations are different from **combinations**. In a combination, the elements
+   don't have any order, but in a permutation, elements order is important.
 
 For example,
 
