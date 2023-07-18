@@ -132,12 +132,26 @@ print(tests.check())
 #### Dumping Covering Array
 
 The `CoveringArray` object implements custom `__str__` method and therefore it can be easily converted into
-a string representation similar to the [NIST covering array tables](https://math.nist.gov/coveringarrays/ipof/ipof-results.html).
+a string representation similar to the format used in the [NIST covering array tables](https://math.nist.gov/coveringarrays/ipof/ipof-results.html).
 
 For example,
 
 ```python
 print(covering(parameters, strength=2)
+```
+
+```bash
+CoveringArray({'a': [0, 1], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},2)[
+6
+a b c d
+-------
+0 b 2 d1
+0 a 1 d0
+1 b 1 d1
+1 a 2 d0
+0 b 0 d0
+1 a 0 d1
+]
 ```
 
 ### Combinations
