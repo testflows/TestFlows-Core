@@ -33,9 +33,9 @@ pip3 install --update testflows.combinatorics
 The `covering(parameters, strength=2)` class allows to calculate a covering array
 for some `k` parameters having the same or different number of possible values.
 
-The class uses [IPOG], an in-parameter-order, algorithm that as described in [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]
+The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]
 
-For any non-trivial number of parameters exhaustively testing all possibilities is not possible.
+For any non-trivial number of parameters exhaustively testing all possibilities is not feasible.
 For example, if we have `10` parameters that each has `10` possible values `(k=10, v=10)`, the
 number of all possibilities is `10**10 = 10 billion` thus requiring `10 billion` tests for complete coverage.
 
@@ -44,19 +44,22 @@ number of tests if we choose to check all possible interactions only between som
 of columns at least once, where an interaction is some specific combination, where order does not matter,
 of some `t` number of columns covering all possible values that each selected column could have.
 
-The `covering(parameters, strength=2)`
+> You can find out more about covering array by visiting US National Institute of Standards and Technology's (NIST)
+> [Introduction to Covering Arrays](https://math.nist.gov/coveringarrays/coveringarray.html).
+
+The `covering(parameters, strength=2)` take the following arguments
 
 where,
 
-* `parameters` specifies parameter names as their possible values.
-   Specified as a `dict[str, list[value]]` where key is the parameter name and
+* `parameters` specifies parameter names and their possible values and
+   is specified as a `dict[str, list[value]]`, where key is the parameter name and
    value is a list of possible values for a given parameter.
-* `strength` specifies the strength `t` of the covering array that indicates number of columns
+* `strength` specifies the strength `t` of the covering array that indicates the number of columns
    in each combination for which all possible interactions will be checked.
-   If `strength` equals number of parameters, then you get the exhaustive case.
+   If `strength` equals the number of parameters, then you get the exhaustive case.
 
 The return value of the `covering(parameters, strength=2)` is a `CoveringArray` object that is an iterable
-of tests where each test is a dictionary with key being the parameter name and the value
+of tests, where each test is a dictionary with each key being the parameter name and its value
 being the parameter value.
 
 For example,
@@ -86,13 +89,13 @@ a b c d
 ```
 
 Given that in the example above the `strength=2`, all possible 2-way (pairwise)
-combinations of parameters are the following:
+combinations of parameters `a`, `b`, `c`, and `d` are the following:
 
 ```python
 [('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
 ```
 
-The six tests that make up the covering array coves all the possible interactions
+The six tests that make up the covering array cover all the possible interactions
 between values of each of these parameter combinations. For example, the `('a', 'b')`
 parameter combination covers all possible combinations of the values that
 parameter `a` and `b` can take.
@@ -113,11 +116,15 @@ Examining the covering array above we can see that all possible interactions of 
 #### Checking Covering Array
 
 The `check()` method of the `CoveringArray` can be used to verify that the tests
-inside the covering array do verify all possible t-way interactions.
+inside the covering array do verify all possible t-way interactions at least once and thus
+meet the definition of a covering array.
 
 For example,
 
 ```python
+from testflows.combinatorics import covering
+
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
 tests = covering(parameters, strength=2)
 
 print(tests.check())
@@ -126,7 +133,7 @@ print(tests.check())
 #### Dumping Covering Array
 
 The `CoveringArray` object implements custom `__str__` method and therefore it can be easily converted into
-a string representation.
+a string representation similar to the [NIST covering array tables](https://math.nist.gov/coveringarrays/ipof/ipof-results.html).
 
 For example,
 
