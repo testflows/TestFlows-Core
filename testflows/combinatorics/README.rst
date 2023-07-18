@@ -1,11 +1,10 @@
-`TestFlows.com Open-Source Software Testing Framework`_ Combinatorics
-=====================================================================
-
 .. image:: https://github.com/testflows/TestFlows-ArtWork/blob/550dcb450bf6db4d48b81936525ccbe974629711/images/logo.png
    :width: 20%
    :alt: test bug
    :align: center
 
+`TestFlows.com Open-Source Software Testing Framework`_ Combinatorics
+=====================================================================
 
 The **testflows.combinatorics** module provides a convenient collection of tools
 used for combinatorial testing to check different combinations of the input parameters
