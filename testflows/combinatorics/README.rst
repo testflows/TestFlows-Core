@@ -8,7 +8,8 @@
 
 
 The **testflows.combinatorics** module provides a convenient collection of tools
-used for combinatorial testing to check different combinations of the input parameters.
+used for combinatorial testing to check different combinations of the input parameters
+including calculating **covering arrays** for **pairwise** and **n-wise** testing using `IPOG`_ algorithm.
 
 .. contents:: Read more about:
    :backlinks: top
