@@ -34,7 +34,8 @@ pip3 install --update testflows.combinatorics
 
 ### Covering Arrays
 
-The `covering(parameters, strength=2)` class allows to calculate a covering array for some `k` parameters having the same or different number of possible values.
+The `covering(parameters, strength=2)` class allows to calculate a covering array
+for some `k` parameters having the same or different number of possible values.
 
 The class uses [IPOG], an in-parameter-order, algorithm that as described in [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]
 
@@ -44,7 +45,7 @@ number of all possibilities is `10**10 = 10 billion` thus requiring `10 billion`
 
 Given that exhaustive testing might not be practical, a covering array could give us a much smaller
 number of tests if we choose to check all possible interactions only between some fixed number
-of columns, where an interaction is some specific combination, where order does not matter,
+of columns at least once, where an interaction is some specific combination, where order does not matter,
 of some `t` number of columns covering all possible values that each selected column could have.
 
 The `covering(parameters, strength=2)`
@@ -52,66 +53,202 @@ The `covering(parameters, strength=2)`
 where,
 
 * `parameters` specifies parameter names as their possible values.
-   Specified as a dict[str, list[value]] where key is the parameter name and
+   Specified as a `dict[str, list[value]]` where key is the parameter name and
    value is a list of possible values for a given parameter.
 
 * `strength` specifies the strength `t` of the covering array that indicates number of columns
    in each combination for which all possible interactions will be checked.
    If `strength` equals number of parameters, then you get the exhaustive case.
 
+The return value of the `covering(parameters, strength=2)` is a `CoveringArray` object that is an iterable
+of tests where each test is a dictionary with key being the parameter name and the value
+being the parameter value.
+
 For example,
 
 ```python
 from testflows.combinatorics import covering
 
-parameters = {"a": [0, 1, 2, 3], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
 
-print(covering(parameters, strength=3)
+print(covering(parameters, strength=2)
 ```
 
-give the following output
+gives the following output
 
 ```bash
-CoveringArray({'a': [0, 1, 2, 3], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},3)[
-24
+CoveringArray({'a': [0, 1], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},2)[
+6
 a b c d
 -------
-0 a 0 d0
-0 a 1 d1
-0 a 2 d0
-0 b 0 d1
-0 b 1 d0
 0 b 2 d1
-1 a 0 d1
-1 a 1 d0
-1 a 2 d1
-1 b 0 d0
+0 a 1 d0
 1 b 1 d1
-1 b 2 d0
-2 a 0 d0
-2 a 1 d1
-2 a 2 d0
-2 b 0 d1
-2 b 1 d0
-2 b 2 d1
-3 a 0 d0
-3 a 1 d1
-3 a 2 d0
-3 b 0 d1
-3 b 1 d0
-3 b 2 d1
+1 a 2 d0
+0 b 0 d0
+1 a 0 d1
 ]
 ```
 
-### Permutations
+Given that in the example above the `strength=2`, all possible 2-way (pairwise)
+combinations of parameters are the following:
+
+```python
+[('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
+```
+
+The six tests that make up the covering array coves all the possible interactions
+between values of each of these parameter combinations. For example, the `('a', 'b')`
+parameter combination covers all possible combinations of the values that
+parameter `a` and `b` can take.
+
+Given that parameter `a` can have values `[0, 1]`, and parameter `b` can have values `['a', 'b']`
+all possible interactions are the following:
+
+```python
+[(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
+```
+
+where the first element of each tuple corresponds to the value of the parameter `a`, and the second
+element corresponds to the value of the parameter `b`.
+
+Examining the covering array above we can see that all possible interactions of parameters
+`a` and `b` are indeed covered at least once. The same check can be done for other parameter combination.
+
+#### Checking Covering Array
+
+The `check()` method of the `CoveringArray` can be used to verify that the tests
+inside the covering array do verify all possible t-way interactions.
+
+For example,
+
+```python
+tests = covering(parameters, strength=2)
+
+print(tests.check())
+```
+
+#### Dumping Covering Array
+
+The `CoveringArray` object implements custom `__str__` method and therefore it can be easily converted into
+a string representation.
+
+For example,
+
+```python
+print(covering(parameters, strength=2)
+```
 
 ### Combinations
 
+The `combinations(iterable, r, with_replacement=False)` function can be used to calculate
+all r-length combinations of elements in a specified iterable.
+
+For example,
+
+```python3
+from testflows.combinatorics import combinations
+
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
+
+print(list(combinations(parameters.keys(), 2)))
+```
+
+```python3
+[('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
+```
+
+> This function is equivalent to the [itertools.combinations](https://docs.python.org/3/library/itertools.html#itertools.combinations).
+
 #### With Replacement
+
+You can calculate all combinations with replacement by setting the `with_replacement` argument to `True`.
+
+For example,
+
+```python3
+from testflows.combinatorics import combinations
+
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
+
+print(list(combinations(parameters.keys(), 2, with_replacement=True)))
+```
+
+```python3
+[('a', 'a'), ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'b'), ('b', 'c'), ('b', 'd'), ('c', 'c'), ('c', 'd'), ('d', 'd')]
+```
+
+> The `with_replacement=True` option is equivalent to [itertools.combinations_with_replacement](https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement).
 
 ### Cartesian Product
 
+You can calculate all possible combinations of elements from different iterables using
+the cartesian `product(*iterables, repeat=1)` function.
+
+For example,
+
+```python3
+from testflows.combinatorics import *
+
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
+
+print(list(product(parameters["a"], parameters["b"])))
+```
+
+```python3
+[(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
+```
+
+> This function is equivalent to the [itertools.product](https://docs.python.org/3/library/itertools.html#itertools.product).
+
+
+### Permutations
+
+The `permutations(iterable, r=None)` function can be used to calculate
+the r-length permutations of elements for a given iterable.
+
+> Permutations are different from `combinations`. In a combination the elements
+> don't have any order but in a permutation elements order is important.
+
+For example,
+
+```python3
+from testflows.combinatorics import *
+
+parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
+
+print(list(permutations(parameters.keys(), 2)))
+```
+
+```python3
+('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'a'), ('b', 'c'), ('b', 'd'), ('c', 'a'), ('c', 'b'), ('c', 'd'), ('d', 'a'), ('d', 'b'), ('d', 'c')]
+```
+
+and as we can see both `('a', 'b')` and `('b', 'a')` elements are present.
+
+
 ### Binomial Coefficients
+
+You can calculate binomial coefficient which is the same as
+the number of ways to choose `k` items from `n` items without repetition and without order.
+
+> n! / (k! * (n - k)!) when k <= n and is zero when k > n
+
+For example,
+
+```python3
+from testflows.combinatorics import *
+
+print(binomial(4,2))
+```
+
+```python3
+6
+```
+
+which means that there are 6 ways to choose 2 elements out of 4.
+
+> This function is equivalent to the [math.comb](https://docs.python.org/3/library/math.html#math.comb).
 
 [IPOG]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
 [IPOG: A General Strategy for T-Way Software Testing by Yu Lei et al.]: https://citeseerx.ist.psu.edu/document?repid=rep1&type=pdf&doi=1362e14b8210a766099a9516491693c0c08bc04a
