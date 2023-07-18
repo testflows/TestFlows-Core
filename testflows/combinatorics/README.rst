@@ -37,11 +37,8 @@ it with other test frameworks, it can be installed separately as follows:
    pip3 install --update testflows.combinatorics
 
 
-Usage
-*****
-
 Covering Arrays
-+++++++++++++++
+***************
 
 The **Covering(parameters, strength=2)** or **CoveringArray(parameters, strength=2)** class allows you to calculate a covering array
 for some **k** parameters having the same or different number of possible values.
@@ -133,7 +130,7 @@ Examining the covering array above, we can see that all possible interactions of
 **a** and **b** are indeed covered at least once. The same check can be done for other parameter combinations.
 
 Checking Covering Array
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 The **check()** method of the **CoveringArray** can be used to verify that the tests
 inside the covering array cover all possible t-way interactions at least once, and thus
@@ -179,7 +176,7 @@ For example,
 
 
 Combinations
-++++++++++++
+************
 
 The **combinations(iterable, r, with_replacement=False)** function can be used to calculate
 all r-length combinations of elements in a specified iterable.
@@ -204,7 +201,7 @@ For example,
    This function is equivalent to the `itertools.combinations <https://docs.python.org/3/library/itertools.html#itertools.combinations>`_.
 
 With Replacement
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~
 
 You can calculate all combinations with replacement by setting the **with_replacement** argument to **True**.
 
@@ -228,7 +225,7 @@ For example,
    The `with_replacement=True` option is equivalent to `itertools.combinations_with_replacement <https://docs.python.org/3/library/itertools.html#itertools.combinations_with_replacement>`_.
 
 Cartesian Product
-+++++++++++++++++
+*****************
 
 You can calculate all possible combinations of elements from different iterables using
 the cartesian **product(*iterables, repeat=1)** function.
@@ -254,7 +251,7 @@ For example,
 
 
 Permutations
-++++++++++++
+************
 
 The **permutations(iterable, r=None)** function can be used to calculate
 the r-length permutations of elements for a given iterable.
@@ -285,7 +282,7 @@ and as we can see, both **('a', 'b')** and **('b', 'a')** elements are present.
    This function is equivalent to the `itertools.permutations <https://docs.python.org/3/library/itertools.html#itertools.permutations>`_.
 
 Binomial Coefficients
-+++++++++++++++++++++
+*********************
 
 You can calculate the binomial coefficient, which is the same as
 the number of ways to choose **k** items from **n** items without repetition and without order.
