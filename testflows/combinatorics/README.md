@@ -29,21 +29,21 @@ pip3 install --update testflows.combinatorics
 
 ### Covering Arrays
 
-The `Covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows to calculate a covering array
+The `Covering(parameters, strength=2)` or `CoveringArray(parameters, strength=2)` class allows you to calculate a covering array
 for some `k` parameters having the same or different number of possible values.
 
 The class uses [IPOG], an in-parameter-order, algorithm as described in [IPOG: A General Strategy for T-Way Software Testing] paper by Yu Lei et al.
 
-For any non-trivial number of parameters exhaustively testing all possibilities is not feasible.
+For any non-trivial number of parameters, exhaustively testing all possibilities is not feasible.
 For example, if we have `10` parameters that each has `10` possible values `(k=10, v=10)`, the
 number of all possibilities is `10**10 = 10 billion` thus requiring `10 billion` tests for complete coverage.
 
 Given that exhaustive testing might not be practical, a covering array could give us a much smaller
 number of tests if we choose to check all possible interactions only between some fixed number
 of parameters at least once, where an interaction is some specific combination, where order does not matter,
-of some `t` number of parameters covering all possible values that each selected parameter could have.
+of some `t` number of parameters, covering all possible values that each selected parameter could have.
 
-> You can find out more about covering array by visiting US National Institute of Standards and Technology's (NIST)
+> You can find out more about covering array by visiting the US National Institute of Standards and Technology's (NIST)
 > [Introduction to Covering Arrays](https://math.nist.gov/coveringarrays/coveringarray.html) page.
 
 The `Covering(parameters, strength=2)` takes the following arguments
@@ -54,11 +54,11 @@ where,
    is specified as a `dict[str, list[value]]`, where key is the parameter name and
    value is a list of possible values for a given parameter.
 * `strength` specifies the strength `t` of the covering array that indicates the number of parameters
-   in each combination for which all possible interactions will be checked.
+   in each combination, for which all possible interactions will be checked.
    If `strength` equals the number of parameters, then you get the exhaustive case.
 
 The return value of the `Covering(parameters, strength=2)` is a `CoveringArray` object that is an iterable
-of tests, where each test is a dictionary with each key being the parameter name and its value
+of tests, where each test is a dictionary, with each key being the parameter name and its value
 being the parameter value.
 
 For example,
@@ -87,7 +87,7 @@ a b c d
 ]
 ```
 
-Given that in the example above the `strength=2`, all possible 2-way (pairwise)
+Given that in the example above, the `strength=2`, all possible 2-way (pairwise)
 combinations of parameters `a`, `b`, `c`, and `d` are the following:
 
 ```python
@@ -95,9 +95,9 @@ combinations of parameters `a`, `b`, `c`, and `d` are the following:
 ```
 
 The six tests that make up the covering array cover all the possible interactions
-between values of each of these parameter combinations. For example, the `('a', 'b')`
+between the values of each of these parameter combinations. For example, the `('a', 'b')`
 parameter combination covers all possible combinations of the values that
-parameter `a` and `b` can take.
+parameters `a` and `b` can take.
 
 Given that parameter `a` can have values `[0, 1]`, and parameter `b` can have values `['a', 'b']`
 all possible interactions are the following:
@@ -115,7 +115,7 @@ Examining the covering array above, we can see that all possible interactions of
 #### Checking Covering Array
 
 The `check()` method of the `CoveringArray` can be used to verify that the tests
-inside the covering array do verify all possible t-way interactions at least once and thus
+inside the covering array, verify all possible t-way interactions at least once, and thus
 meet the definition of a covering array.
 
 For example,
