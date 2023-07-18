@@ -9,9 +9,7 @@ used for combinatorial testing to check different combinations of the input para
 
 Provides support for calculating the following:
 
-* covering arrays based on the [IPOG] algorithm.
-  Covering arrays are a generalization of pairwise testing also known as all-pairs testing.
-  Also known as n-wise testing.
+* pure Python implementation of calculating covering arrays based on the [IPOG] algorithm that can be used with any Python test framework
 * permutations of input parameters
 * combinations with and without replacement
 * cartesian product of input iterables
