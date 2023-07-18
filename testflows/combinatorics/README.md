@@ -40,8 +40,8 @@ number of all possibilities is `10**10 = 10 billion` thus requiring `10 billion`
 
 Given that exhaustive testing might not be practical, a covering array could give us a much smaller
 number of tests if we choose to check all possible interactions only between some fixed number
-of columns at least once, where an interaction is some specific combination, where order does not matter,
-of some `t` number of columns covering all possible values that each selected column could have.
+of parameters at least once, where an interaction is some specific combination, where order does not matter,
+of some `t` number of parameters covering all possible values that each selected parameter could have.
 
 > You can find out more about covering array by visiting US National Institute of Standards and Technology's (NIST)
 > [Introduction to Covering Arrays](https://math.nist.gov/coveringarrays/coveringarray.html) page.
@@ -53,7 +53,7 @@ where,
 * `parameters` specifies parameter names and their possible values and
    is specified as a `dict[str, list[value]]`, where key is the parameter name and
    value is a list of possible values for a given parameter.
-* `strength` specifies the strength `t` of the covering array that indicates the number of columns
+* `strength` specifies the strength `t` of the covering array that indicates the number of parameters
    in each combination for which all possible interactions will be checked.
    If `strength` equals the number of parameters, then you get the exhaustive case.
 
