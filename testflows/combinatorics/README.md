@@ -47,7 +47,7 @@ of some `t` number of columns covering all possible values that each selected co
 > You can find out more about covering array by visiting US National Institute of Standards and Technology's (NIST)
 > [Introduction to Covering Arrays](https://math.nist.gov/coveringarrays/coveringarray.html) page.
 
-The `covering(parameters, strength=2)` take the following arguments
+The `covering(parameters, strength=2)` takes the following arguments
 
 where,
 
