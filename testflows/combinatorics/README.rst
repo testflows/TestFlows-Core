@@ -290,7 +290,9 @@ the number of ways to choose **k** items from **n** items without repetition and
 
 Binomial coefficient is defined as
 
-   **n! / (k! * (n - k)!)** when **k <= n** and is zero when **k > n**
+.. image:: https://latex.codecogs.com/svg.image?%5Cfrac%7Bn!%7D%7Bk!(n-k!)%7D=%5Cbinom%7Bn%7D%7Bk%7D
+
+when $k <= n$ and is zero when $k > n$
 
 For example,
 
