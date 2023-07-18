@@ -131,7 +131,7 @@ print(tests.check())
 
 #### Dumping Covering Array
 
-The `CoveringArray` object implements custom `__str__` method and therefore it can be easily converted into
+The `CoveringArray` object implements a custom `__str__` method, and therefore it can be easily converted into
 a string representation similar to the format used in the [NIST covering array tables](https://math.nist.gov/coveringarrays/ipof/ipof-results.html).
 
 For example,
@@ -222,8 +222,8 @@ print(list(product(parameters["a"], parameters["b"])))
 The `permutations(iterable, r=None)` function can be used to calculate
 the r-length permutations of elements for a given iterable.
 
-> Permutations are different from `combinations`. In a combination the elements
-> don't have any order but in a permutation elements order is important.
+> Permutations are different from `combinations`. In a combination, the elements
+> don't have any order, but in a permutation, elements order is important.
 
 For example,
 
@@ -239,12 +239,12 @@ print(list(permutations(parameters.keys(), 2)))
 ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'a'), ('b', 'c'), ('b', 'd'), ('c', 'a'), ('c', 'b'), ('c', 'd'), ('d', 'a'), ('d', 'b'), ('d', 'c')]
 ```
 
-and as we can see both `('a', 'b')` and `('b', 'a')` elements are present.
+and as we can see, both `('a', 'b')` and `('b', 'a')` elements are present.
 
 
 ### Binomial Coefficients
 
-You can calculate binomial coefficient which is the same as
+You can calculate the binomial coefficient, which is the same as
 the number of ways to choose `k` items from `n` items without repetition and without order.
 
 > n! / (k! * (n - k)!) when k <= n and is zero when k > n
