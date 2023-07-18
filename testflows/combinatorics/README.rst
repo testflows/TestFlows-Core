@@ -2,7 +2,7 @@
 =====================================================================
 
 .. image:: https://github.com/testflows/TestFlows-ArtWork/blob/550dcb450bf6db4d48b81936525ccbe974629711/images/logo.png
-   :width: 100%
+   :width: 20%
    :alt: test bug
    :align: center
 
