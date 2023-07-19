@@ -86,9 +86,6 @@ For example,
 
    print(Covering(parameters, strength=2)
 
-
-gives the following output
-
 ::
 
    CoveringArray({'a': [0, 1], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},2)[
