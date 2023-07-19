@@ -1,7 +1,7 @@
 `TestFlows.com Open-Source Software Testing Framework`_ Combinatorics
 ---------------------------------------------------------------------
 
-.. image:: https://github.com/testflows/TestFlows-ArtWork/blob/550dcb450bf6db4d48b81936525ccbe974629711/images/logo.png
+.. image:: https://raw.githubusercontent.com/testflows/TestFlows-ArtWork/master/images/logo.png
    :width: 20%
    :alt: test bug
    :align: center
@@ -84,9 +84,10 @@ For example,
 
    parameters = {"a": [0, 1], "b": ["a", "b"], "c": [0, 1, 2], "d": ["d0", "d1"]}
 
-   print(Covering(parameters, strength=2)
+   print(Covering(parameters, strength=2))
 
-::
+
+.. code-block::
 
    CoveringArray({'a': [0, 1], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},2)[
    6
@@ -104,7 +105,7 @@ For example,
 Given that in the example above, the **strength=2**, all possible 2-way (pairwise)
 combinations of parameters **a**, **b**, **c**, and **d** are the following:
 
-::
+.. code-block::
 
    [('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
 
@@ -117,7 +118,7 @@ parameters **a** and **b** can take.
 Given that parameter **a** can have values **[0, 1]**, and parameter **b** can have values **['a', 'b']**
 all possible interactions are the following:
 
-::
+.. code-block::
 
    [(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
 
@@ -129,7 +130,7 @@ Examining the covering array above, we can see that all possible interactions of
 **a** and **b** are indeed covered at least once. The same check can be done for other parameter combinations.
 
 Checking Covering Array
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 The **check()** method of the **CoveringArray** can be used to verify that the tests
 inside the covering array cover all possible t-way interactions at least once, and thus
@@ -157,9 +158,9 @@ For example,
 
 .. code-block:: python
 
-   print(covering(parameters, strength=2)
+   print(Covering(parameters, strength=2))
 
-::
+.. code-block::
 
    CoveringArray({'a': [0, 1], 'b': ['a', 'b'], 'c': [0, 1, 2], 'd': ['d0', 'd1']},2)[
    6
@@ -191,7 +192,7 @@ For example,
    print(list(combinations(parameters.keys(), 2)))
 
 
-::
+.. code-block::
 
    [('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'c'), ('b', 'd'), ('c', 'd')]
 
@@ -199,7 +200,7 @@ For example,
    This function is equivalent to the `itertools.combinations <https://docs.python.org/3/library/itertools.html#itertools.combinations>`_
 
 With Replacement
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 You can calculate all combinations with replacement by setting the **with_replacement** argument to **True**.
 
@@ -214,7 +215,7 @@ For example,
    print(list(combinations(parameters.keys(), 2, with_replacement=True)))
 
 
-::
+.. code-block::
 
    [('a', 'a'), ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'b'), ('b', 'c'), ('b', 'd'), ('c', 'c'), ('c', 'd'), ('d', 'd')]
 
@@ -238,7 +239,7 @@ For example,
    print(list(product(parameters["a"], parameters["b"])))
 
 
-::
+.. code-block::
 
    [(0, 'a'), (0, 'b'), (1, 'a'), (1, 'b')]
 
@@ -267,7 +268,7 @@ For example,
    print(list(permutations(parameters.keys(), 2)))
 
 
-::
+.. code-block::
 
    ('a', 'b'), ('a', 'c'), ('a', 'd'), ('b', 'a'), ('b', 'c'), ('b', 'd'), ('c', 'a'), ('c', 'b'), ('c', 'd'), ('d', 'a'), ('d', 'b'), ('d', 'c')]
 
@@ -297,7 +298,7 @@ For example,
 
    print(binomial(4,2))
 
-::
+.. code-block::
 
    6
 
