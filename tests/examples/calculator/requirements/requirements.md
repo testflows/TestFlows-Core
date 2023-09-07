@@ -112,7 +112,7 @@
 * 17 [Answer Prompt](#answer-prompt)
     * 17.1 [RQ.Google.Calculator.AnswerPrompt](#rqgooglecalculatoranswerprompt)
 * 18 [Calculation History](#calculation-history)
-        * 18.1.1 [RQ.Google.Calculator.History](#rqgooglecalculatorhistory)
+    * 18.1 [RQ.Google.Calculator.History](#rqgooglecalculatorhistory)
     * 18.2 [History Result](#history-result)
         * 18.2.1 [RQ.Google.Calculator.History.Result](#rqgooglecalculatorhistoryresult)
     * 18.3 [History Expression](#history-expression)
@@ -1244,7 +1244,7 @@ For example,
 
 ## Calculation History
 
-#### RQ.Google.Calculator.History
+### RQ.Google.Calculator.History
 version: 1.0
 
 The calculator SHALL provide calculation history when the user clicks on the `🕑` button on the left top corner.
