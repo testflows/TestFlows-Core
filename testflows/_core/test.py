@@ -2427,7 +2427,7 @@ class TestDefinition(object):
                 self.test._run_outline = True
 
             # indicate that parent is running a pattern
-            if isinstance(kwargs_test, TestPattern):
+            if isinstance(kwargs_test, TestSketch):
                 self.test._run_pattern = True
 
             if self.rerun_individually is not None:
@@ -2767,7 +2767,7 @@ class TestDefinition(object):
                                 self.no_arguments
                             )
                             retry_iteration._run_outline = True
-                        elif isinstance(self.repeatable_func, TestPattern):
+                        elif isinstance(self.repeatable_func, TestSketch):
                             retry_iteration._run_pattern = True
                         self.repeatable_func(**args, __run_as_func__=True)
                     if not retry:
@@ -2830,7 +2830,7 @@ class TestDefinition(object):
                                 self.no_arguments
                             )
                             retry_iteration._run_outline = True
-                        elif isinstance(self.repeatable_func, TestPattern):
+                        elif isinstance(self.repeatable_func, TestSketch):
                             retry_iteration._run_pattern = True
                         await self.repeatable_func(**args, __run_as_func__=True)
 
@@ -2885,7 +2885,7 @@ class TestDefinition(object):
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
-                elif isinstance(self.repeatable_func, TestPattern):
+                elif isinstance(self.repeatable_func, TestSketch):
                     iteration._run_pattern = True
                 self.repeatable_func(**args)
 
@@ -2915,7 +2915,7 @@ class TestDefinition(object):
                 if isinstance(self.repeatable_func, TestOutline):
                     iteration._run_outline_with_no_arguments = self.no_arguments
                     iteration._run_outline = True
-                elif isinstance(self.repeatable_func, TestPattern):
+                elif isinstance(self.repeatable_func, TestSketch):
                     iteration._run_pattern = True
                 await self.repeatable_func(**args)
 
@@ -3087,13 +3087,30 @@ class Test(TestDefinition):
         return super(Test, cls).__new__(cls, name, **kwargs)
 
 
+class Sketch(TestDefinition):
+    """Sketch definition."""
+
+    type = TestType.Test
+    subtype = TestSubType.Sketch
+
+    def __new__(cls, name=None, type=None, **kwargs):
+        kwargs["type"] = (
+            (type.type if ifsubclass(type, TestDefinition) else type)
+            if type is not None
+            else cls.type
+        )
+        kwargs["subtype"] = cls.subtype
+        self = super(Sketch, cls).__new__(cls, name, **kwargs)
+        return self
+
+
 class Pattern(TestDefinition):
     """Pattern definition."""
 
     type = TestType.Test
     subtype = TestSubType.Pattern
 
-    def __new__(cls, name=None, type=None, subtype=None, **kwargs):
+    def __new__(cls, name=None, type=None, **kwargs):
         kwargs["type"] = (
             (type.type if ifsubclass(type, TestDefinition) else type)
             if type is not None
@@ -3462,7 +3479,7 @@ class TestDecorator(object):
                     else:
                         return self.type(**kwargs, test=self)(**args)
 
-            elif isinstance(self, TestPattern):
+            elif isinstance(self, TestSketch):
                 _test_type = self.type(**kwargs, test=self)
 
                 def execute_patterns():
@@ -3573,7 +3590,7 @@ class TestOutline(TestDecorator):
         return super(TestOutline, self).__call__(*args, **kwargs)
 
 
-class TestPattern(TestDecorator):
+class TestSketch(TestDecorator):
     type = Test
 
     def __init__(self, func_or_type=None, random=False, limit=None):
@@ -3606,7 +3623,7 @@ class TestPattern(TestDecorator):
             TestDecorator.__init__(self, self.func)
             return self
 
-        return super(TestPattern, self).__call__(*args, **kwargs)
+        return super(TestSketch, self).__call__(*args, **kwargs)
 
 
 class TestCase(TestDecorator):

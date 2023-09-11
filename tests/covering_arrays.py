@@ -4,7 +4,7 @@ from testflows.asserts import snapshot, error
 from testflows.asserts import values as assert_values
 
 
-@TestPattern(Scenario)
+@TestSketch(Scenario)
 def homogeneous(self):
     """Check generating covering arrays for different strength and
     different number of parameters with different number of homogeneous values
@@ -52,7 +52,7 @@ def homogeneous(self):
             ), error()
 
 
-@TestPattern(Scenario)
+@TestSketch(Scenario)
 def heterogeneous(self):
     """Check generating covering arrays for different strength and
     different number of parameters with different number of heterogeneous values

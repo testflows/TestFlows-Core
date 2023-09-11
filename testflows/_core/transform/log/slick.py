@@ -103,6 +103,8 @@ def format_type(msg):
 
     if test_subtype == TestSubType.Example:
         return "Example"
+    elif test_subtype == TestSubType.Sketch:
+        return "Sketch"
     elif test_subtype == TestSubType.Pattern:
         return "Pattern"
     elif test_type == TestType.Module:

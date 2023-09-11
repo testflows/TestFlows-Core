@@ -351,6 +351,8 @@ def format_test(msg, keyword, no_colors=False):
 
     if test_subtype == TestSubType.Example:
         keyword += "Example"
+    elif test_subtype == TestSubType.Sketch:
+        keyword += "Sketch"
     elif test_subtype == TestSubType.Pattern:
         keyword += "Pattern"
     elif test_type == TestType.Module:

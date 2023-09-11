@@ -1,6 +1,6 @@
 # These requirements were auto generated
 # from software requirements specification (SRS)
-# document by TestFlows v1.9.230705.1122619.
+# document by TestFlows v1.9.230815.1123444.
 # Do not edit by hand but re-generate instead
 # using 'tfs requirements generate' command.
 from testflows.core import Specification
@@ -1563,8 +1563,8 @@ RQ_Google_Calculator_History = Requirement(
         "\n"
     ),
     link=None,
-    level=3,
-    num="18.1.1",
+    level=2,
+    num="18.1",
 )
 
 RQ_Google_Calculator_History_Result = Requirement(
@@ -1840,7 +1840,7 @@ SRS001_Google_com_Calculator = Specification(
         Heading(name="Answer Prompt", level=1, num="17"),
         Heading(name="RQ.Google.Calculator.AnswerPrompt", level=2, num="17.1"),
         Heading(name="Calculation History", level=1, num="18"),
-        Heading(name="RQ.Google.Calculator.History", level=3, num="18.1.1"),
+        Heading(name="RQ.Google.Calculator.History", level=2, num="18.1"),
         Heading(name="History Result", level=2, num="18.2"),
         Heading(name="RQ.Google.Calculator.History.Result", level=3, num="18.2.1"),
         Heading(name="History Expression", level=2, num="18.3"),
@@ -2018,7 +2018,7 @@ SRS001_Google_com_Calculator = Specification(
 * 17 [Answer Prompt](#answer-prompt)
     * 17.1 [RQ.Google.Calculator.AnswerPrompt](#rqgooglecalculatoranswerprompt)
 * 18 [Calculation History](#calculation-history)
-        * 18.1.1 [RQ.Google.Calculator.History](#rqgooglecalculatorhistory)
+    * 18.1 [RQ.Google.Calculator.History](#rqgooglecalculatorhistory)
     * 18.2 [History Result](#history-result)
         * 18.2.1 [RQ.Google.Calculator.History.Result](#rqgooglecalculatorhistoryresult)
     * 18.3 [History Expression](#history-expression)
@@ -3150,7 +3150,7 @@ For example,
 
 ## Calculation History
 
-#### RQ.Google.Calculator.History
+### RQ.Google.Calculator.History
 version: 1.0
 
 The calculator SHALL provide calculation history when the user clicks on the `🕑` button on the left top corner.

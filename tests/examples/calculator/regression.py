@@ -23,7 +23,7 @@ def argparser(parser):
     return parser
 
 
-@TestPattern(Scenario)
+@TestSketch(Scenario)
 def check_basic_operations(self):
     """Check basic operations `+`, `-`, `*`, `/`
     with some one digit positive or negative numbers including `0`.

@@ -39,6 +39,7 @@ class TestSubType(IntEnum):
     Page = 46
     Example = 45
     Pattern = 44
+    Sketch = 43
     Background = 40
     Recipe = 35
     Critical = 34

@@ -107,7 +107,15 @@ class Counts(object):
         return data
 
     def __str__(self):
-        s = f"{self.units} {self.name if self.units != 1 else self.name.rstrip('s') if self.name != 'retries' else 'retry'}"
+        s = f"{self.units} "
+        if self.units != 1:
+            s += self.name
+        elif self.name == "retries":
+            s += "retry"
+        elif self.name == "sketches":
+            s += "sketch"
+        else:
+            s += self.name.rstrip("s")
         s = color(s, "white", attrs=["bold"])
         r = []
         if self.ok > 0:
@@ -151,6 +159,8 @@ def format_test(msg, counts):
         counts["example"].units += 1
     elif test_subtype == TestSubType.Pattern:
         counts["pattern"].units += 1
+    elif test_subtype == TestSubType.Sketch:
+        counts["sketch"].units += 1
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             counts["book"].units += 1
@@ -216,6 +226,8 @@ def format_result(msg, counts):
         setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
     elif test_subtype == TestSubType.Pattern:
         setattr(counts["pattern"], _name, getattr(counts["pattern"], _name) + 1)
+    elif test_subtype == TestSubType.Sketch:
+        setattr(counts["sketch"], _name, getattr(counts["sketch"], _name) + 1)
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             setattr(counts["book"], _name, getattr(counts["book"], _name) + 1)
@@ -287,6 +299,7 @@ def all_counts():
         "document": Counts("documents", *([0] * 11)),
         "page": Counts("pages", *([0] * 11)),
         "section": Counts("sections", *([0] * 11)),
+        "sketch": Counts("sketches", *([0] * 11)),
         "pattern": Counts("patterns", *([0] * 11)),
         "example": Counts("examples", *([0] * 11)),
     }
@@ -341,6 +354,8 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["page"])
             if counts["section"]:
                 line += line_icon + str(counts["section"])
+            if counts["sketch"]:
+                line += line_icon + str(counts["sketch"])
             if counts["pattern"]:
                 line += line_icon + str(counts["pattern"])
             if counts["example"]:

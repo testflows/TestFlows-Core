@@ -21,10 +21,18 @@ from testflows._core.test import (
     TestModule,
     TestBackground,
     TestOutline,
-    TestPattern,
+    TestSketch,
 )
 from testflows._core.test import Context, SharedContext
-from testflows._core.test import Feature, Background, Scenario, Example, Outline
+from testflows._core.test import (
+    Feature,
+    Background,
+    Scenario,
+    Example,
+    Outline,
+    Sketch,
+    Pattern,
+)
 from testflows._core.test import (
     Critical,
     Major,
