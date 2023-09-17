@@ -157,6 +157,12 @@ def format_test(msg, counts):
 
     if test_subtype == TestSubType.Example:
         counts["example"].units += 1
+    elif test_subtype == TestSubType.Outline:
+        counts["outline"].units += 1
+    elif test_subtype == TestSubType.Iteration:
+        counts["iteration"].units += 1
+    elif test_subtype == TestSubType.RetryIteration:
+        counts["retry"].units += 1
     elif test_subtype == TestSubType.Pattern:
         counts["pattern"].units += 1
     elif test_subtype == TestSubType.Sketch:
@@ -224,6 +230,12 @@ def format_result(msg, counts):
 
     if test_subtype == TestSubType.Example:
         setattr(counts["example"], _name, getattr(counts["example"], _name) + 1)
+    elif test_subtype == TestSubType.Outline:
+        setattr(counts["outline"], _name, getattr(counts["outline"], _name) + 1)
+    elif test_subtype == TestSubType.Iteration:
+        setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
+    elif test_subtype == TestSubType.RetryIteration:
+        setattr(counts["retry"], _name, getattr(counts["retry"], _name) + 1)
     elif test_subtype == TestSubType.Pattern:
         setattr(counts["pattern"], _name, getattr(counts["pattern"], _name) + 1)
     elif test_subtype == TestSubType.Sketch:

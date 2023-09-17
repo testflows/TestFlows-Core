@@ -15,7 +15,7 @@
 from datetime import datetime
 
 __author__ = "Vitaliy Zakaznikov"
-__version__ = "1.9.__VERSION__"
+__version__ = "2.0.__VERSION__"
 __repository__ = "__REPOSITORY__"
 __commit__ = "__COMMIT__"
 __branch__ = "__BRANCH__"

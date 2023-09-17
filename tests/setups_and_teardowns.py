@@ -12,32 +12,39 @@ def given_with_yield(self, num):
             pass
 
 
+@TestStep(Given)
+def open_log(self, name, mode="w+"):
+    with open(name, mode) as log:
+        yield log
+
+
 @TestBackground
 def open_logs(self):
     with Given("open log1"):
-        self.append(open("helllo", "w+"))
+        log1 = open_log(name="helllo")
     with Given("open log2"):
-        self.append(open("helllo2", "w+"))
-    yield self
+        log2 = open_log(name="helllo2")
+    yield log1, log2
     with Finally("I close the logs"):
         pass
 
 
 @TestBackground
 def open_logs_with_fail(self, ref):
-    ref.append(self.contexts)
     try:
         with Given("open log1"):
-            self.append(open("helllo", "w+"))
+            log1 = open_log(name="helllo")
+            ref.append(log1)
         with Given("open log that fails"):
-            self.append(open("foozoo", "r"))
+            log2 = open_log(name="foozoo", mode="r")
+            ref.append(log2)
         with Given("open log2"):
-            self.append(open("helllo2", "w+"))
-        yield self
+            log3 = open_log(name="helllo2")
+            ref.append(log3)
+        yield log1, log2, log3
     finally:
         with Finally("I close the logs"):
-            for log in self.contexts:
-                assert log.closed is False, error()
+            pass
 
 
 @TestBackground
@@ -45,9 +52,9 @@ def open_logs_and_given_with_yield(self):
     with Given("given with yield"):
         assert given_with_yield(num=1) == 1, error()
     with Given("open log1"):
-        self.append(open("helllo", "w+"))
+        log1 = open_log(name="helllo")
     with Given("open log2"):
-        self.append(open("helllo2", "w+"))
+        log2 = open_log(name="helllo2")
     yield self
 
 
@@ -57,12 +64,8 @@ def background(self):
     and TestBackground decorator.
     """
     with Scenario("direct call"):
-        log, log2 = open_logs()
-        assert log.closed is False and log2.closed is False, error()
-    assert log.closed is True and log2.closed is True, error()
-
-    with Scenario("run test definition"):
-        log, log2 = Background(run=open_logs)
+        with Given("opened logs"):
+            log, log2 = open_logs()
         assert log.closed is False and log2.closed is False, error()
     assert log.closed is True and log2.closed is True, error()
 
@@ -72,18 +75,11 @@ def background(self):
         assert log.closed is False and log2.closed is False, error()
     assert log.closed is True and log2.closed is True, error()
 
-    with Scenario("call test definition"):
-        log, log2 = Background(test=open_logs)()
-        assert log.closed is False and log2.closed is False, error()
-    assert log.closed is True and log2.closed is True, error()
-
     with Scenario("open logs with fail"):
         logs = []
         with Check("proper background cleanup"):
             with raises(Error):
                 Background(test=open_logs_with_fail)(ref=logs)
-        for log in logs[0]:
-            assert log.closed is True, error()
 
     with Scenario("background with given with yield"):
         with Background("my background"):

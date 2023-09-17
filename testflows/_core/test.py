@@ -19,7 +19,6 @@ import time
 import random
 import inspect
 import builtins
-import itertools
 import functools
 import threading
 import importlib
@@ -425,7 +424,6 @@ class TestBase(object):
         description=None,
         parent=None,
         parent_type=None,
-        parent_subtype=None,
         xfails=None,
         xflags=None,
         ffails=None,
@@ -474,7 +472,6 @@ class TestBase(object):
         self.test_time = None
         self.parent = parent
         self.parent_type = parent_type
-        self.parent_subtype = parent_subtype
         self.id = get(id, [settings.test_id])
         self.id_str = id_sep + id_sep.join(str(n) for n in self.id)
         self.maps = get(maps, list(self.maps))
@@ -485,25 +482,21 @@ class TestBase(object):
         self.context = get(
             context,
             current_test.context
-            if current_test and self.type < TestType.Iteration
+            if current_test and self.type < TestType.Test
             else (Context(current_test.context if current_test else None)),
         )
         self.behavior = get(
             behavior,
-            current_test.behavior
-            if current_test and self.type < TestType.Iteration
-            else [],
+            current_test.behavior if current_test and self.type < TestType.Test else [],
         )
         self.pattern = get(
             pattern,
-            current_test.pattern
-            if current_test and self.type < TestType.Iteration
-            else {},
+            current_test.pattern if current_test and self.type < TestType.Test else {},
         )
         self.random = get(
             random,
             current_test.random
-            if current_test and self.type < TestType.Iteration
+            if current_test and self.type < TestType.Test
             else False,
         )
         self.limit = limit
@@ -839,7 +832,7 @@ class TestBase(object):
                     parallel_exception = exc
 
             # context cleanups
-            if self.type >= TestType.Iteration:
+            if self.type >= TestType.Test:
                 if self.context._cleanups and not isinstance(
                     self.context, SharedContext
                 ):
@@ -903,7 +896,7 @@ class TestBase(object):
                 parallel_exception = exc
 
             # context cleanups
-            if self.type >= TestType.Iteration:
+            if self.type >= TestType.Test:
                 if self.context._cleanups:
                     try:
                         async with Finally("I clean up"):
@@ -2188,12 +2181,11 @@ class TestDefinition(object):
                 kwargs["end"] = parent.end or kwargs.get("end")
                 kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
                 kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
+                # handle parent test type propagation
+                if keep_type is None:
+                    self._parent_type_propagation(parent, kwargs)
                 # propagate repeats
-                if (
-                    parent.repeats
-                    and parent.type > TestType.Outline
-                    and self.type >= TestType.Outline
-                ):
+                if parent.repeats and kwargs["type"] >= TestType.Test:
                     kwargs["repeats"] = (
                         {
                             k: v
@@ -2204,11 +2196,7 @@ class TestDefinition(object):
                         else None or kwargs.get("repeats")
                     )
                 # propagate retries
-                if (
-                    parent.retries
-                    and parent.type > TestType.Outline
-                    and self.type >= TestType.Outline
-                ):
+                if parent.retries and kwargs["type"] >= TestType.Test:
                     kwargs["retries"] = (
                         {
                             k: v
@@ -2218,11 +2206,8 @@ class TestDefinition(object):
                         if parent.retries
                         else None or kwargs.get("retries")
                     )
-                # handle parent test type propagation
-                if keep_type is None:
-                    self._parent_type_propagation(parent, kwargs)
                 # propagate first_fail and test_to_end
-                if kwargs["type"] >= TestType.Iteration:
+                if kwargs["type"] >= TestType.Test:
                     kwargs["first_fail"] = parent.first_fail or kwargs.get("first_fail")
                     kwargs["test_to_end"] = parent.test_to_end or kwargs.get(
                         "test_to_end"
@@ -2327,7 +2312,7 @@ class TestDefinition(object):
                 kwargs["flags"] |= TE | CLEANUP
 
             # mark nested retries for RetryIteration test type
-            if kwargs["type"] == TestType.RetryIteration:
+            if kwargs.get("subtype") == TestSubType.RetryIteration:
                 if kwargs["cflags"] & RETRY:
                     kwargs["flags"] |= NESTED_RETRY
                 kwargs["flags"] |= RETRY
@@ -2417,8 +2402,6 @@ class TestDefinition(object):
 
             if getattr(self, "parent_type", None):
                 self.test.parent_type = self.parent_type
-            if getattr(self, "parent_subtype", None):
-                self.test.parent_subtype = self.parent_subtype
 
             # indicate that parent is running an outline
             # and if there are any user arguments for an outline
@@ -2566,28 +2549,26 @@ class TestDefinition(object):
                 )
 
     def _parent_type_propagation(self, parent, kwargs):
-        """Propagate parent test type if lower
-        and not Iteration or RetryIteration.
+        """Propagate parent test type.
 
         :param parent: parent
         :param kwargs: test's kwargs
         """
         type = kwargs.pop("type", TestType.Test)
         subtype = kwargs.pop("subtype", None)
-
         parent_type = kwargs.get("parent_type", parent.type)
-        parent_subtype = kwargs.get("parent_subtype", parent.subtype)
 
-        if parent_type in (TestType.Iteration, TestType.RetryIteration):
-            parent_type = parent.parent_type
-            parent_subtype = parent.parent_subtype
-
-        if type in (TestType.Iteration, TestType.RetryIteration):
-            pass
-
-        elif int(parent_type) < int(type):
+        if int(parent_type) < int(type):
             type = parent_type
-            subtype = parent_subtype
+
+        elif subtype is TestSubType.Outline:
+            type = parent_type
+
+        elif subtype is TestSubType.Iteration:
+            type = parent_type
+
+        elif subtype is TestSubType.RetryIteration:
+            type = parent_type
 
         elif subtype is TestSubType.Pattern:
             type = parent_type
@@ -2598,7 +2579,6 @@ class TestDefinition(object):
         kwargs["subtype"] = subtype
         kwargs["type"] = type
         kwargs["parent_type"] = parent_type
-        kwargs["parent_subtype"] = parent_subtype
 
     def __repeat__(self, repeat=None, retry=None, *args):
         sys.settrace(self.trace)
@@ -2690,14 +2670,12 @@ class TestDefinition(object):
         repeat_kwargs.pop("name", None)
         repeat_kwargs.pop("parent", None)
         repeat_kwargs.pop("parent_type", None)
-        repeat_kwargs.pop("parent_subtype", None)
-        repeat_kwargs["type"] = TestType.Iteration
+        repeat_kwargs["subtype"] = TestSubType.Iteration
 
         retry_kwargs.pop("name", None)
         retry_kwargs.pop("parent", None)
         retry_kwargs.pop("parent_type", None)
-        retry_kwargs.pop("parent_subtype", None)
-        retry_kwargs["type"] = TestType.RetryIteration
+        retry_kwargs["subtype"] = TestSubType.RetryIteration
 
         repeat_kwargs["flags"] = Flags(repeat_kwargs.get("flags")) & ~PARALLEL
         retry_kwargs["flags"] = Flags(retry_kwargs.get("flags")) & ~PARALLEL
@@ -2729,19 +2707,11 @@ class TestDefinition(object):
         _repeat = repeat if repeat is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-        parent_type, parent_subtype = (
-            (self.test.type, self.test.subtype)
-            if self.test.type not in (Iteration, RetryIteration)
-            else (self.test.parent_type, self.test.parent_subtype)
-        )
-
         _repeats = repeats(*_repeat)
         while True:
             try:
                 i = _repeats.__next__(
                     tags=self.tags,
-                    parent_type=parent_type,
-                    parent_subtype=parent_subtype,
                     **repeat_kwargs,
                 )
             except StopIteration:
@@ -2753,8 +2723,6 @@ class TestDefinition(object):
                         r = _retries.__next__(
                             flags=retry_kwargs_flags,
                             tags=self.tags,
-                            parent_type=parent_type,
-                            parent_subtype=parent_subtype,
                             **retry_kwargs,
                         )
                     except StopIteration:
@@ -2792,19 +2760,11 @@ class TestDefinition(object):
         _retry = retry if retry is not None else (1,)
         retry_kwargs_flags = Flags(retry_kwargs.pop("flags", None))
 
-        parent_type, parent_subtype = (
-            (self.test.type, self.test.subtype)
-            if self.test.type not in (Iteration, RetryIteration)
-            else (self.test.parent_type, self.test.parent_subtype)
-        )
-
         _repeats = repeats(*_repeat)
         while True:
             try:
                 i = _repeats.__next__(
                     tags=self.tags,
-                    parent_type=parent_type,
-                    parent_subtype=parent_subtype,
                     **repeat_kwargs,
                 )
             except StopIteration:
@@ -2816,8 +2776,6 @@ class TestDefinition(object):
                         r = _retries.__next__(
                             flags=retry_kwargs_flags,
                             tags=self.tags,
-                            parent_type=parent_type,
-                            parent_subtype=parent_subtype,
                             **retry_kwargs,
                         )
                     except StopIteration:
@@ -2845,7 +2803,7 @@ class TestDefinition(object):
         __kwargs.pop("name", None)
         __kwargs.pop("parent", None)
         __kwargs["flags"] = Flags(__kwargs.get("flags")) | TE
-        __kwargs["type"] = TestType.Iteration
+        __kwargs["subtype"] = TestSubType.Iteration
         __args = __kwargs.pop("args", {})
 
         rerun_name = rerun_test.name.pattern.rstrip(name_sep + "*")
@@ -2948,7 +2906,7 @@ class TestDefinition(object):
                 result = Error(test=self.parent.name, message=self.test.result.message)
 
             if (
-                self.test.type == TestType.RetryIteration
+                self.test.subtype == TestSubType.RetryIteration
                 and LAST_RETRY not in self.test.flags
             ):
                 # don't raise or propagate to a parent a failing result of retry
@@ -3066,13 +3024,19 @@ class Suite(TestDefinition):
 class Outline(TestDefinition):
     """Outline definition."""
 
-    type = TestType.Outline
+    type = TestType.Test
+    subtype = TestSubType.Outline
 
     def __new__(cls, name=None, type=None, **kwargs):
         kwargs["type"] = (
             (type.type if ifsubclass(type, TestDefinition) else type)
             if type is not None
             else cls.type
+        )
+        kwargs["subtype"] = (
+            type.subtype
+            if type is not None and ifsubclass(type, TestDefinition)
+            else cls.subtype
         )
         return super(Outline, cls).__new__(cls, name, **kwargs)
 
@@ -3124,34 +3088,28 @@ class Pattern(TestDefinition):
 class Iteration(TestDefinition):
     """Test iteration definition."""
 
-    type = TestType.Iteration
+    type = TestType.Test
+    subtype = TestSubType.Iteration
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = cls.type
+        kwargs["subtype"] = cls.subtype
 
-        parent_type = kwargs.pop("parent_type", TestType.Test)
-        parent_subtype = kwargs.pop("parent_subtype", None)
-
-        self = super(Iteration, cls).__new__(
-            cls, name, **kwargs, parent_type=parent_type, parent_subtype=parent_subtype
-        )
+        self = super(Iteration, cls).__new__(cls, name, **kwargs)
         return self
 
 
 class RetryIteration(TestDefinition):
     """Test retry iteration definition."""
 
-    type = TestType.RetryIteration
+    type = TestType.Test
+    subtype = TestSubType.RetryIteration
 
     def __new__(cls, name=None, **kwargs):
         kwargs["type"] = cls.type
+        kwargs["subtype"] = cls.subtype
 
-        parent_type = kwargs.pop("parent_type", TestType.Test)
-        parent_subtype = kwargs.pop("parent_subtype", None)
-
-        self = super(RetryIteration, cls).__new__(
-            cls, name, **kwargs, parent_type=parent_type, parent_subtype=parent_subtype
-        )
+        self = super(RetryIteration, cls).__new__(cls, name, **kwargs)
         return self
 
 
@@ -3420,8 +3378,6 @@ class TestDecorator(object):
                 or (
                     test
                     and test.type > self.type.type
-                    and self.type.type != TestType.Outline
-                    and test.subtype != TestSubType.Pattern
                 )
             )
             and not (test and _run_as_func)
@@ -3756,19 +3712,6 @@ class retries(object):
 
     def __next__(self, **kwargs):
         flags = kwargs.pop("flags", Flags())
-        current_type = current().type
-        parent_type = kwargs.pop(
-            "parent_type",
-            current_type
-            if current_type not in (Iteration, RetryIteration)
-            else current().parent_type,
-        )
-        parent_subtype = kwargs.pop(
-            "parent_subtype",
-            current_type
-            if current_type not in (Iteration, RetryIteration)
-            else current().parent_subtype,
-        )
 
         if self.retry is not None:
             if self.retry.test is not None:
@@ -3809,8 +3752,6 @@ class retries(object):
         self.retry = RetryIteration(
             f"try #{self.number}",
             flags=flags,
-            parent_type=parent_type,
-            parent_subtype=parent_subtype,
             **kwargs,
         )
 
@@ -3907,18 +3848,6 @@ class repeats(object):
     def __next__(self, **kwargs):
         flags = kwargs.pop("flags", Flags())
         current_type = current().type
-        parent_type = kwargs.pop(
-            "parent_type",
-            current_type
-            if current_type not in (Iteration, RetryIteration)
-            else current().parent_type,
-        )
-        parent_subtype = kwargs.pop(
-            "parent_subtype",
-            current_type
-            if current_type not in (Iteration, RetryIteration)
-            else current().parent_subtype,
-        )
 
         if self.until in ("pass", "complete"):
             flags |= TE
@@ -3957,8 +3886,6 @@ class repeats(object):
         self.iteration = Iteration(
             f"run #{self.number}",
             flags=flags,
-            parent_type=parent_type,
-            parent_subtype=parent_subtype,
             **kwargs,
         )
 

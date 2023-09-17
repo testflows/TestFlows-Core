@@ -303,6 +303,8 @@ def format_test(msg, keyword):
 
     if test_subtype == TestSubType.Example:
         keyword += "Example"
+    elif test_subtype == TestSubType.Outline:
+        keyword += "Outline"
     elif test_subtype == TestSubType.Sketch:
         keyword += "Sketch"
     elif test_subtype == TestSubType.Pattern:
@@ -384,9 +386,10 @@ def format_test(msg, keyword):
 
 def format_result(msg, prefix):
     result = msg["result_type"]
-    _retry = get_type(msg) == TestType.RetryIteration and LAST_RETRY not in Flags(
-        msg["test_flags"]
-    )
+    _retry = (
+        get_type(msg) == TestType.RetryIteration
+        or get_subtype(msg) == TestSubType.RetryIteration
+    ) and LAST_RETRY not in Flags(msg["test_flags"])
     _color = color_result(result, retry=_retry)
     _result = _color(prefix + result)
     _test = color_other(basename(msg["result_test"]))

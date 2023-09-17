@@ -21,9 +21,9 @@ class TestType(IntEnum):
     Module = 40
     Suite = 30
     Test = 20
-    Outline = 17
-    Iteration = 15
-    RetryIteration = 14
+    Outline = 17  # deprecated
+    Iteration = 15  # deprecated
+    RetryIteration = 14  # deprecated
     Step = 10
 
 
@@ -41,6 +41,9 @@ class TestSubType(IntEnum):
     Pattern = 44
     Sketch = 43
     Background = 40
+    Outline = 39
+    Iteration = 38
+    RetryIteration = 37
     Recipe = 35
     Critical = 34
     Check = 33

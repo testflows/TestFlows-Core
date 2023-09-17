@@ -15,13 +15,21 @@
 import testflows.settings as settings
 
 from testflows._core.flags import Flags, SKIP, RETRY
-from testflows._core.testtype import TestType
+from testflows._core.testtype import TestType, TestSubType
 from testflows._core.message import Message
 from testflows._core.name import split, parentname
 from testflows._core.cli.colors import color
 from testflows._core.transform.log.report.totals import Counts, color_result
 
 indent = " " * 2
+
+
+def get_type(msg):
+    return getattr(TestType, msg["test_type"])
+
+
+def get_subtype(msg):
+    return getattr(TestSubType, str(msg["test_subtype"]), 0)
 
 
 class UnstableCounts(Counts):
@@ -66,7 +74,9 @@ def add_result(msg, results):
     if flags & SKIP and settings.show_skipped is False:
         return
 
-    if getattr(TestType, msg["test_type"]) == TestType.Iteration and not cflags & RETRY:
+    if (
+        get_type(msg) == TestType.Iteration or get_subtype(msg) == TestSubType.Iteration
+    ) and not cflags & RETRY:
         result = msg["result_type"]
         parent_id, test_id = split(msg["test_id"])
         if results.get(parent_id) is None:

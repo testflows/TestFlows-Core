@@ -19,7 +19,6 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType, TestSubType
 from testflows._core.message import Message
-from testflows._core.objects import ExamplesTable
 from testflows._core.name import split, parentname, basename
 from testflows._core.cli.colors import color, cursor_up
 
@@ -103,6 +102,8 @@ def format_type(msg):
 
     if test_subtype == TestSubType.Example:
         return "Example"
+    elif test_subtype == TestSubType.Outline:
+        return "Outline"
     elif test_subtype == TestSubType.Sketch:
         return "Sketch"
     elif test_subtype == TestSubType.Pattern:
