@@ -105,8 +105,6 @@ def generate(results, divider):
             result_name = result.lower()
             setattr(counts, result_name, getattr(counts, result_name) + 1)
         _counts = str(counts)
-        if _counts:
-            _counts += "\n"
         unstable += _counts
 
     if unstable:
