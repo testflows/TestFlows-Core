@@ -2570,7 +2570,7 @@ class TestDefinition(object):
         elif subtype is TestSubType.RetryIteration:
             type = parent_type
 
-        elif subtype is TestSubType.Pattern:
+        elif subtype is TestSubType.Combination:
             type = parent_type
 
         elif subtype is TestSubType.Example:
@@ -3068,11 +3068,11 @@ class Sketch(TestDefinition):
         return self
 
 
-class Pattern(TestDefinition):
-    """Pattern definition."""
+class Combination(TestDefinition):
+    """Combination definition."""
 
     type = TestType.Test
-    subtype = TestSubType.Pattern
+    subtype = TestSubType.Combination
 
     def __new__(cls, name=None, type=None, **kwargs):
         kwargs["type"] = (
@@ -3081,7 +3081,7 @@ class Pattern(TestDefinition):
             else cls.type
         )
         kwargs["subtype"] = cls.subtype
-        self = super(Pattern, cls).__new__(cls, name, **kwargs)
+        self = super(Combination, cls).__new__(cls, name, **kwargs)
         return self
 
 
@@ -3373,13 +3373,7 @@ class TestDecorator(object):
         test_running_pattern = getattr(test, "_run_pattern", False)
 
         if (
-            (
-                test is None
-                or (
-                    test
-                    and test.type > self.type.type
-                )
-            )
+            (test is None or (test and test.type > self.type.type))
             and not (test and _run_as_func)
             or (test and test_running_outline)
             or (test and test_running_pattern)
@@ -3461,7 +3455,9 @@ class TestDecorator(object):
                             args.pop("__run_as_func__", None)
                             process_func_result(self.func(current(), **args))
 
-                        _pattern_type = Pattern(**_kwargs, subtype=TestSubType.Pattern)
+                        _pattern_type = Combination(
+                            **_kwargs, subtype=TestSubType.Combination
+                        )
                         _pattern_type.repeatable_func = execute_pattern
 
                         with _pattern_type as _pattern:

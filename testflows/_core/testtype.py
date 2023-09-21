@@ -38,7 +38,7 @@ class TestSubType(IntEnum):
     Section = 47
     Page = 46
     Example = 45
-    Pattern = 44
+    Combination = 44
     Sketch = 43
     Background = 40
     Outline = 39

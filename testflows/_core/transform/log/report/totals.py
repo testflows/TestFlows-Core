@@ -163,8 +163,8 @@ def format_test(msg, counts):
         counts["iteration"].units += 1
     elif test_subtype == TestSubType.RetryIteration:
         counts["retry"].units += 1
-    elif test_subtype == TestSubType.Pattern:
-        counts["pattern"].units += 1
+    elif test_subtype == TestSubType.Combination:
+        counts["combination"].units += 1
     elif test_subtype == TestSubType.Sketch:
         counts["sketch"].units += 1
     elif test_type == TestType.Module:
@@ -236,8 +236,8 @@ def format_result(msg, counts):
         setattr(counts["iteration"], _name, getattr(counts["iteration"], _name) + 1)
     elif test_subtype == TestSubType.RetryIteration:
         setattr(counts["retry"], _name, getattr(counts["retry"], _name) + 1)
-    elif test_subtype == TestSubType.Pattern:
-        setattr(counts["pattern"], _name, getattr(counts["pattern"], _name) + 1)
+    elif test_subtype == TestSubType.Combination:
+        setattr(counts["combination"], _name, getattr(counts["combination"], _name) + 1)
     elif test_subtype == TestSubType.Sketch:
         setattr(counts["sketch"], _name, getattr(counts["sketch"], _name) + 1)
     elif test_type == TestType.Module:
@@ -312,7 +312,7 @@ def all_counts():
         "page": Counts("pages", *([0] * 11)),
         "section": Counts("sections", *([0] * 11)),
         "sketch": Counts("sketches", *([0] * 11)),
-        "pattern": Counts("patterns", *([0] * 11)),
+        "combination": Counts("combinations", *([0] * 11)),
         "example": Counts("examples", *([0] * 11)),
     }
 
@@ -368,8 +368,8 @@ def transform(stop, divider="\n"):
                 line += line_icon + str(counts["section"])
             if counts["sketch"]:
                 line += line_icon + str(counts["sketch"])
-            if counts["pattern"]:
-                line += line_icon + str(counts["pattern"])
+            if counts["combination"]:
+                line += line_icon + str(counts["combination"])
             if counts["example"]:
                 line += line_icon + str(counts["example"])
             if counts["outline"]:

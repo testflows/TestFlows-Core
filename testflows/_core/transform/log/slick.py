@@ -106,8 +106,8 @@ def format_type(msg):
         return "Outline"
     elif test_subtype == TestSubType.Sketch:
         return "Sketch"
-    elif test_subtype == TestSubType.Pattern:
-        return "Pattern"
+    elif test_subtype == TestSubType.Combination:
+        return "Combination"
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             return "Book"

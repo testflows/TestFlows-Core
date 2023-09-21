@@ -31,7 +31,7 @@ from testflows._core.test import (
     Example,
     Outline,
     Sketch,
-    Pattern,
+    Combination,
 )
 from testflows._core.test import (
     Critical,

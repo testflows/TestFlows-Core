@@ -307,8 +307,8 @@ def format_test(msg, keyword):
         keyword += "Outline"
     elif test_subtype == TestSubType.Sketch:
         keyword += "Sketch"
-    elif test_subtype == TestSubType.Pattern:
-        keyword += "Pattern"
+    elif test_subtype == TestSubType.Combination:
+        keyword += "Combination"
     elif test_type == TestType.Module:
         if test_subtype == TestSubType.Book:
             keyword += "Book"
