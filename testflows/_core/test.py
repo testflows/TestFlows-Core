@@ -3978,13 +3978,13 @@ def either(
     frame=None,
     test=None,
 ):
-    """Select choices for a pattern one at a time until all choices are consumed.
+    """Select values for a combination pattern one at a time until all values are consumed.
 
-    Choices can be specified either using `*values` or by passing an iterator or generator
+    Values can be specified either using `*values` or by passing an iterator or generator
     as `value`.
 
-    If neither `*values`, or `value` is explicitly specified then choices
-    are set to a `(True, False)` tuple.
+    If neither `*values`, or `value` is explicitly specified then `*values`
+    is set to a `(True, False)` tuple.
 
     This function must be called only once for each line of code in the same source file or
     a unique identifier `i` must be specified.

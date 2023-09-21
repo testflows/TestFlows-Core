@@ -15,7 +15,7 @@
 import math
 import itertools
 
-from .covering_array import covering, CoveringArray, CoveringArrayError
+from .covering_array import CoveringArray, CoveringArrayError
 
 product = itertools.product
 permutations = itertools.permutations
