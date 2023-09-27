@@ -3545,7 +3545,7 @@ class TestOutline(TestDecorator):
 class TestSketch(TestDecorator):
     type = Test
 
-    def __init__(self, func_or_type=None, random=False, limit=None):
+    def __init__(self, func_or_type=None, random=None, limit=None):
         self.func = None
         self.random = random
         self.limit = limit
@@ -3565,8 +3565,14 @@ class TestSketch(TestDecorator):
             TestDecorator.__init__(self, self.func)
 
     def _init_func(self):
-        self.func.random = self.random
-        self.func.limit = self.limit
+        self.func.random = (
+            self.random
+            if self.random is not None
+            else getattr(self.func, "random", False)
+        )
+        self.func.limit = (
+            self.limit if self.limit is not None else getattr(self.func, "limit", None)
+        )
 
     def __call__(self, *args, **kwargs):
         if not self.func:
