@@ -10,7 +10,10 @@ from testflows.core import *
 def feature(self):
     """Check reading input from user."""
     with Scenario("test 1", attributes=[Attribute("name", "value")]):
-        with When("I do something and I grab note from the user", flags=AUTO):
+        with When("I ask for input with case insensitive choices"):
+            note(input("Enter y/n?", choices=("Y", "N"), lower=True))
+
+        with And("I do something and I grab note from the user", flags=AUTO):
             note(input("Enter a note"))
 
         with And("I do something and grab debug message form the user", flags=AUTO):

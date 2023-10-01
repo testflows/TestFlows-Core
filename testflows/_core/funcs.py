@@ -386,11 +386,14 @@ def pause(message=None, test=None):
     test.io.output.input("")
 
 
-def input(type, multiline=False, choices=None, confirm=True, test=None):
+def input(type, multiline=False, choices=None, confirm=True, lower=False, test=None):
     nl = "\n"
 
     if test is None:
         test = current()
+
+    if choices is not None and lower:
+        choices = [str(c).lower() for c in choices]
 
     def confirmed():
         prompt = "Is this correct [Y/n]? "
@@ -411,18 +414,24 @@ def input(type, multiline=False, choices=None, confirm=True, test=None):
     if builtins.type(type) is str:
         while True:
             test.io.output.prompt(
-                f"{type.strip()}{(nl + '(Press Enter then Ctrl-D to finish)') if multiline else ''}\n\n"
-                f"{('[' + ','.join([repr(c) for c in choices]) + ']' + nl*2) if choices else ''}"
+                f"{type.strip()}{(nl + '(Press Enter then Ctrl-D to finish)') if multiline else ''}"
+                f"{nl*2}"
             )
             if multiline:
                 text = multilined()
             else:
                 text = builtins.input()
 
+            if lower:
+                text = text.lower()
+
             test.io.output.input(text)
 
             if choices:
                 if text not in choices:
+                    test.io.output.prompt(
+                        f"Error: invalid input, try again\nchoices: {','.join([str(c) for c in choices])}\n\n"
+                    )
                     continue
 
             if confirm:
