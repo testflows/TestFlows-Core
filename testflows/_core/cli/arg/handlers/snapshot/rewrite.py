@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2023 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,27 +12,44 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import sys
+from testflows._core.cli.text import secondary
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.requirement.generate import (
-    Handler as generate_handler,
-)
+from testflows.asserts.helpers import rewrite_snapshot
 
 
 class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
         parser = commands.add_parser(
-            "requirements",
-            help="requirements processing",
+            "rewrite",
+            help="rewrite snapshot",
             epilog=epilog(),
-            description="Work with requirements.",
+            description=(
+                "Rewrite snapshot files.\n\n"
+                "For example:\n"
+                "  tfs snapshots rewrite *.snapshot"
+            ),
             formatter_class=HelpFormatter,
         )
 
-        requirement_commands = parser.add_subparsers(
-            title="commands", metavar="command", description=None, help=None
+        parser.add_argument(
+            "input",
+            metavar="input",
+            type=str,
+            nargs="+",
+            help="input file or files",
         )
-        requirement_commands.required = True
-        generate_handler.add_command(requirement_commands)
+
+        parser.set_defaults(func=cls())
+
+    def handle(self, args):
+        for filename in args.input:
+            try:
+                rewrite_snapshot(filename)
+            except ValueError as exc:
+                print(secondary(f"skipping: {exc}", eol=""), file=sys.stderr)
+            else:
+                print(secondary(f"rewrote: {filename}", eol=""))

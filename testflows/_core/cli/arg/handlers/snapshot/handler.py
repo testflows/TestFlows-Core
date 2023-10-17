@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2023 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,8 +15,8 @@
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.cli.arg.handlers.requirement.generate import (
-    Handler as generate_handler,
+from testflows._core.cli.arg.handlers.snapshot.rewrite import (
+    Handler as rewrite_handler,
 )
 
 
@@ -24,15 +24,15 @@ class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
         parser = commands.add_parser(
-            "requirements",
-            help="requirements processing",
+            "snapshots",
+            help="snapshots processing",
             epilog=epilog(),
-            description="Work with requirements.",
+            description="Work with snapshots.",
             formatter_class=HelpFormatter,
         )
 
-        requirement_commands = parser.add_subparsers(
+        snapshot_commands = parser.add_subparsers(
             title="commands", metavar="command", description=None, help=None
         )
-        requirement_commands.required = True
-        generate_handler.add_command(requirement_commands)
+        snapshot_commands.required = True
+        rewrite_handler.add_command(snapshot_commands)

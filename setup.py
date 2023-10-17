@@ -80,6 +80,7 @@ setup(
         "testflows._core.cli.arg.handlers.document",
         "testflows._core.cli.arg.handlers.document.new",
         "testflows._core.cli.arg.handlers.requirement",
+        "testflows._core.cli.arg.handlers.snapshot",
         "testflows._core.cli.arg.handlers.show",
         "testflows._core.combinatorics",
     ],

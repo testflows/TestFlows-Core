@@ -30,6 +30,11 @@ from .handlers.run import Handler as run_handler
 from .type import onoff as onoff_type
 
 try:
+    from .handlers.snapshot.handler import Handler as snapshot_handler
+except Exception as e:
+    snapshot_handler = None
+
+try:
     from testflows.database.cli.handler import Handler as database_handler
 except:
     database_handler = None
@@ -107,16 +112,17 @@ commands = parser.add_subparsers(
 )
 commands.required = True
 
+run_handler.add_command(commands)
 log_handler.add_command(commands)
+show_handler.add_command(commands)
 report_handler.add_command(commands)
 transform_handler.add_command(commands)
 requirement_handler.add_command(commands)
-document_handler.add_command(commands)
-show_handler.add_command(commands)
-run_handler.add_command(commands)
-
+if snapshot_handler:
+    snapshot_handler.add_command(commands)
 if database_handler:
     database_handler.add_command(commands)
+document_handler.add_command(commands)
 
 if enterprise_handler:
     enterprise_handler.add_command(commands)
