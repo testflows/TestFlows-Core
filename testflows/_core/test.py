@@ -832,7 +832,7 @@ class TestBase(object):
                     parallel_exception = exc
 
             # context cleanups
-            if self.type >= TestType.Test:
+            if not self.parent or self.context is not self.parent.context:
                 if self.context._cleanups and not isinstance(
                     self.context, SharedContext
                 ):
@@ -896,7 +896,7 @@ class TestBase(object):
                 parallel_exception = exc
 
             # context cleanups
-            if self.type >= TestType.Test:
+            if not self.parent or self.context is not self.parent.context:
                 if self.context._cleanups:
                     try:
                         async with Finally("I clean up"):
