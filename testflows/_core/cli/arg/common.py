@@ -37,7 +37,6 @@ class HelpFormatter(HelpFormatterBase):
 
     def add_argument(self, action):
         if action.help is not argparse.SUPPRESS:
-
             # find all invocations
             get_invocation = self._format_action_invocation
             invocations = [get_invocation(action)]

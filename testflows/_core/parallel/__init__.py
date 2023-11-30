@@ -35,15 +35,29 @@ def Context(**kwargs):
     return namedtuple("ParallelContext", " ".join(kwargs.keys()))(*kwargs.values())
 
 
-context = Context(
-    current=contextvars.ContextVar("_testflows_current", default=None),
-    previous=contextvars.ContextVar("_testflows_previous", default=None),
-    top=contextvars.ContextVar("_testflows_top", default=None),
-    is_valid=contextvars.ContextVar("_testflows_is_valid", default=None),
-)
+def new_context():
+    """New context."""
+    context = Context(
+        current=contextvars.ContextVar("_testflows_current", default=None),
+        previous=contextvars.ContextVar("_testflows_previous", default=None),
+        top=contextvars.ContextVar("_testflows_top", default=None),
+        is_valid=contextvars.ContextVar("_testflows_is_valid", default=None),
+    )
+    # set current parallel context as valid
+    context.is_valid.set(True)
+    return context
 
-# set current parallel context as valid
-context.is_valid.set(True)
+
+# global parallel context
+context = new_context()
+
+
+def reset_context():
+    """Reset context."""
+    global context
+    context = new_context()
+    return context
+
 
 ContextVar = contextvars.ContextVar
 copy_context = contextvars.copy_context
@@ -116,6 +130,7 @@ def join(
     filter=None,
     all=False,
     no_async=False,
+    force_async=False,
     cancel_pending=False
 ):
     """Wait for parallel test futures to complete.
@@ -135,7 +150,7 @@ def join(
     :param no_async: force non async join while running in event loop
     :param cancel_pending: cancel any pending futures
     """
-    if no_async is False and is_running_in_event_loop():
+    if (no_async is False and is_running_in_event_loop()) or force_async is True:
         return _async_join(
             *future,
             futures=futures,

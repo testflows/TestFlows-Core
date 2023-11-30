@@ -85,7 +85,7 @@ from .objects import ExamplesTable, Specification
 from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
 from .constants import name_sep, id_sep
-from .io import TestIO
+from .io import TestIO, LogWriter
 from .name import join, depth, match, absname, isabs, basename
 from .funcs import exception, pause, result, value, input
 from .init import init
@@ -117,7 +117,10 @@ from .parallel import (
     _check_parallel_context,
     join as parallel_join,
 )
-from .parallel import convert_result_to_concurrent_future
+from .parallel import (
+    convert_result_to_concurrent_future,
+    reset_context as reset_parallel_context,
+)
 from .parallel.executor.thread import ThreadPoolExecutor, GlobalThreadPoolExecutor
 from .parallel.executor.asyncio import AsyncPoolExecutor, GlobalAsyncPoolExecutor
 from .parallel.executor.process import (
@@ -131,6 +134,7 @@ from .parallel.asyncio import (
     wrap_future,
     OptionalFuture,
 )
+from .notebook import is_notebook
 
 tracer = tracing.getLogger(__name__)
 
@@ -451,7 +455,6 @@ class TestBase(object):
         random=False,
         limit=None,
     ):
-
         self.lock = threading.Lock()
 
         if current() is None:
@@ -827,7 +830,9 @@ class TestBase(object):
             # join any left over parallel tests and save parallel exception
             if self.futures:
                 try:
-                    parallel_join(futures=self.futures, test=self, all=True)
+                    parallel_join(
+                        futures=self.futures, test=self, all=True, no_async=True
+                    )
                 except (Exception, KeyboardInterrupt) as exc:
                     parallel_exception = exc
 
@@ -891,7 +896,9 @@ class TestBase(object):
 
             # join any left over parallel tests and save
             try:
-                await parallel_join(futures=self.futures, test=self, all=True)
+                await parallel_join(
+                    futures=self.futures, test=self, all=True, force_async=True
+                )
             except (Exception, KeyboardInterrupt) as exc:
                 parallel_exception = exc
 
@@ -1583,7 +1590,7 @@ def parse_cli_args(kwargs, parser_schema):
         if exc is not None:
             raise exc from None
 
-        if unknown:
+        if unknown and not is_notebook():
             raise ExitWithError(f"unknown argument {unknown}")
 
         settings.trace = get(args.pop("_trace", None), get(settings.trace, False))
@@ -1968,7 +1975,9 @@ class TestDefinition(object):
 
                 async def _async_test_wrapper():
                     async with self as _test:
-                        r = await test(**self.kwargs["args"])
+                        r = test(**self.kwargs["args"])
+                        if inspect.isawaitable(r):
+                            r = await r
                         if r is not None:
                             value("return", value=r)
                     return _test.result
@@ -1997,8 +2006,9 @@ class TestDefinition(object):
                                 executor, _wrapper, (test,)
                             )
                     else:
-                        r = await test(**self.kwargs["args"])
-                    if r is not None:
+                        r = test(**self.kwargs["args"])
+                        if inspect.isawaitable(r):
+                            r = await r
                         value("return", value=r)
                 return _test.result
             else:
@@ -2090,6 +2100,8 @@ class TestDefinition(object):
         if _check_async and is_running_in_event_loop():
             raise RuntimeError("Use `async with` for asynchronous tests.")
 
+        if current() is None and is_notebook():
+            reset_parallel_context()
         _check_parallel_context()
 
         try:
@@ -2889,7 +2901,13 @@ class TestDefinition(object):
                     )
                 sys.stderr.write(danger("error: " + str(exc_value).strip()))
                 sys.exit(1)
-            sys.exit(0 if self.test.result else 1)
+
+            if is_notebook():
+                reset_parallel_context()
+                importlib.reload(settings)
+                LogWriter.instance = None
+            else:
+                sys.exit(0 if self.test.result else 1)
 
         if isinstance(exc_value, KeyboardInterrupt):
             raise KeyboardInterrupt from None
@@ -3156,7 +3174,6 @@ class Step(TestDefinition):
 
 # support for BDD
 class Feature(Suite):
-
     subtype = TestSubType.Feature
 
     def __new__(cls, name=None, **kwargs):
@@ -3308,7 +3325,7 @@ class TestDecorator(object):
                 f"only named arguments are allowed but {pargs} positional arguments were passed"
             )
 
-        if is_running_in_event_loop():
+        if current() and is_running_in_event_loop():
             if not (
                 asyncio.iscoroutinefunction(self.func)
                 or inspect.isasyncgenfunction(self.func)
@@ -3350,6 +3367,8 @@ class TestDecorator(object):
     def __run__(self, **args):
         _run_as_func = args.pop("__run_as_func__", False)
 
+        if current() is None and is_notebook():
+            reset_parallel_context()
         _check_parallel_context()
 
         test = current()

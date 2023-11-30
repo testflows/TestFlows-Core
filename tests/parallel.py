@@ -60,7 +60,6 @@ def suite(self):
 
     tasks = []
     with pool:
-
         for i in range(3):
             tasks.append(Scenario(name=f"ptest2-{i}", run=ptest2, parallel=True))
             tasks.append(Scenario(run=ptest3, parallel=True))

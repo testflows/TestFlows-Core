@@ -199,7 +199,7 @@ class _WorkItem(object):
                     set_settings(self.settings)
 
                     # global thread and async pool are local to each work item
-                    with (settings.global_thread_pool or contextlib.nullcontext()), (
+                    with settings.global_thread_pool or contextlib.nullcontext(), (
                         settings.global_async_pool or contextlib.nullcontext()
                     ):
                         result = self.fn(*self.args, **self.kwargs)

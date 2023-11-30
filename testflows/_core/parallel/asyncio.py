@@ -18,6 +18,7 @@ import asyncio
 import concurrent
 
 from asyncio import *
+from testflows._core.notebook import is_notebook
 
 
 async def async_await(coroutine):
@@ -33,6 +34,8 @@ async def async_next(async_iterator):
 
 def is_running_in_event_loop():
     """Check if running in async event loop."""
+    if is_notebook():
+        return False
     try:
         asyncio.get_running_loop()
         return True
