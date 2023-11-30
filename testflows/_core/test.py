@@ -2009,6 +2009,7 @@ class TestDefinition(object):
                         r = test(**self.kwargs["args"])
                         if inspect.isawaitable(r):
                             r = await r
+                    if r is not None:
                         value("return", value=r)
                 return _test.result
             else:
