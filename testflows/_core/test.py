@@ -2348,6 +2348,9 @@ class TestDefinition(object):
                 kwargs["flags"] &= ~PAUSE_ON_PASS
                 kwargs["flags"] &= ~PAUSE_ON_FAIL
 
+            if kwargs["flags"] & LAST_RETRY:
+                kwargs["flags"] &= ~TE
+
             kwargs["cflags"] |= kwargs["flags"] & CFLAGS
 
             self.repeats = kwargs.pop("repeats", None)
@@ -2932,7 +2935,7 @@ class TestDefinition(object):
                 # if it is not the last try
                 pass
             else:
-                if TE not in self.test.flags:
+                if TE not in self.test.flags or LAST_RETRY in self.test.flags:
                     raise result from None
                 else:
                     self.parent.set_result(self.test.result, self.test.flags)
@@ -3759,7 +3762,6 @@ class retries(object):
             and time.time() - self.started >= self.timeout
         ):
             flags |= LAST_RETRY
-            flags &= ~TE
 
         if not self.started:
             self.started = time.time()
@@ -3769,7 +3771,6 @@ class retries(object):
 
         if self.count is not None and self.count <= self.number + 1:
             flags |= LAST_RETRY
-            flags &= ~TE
 
         self.retry = RetryIteration(
             f"try #{self.number}",
