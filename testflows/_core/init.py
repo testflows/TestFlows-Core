@@ -37,6 +37,7 @@ from .transform.log.pipeline import QuietLogPipeline
 from .temp import glob as temp_glob, parser as temp_parser, dirname as temp_dirname
 from .parallel import top
 from .objects import Error
+from .jupyter_notebook import is_jupyter_notebook
 
 _handlers = []
 
@@ -249,9 +250,10 @@ def start_database_handler():
 
 def init():
     """Initialization before we run the first test."""
-    if threading.current_thread() is not threading.main_thread():
-        raise RuntimeError("top level test was not started in main thread")
-    signal.signal(signal.SIGINT, sigint_handler)
+    if not is_jupyter_notebook():
+        if threading.current_thread() is not threading.main_thread():
+            raise RuntimeError("top level test was not started in main thread")
+        signal.signal(signal.SIGINT, sigint_handler)
     cleanup()
     start_output_handler()
     start_database_handler()
