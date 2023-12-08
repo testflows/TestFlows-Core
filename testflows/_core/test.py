@@ -134,7 +134,7 @@ from .parallel.asyncio import (
     wrap_future,
     OptionalFuture,
 )
-from .notebook import is_notebook
+from .jupyter_notebook import is_jupyter_notebook
 
 tracer = tracing.getLogger(__name__)
 
@@ -1590,7 +1590,7 @@ def parse_cli_args(kwargs, parser_schema):
         if exc is not None:
             raise exc from None
 
-        if unknown and not is_notebook():
+        if unknown and not is_jupyter_notebook():
             raise ExitWithError(f"unknown argument {unknown}")
 
         settings.trace = get(args.pop("_trace", None), get(settings.trace, False))
@@ -2101,7 +2101,7 @@ class TestDefinition(object):
         if _check_async and is_running_in_event_loop():
             raise RuntimeError("Use `async with` for asynchronous tests.")
 
-        if current() is None and is_notebook():
+        if current() is None and is_jupyter_notebook():
             reset_parallel_context()
         _check_parallel_context()
 
@@ -2906,10 +2906,11 @@ class TestDefinition(object):
                 sys.stderr.write(danger("error: " + str(exc_value).strip()))
                 sys.exit(1)
 
-            if is_notebook():
+            if is_jupyter_notebook():
                 reset_parallel_context()
                 importlib.reload(settings)
                 LogWriter.instance = None
+                return True
             else:
                 sys.exit(0 if self.test.result else 1)
 
@@ -3371,7 +3372,7 @@ class TestDecorator(object):
     def __run__(self, **args):
         _run_as_func = args.pop("__run_as_func__", False)
 
-        if current() is None and is_notebook():
+        if current() is None and is_jupyter_notebook():
             reset_parallel_context()
         _check_parallel_context()
 
