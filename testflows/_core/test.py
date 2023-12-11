@@ -454,6 +454,8 @@ class TestBase(object):
         pattern=None,
         random=False,
         limit=None,
+        start_time=None,
+        test_time=None,
     ):
         self.lock = threading.Lock()
 
@@ -471,8 +473,8 @@ class TestBase(object):
         if self.name is None:
             raise TypeError("name must be specified")
         self.child_count = 0
-        self.start_time = time.time()
-        self.test_time = None
+        self.start_time = get(start_time, time.time())
+        self.test_time = get(test_time, None)
         self.parent = parent
         self.parent_type = parent_type
         self.id = get(id, [settings.test_id])
@@ -973,7 +975,8 @@ class TestBase(object):
         self._apply_xfails()
 
         self.io.output.result(self.result)
-        self.test_time = time.time() - self.start_time
+        if self.test_time is None:
+            self.test_time = time.time() - self.start_time
         self.result.test_time = self.test_time
 
         if top() is self:
