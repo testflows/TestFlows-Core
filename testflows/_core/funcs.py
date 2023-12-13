@@ -24,6 +24,7 @@ import functools
 import textwrap
 import pkgutil
 import contextlib
+import importlib.machinery
 
 from .message import Message, dumps
 from .name import basename
@@ -47,8 +48,13 @@ def current_module(frame=None):
     return sys.modules[frame.f_globals["__name__"]]
 
 
-def load_module(name, package=None):
-    """Load module by name."""
+def load_module(name, package=None, path=None):
+    """Load module by name. If path is specified then load module
+    from path. If path is specified then package argument is ignored.
+    """
+    if path:
+        return importlib.machinery.SourceFileLoader(name, path).load_module()
+
     return importlib.import_module(name, package=package)
 
 
