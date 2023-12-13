@@ -11,6 +11,18 @@ pardir = dotdot
 curdir = dot
 
 
+def escape(name):
+    """Escape special pattern characters in name."""
+    # the closing square bracket ']' does not need to be escaped
+    # as pattern is parsed from left to right
+    return (
+        name.replace("[", f"[\[]")
+        .replace("*", "[*]")
+        .replace(":", "[:]")
+        .replace("?", "[?]")
+    )
+
+
 def match(name, pat, prefix=False):
     """Test whether FILENAME matches PATTERN.
 

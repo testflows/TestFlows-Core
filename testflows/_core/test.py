@@ -86,7 +86,7 @@ from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
-from .name import join, depth, match, absname, isabs, basename
+from .name import join, depth, match, escape, absname, isabs, basename
 from .funcs import exception, pause, result, value, input
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
@@ -2240,40 +2240,40 @@ class TestDefinition(object):
 
             # anchor all patterns
             kwargs["xfails"] = {
-                absname(k, name if name else name_sep): v
+                absname(k, escape(name) if name else name_sep): v
                 for k, v in dict(kwargs.get("xfails") or {}).items()
             } or None
             kwargs["xflags"] = {
-                absname(k, name if name else name_sep): v
+                absname(k, escape(name) if name else name_sep): v
                 for k, v in dict(kwargs.get("xflags") or {}).items()
             } or None
             kwargs["ffails"] = {
-                absname(k, name if name else name_sep): v
+                absname(k, escape(name) if name else name_sep): v
                 for k, v in dict(kwargs.get("ffails") or {}).items()
             } or None
             kwargs["repeats"] = {
-                absname(k, name if name else name_sep): v
+                absname(k, escape(name) if name else name_sep): v
                 for k, v in dict(kwargs.get("repeats") or {}).items()
             } or None
             kwargs["retries"] = {
-                absname(k, name if name else name_sep): v
+                absname(k, escape(name) if name else name_sep): v
                 for k, v in dict(kwargs.get("retries") or {}).items()
             } or None
             kwargs["only"] = [
-                The(str(f)).at(name if name else name_sep)
+                The(str(f)).at(escape(name) if name else name_sep)
                 for f in kwargs.get("only") or []
             ] or None
             kwargs["skip"] = [
-                The(str(f)).at(name if name else name_sep)
+                The(str(f)).at(escape(name) if name else name_sep)
                 for f in kwargs.get("skip") or []
             ] or None
             kwargs["start"] = (
-                The(str(kwargs.get("start"))).at(name if name else name_sep)
+                The(str(kwargs.get("start"))).at(escape(name) if name else name_sep)
                 if kwargs.get("start")
                 else None
             )
             kwargs["end"] = (
-                The(str(kwargs.get("end"))).at(name if name else name_sep)
+                The(str(kwargs.get("end"))).at(escape(name) if name else name_sep)
                 if kwargs.get("end")
                 else None
             )
