@@ -559,7 +559,7 @@ def timer(timeout, message=None, test=None, result_type=Fail):
     if test is None:
         test = current()
 
-    if time.time() - test.start_time >= timeout:
+    if timeout is not None and time.time() - test.start_time >= timeout:
         result(result_type, message, f"timeout {timeout}s", test=test)
 
     yield
