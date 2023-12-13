@@ -139,6 +139,7 @@ from testflows._core.funcs import (
     pause,
     getsattr,
     always,
+    timer,
 )
 from testflows._core.funcs import (
     current_dir,

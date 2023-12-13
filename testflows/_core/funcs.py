@@ -23,6 +23,7 @@ import itertools
 import functools
 import textwrap
 import pkgutil
+import contextlib
 
 from .message import Message, dumps
 from .name import basename
@@ -544,3 +545,15 @@ def always(*args, **kwargs):
 def noop(*args, **kwargs):
     """No operation function call."""
     return None
+
+
+@contextlib.contextmanager
+def timer(timeout, message=None, test=None, result_type=Fail):
+    """Timer that fails current test if timeout was reached."""
+    if test is None:
+        test = current()
+
+    if time.time() - test.start_time >= timeout:
+        result(result_type, message, f"timeout {timeout}s", test=test)
+
+    yield
