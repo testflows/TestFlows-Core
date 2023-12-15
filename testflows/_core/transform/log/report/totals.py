@@ -175,7 +175,7 @@ def format_test(msg, counts):
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:
             counts["feature"].units += 1
-        if test_subtype == TestSubType.Chapter:
+        elif test_subtype == TestSubType.Chapter:
             counts["chapter"].units += 1
         else:
             counts["suite"].units += 1
@@ -248,7 +248,7 @@ def format_result(msg, counts):
     elif test_type == TestType.Suite:
         if test_subtype == TestSubType.Feature:
             setattr(counts["feature"], _name, getattr(counts["feature"], _name) + 1)
-        if test_subtype == TestSubType.Chapter:
+        elif test_subtype == TestSubType.Chapter:
             setattr(counts["chapter"], _name, getattr(counts["chapter"], _name) + 1)
         else:
             setattr(counts["suite"], _name, getattr(counts["suite"], _name) + 1)
