@@ -500,10 +500,15 @@ def current_time(test=None):
     if test is None:
         test = current()
 
-    if test.test_time is None:
-        return time.time() - test.start_time
-    else:
-        return test.test_time
+    return test.current_time
+
+
+def start_time(test=None):
+    """Return current test start time."""
+    if test is None:
+        test = current()
+
+    return test.start_time
 
 
 def aslice(iterator, *args, **kwargs):
@@ -553,13 +558,43 @@ def noop(*args, **kwargs):
     return None
 
 
-@contextlib.contextmanager
-def timer(timeout, message=None, test=None, result_type=Fail):
-    """Timer that fails current test if timeout was reached."""
-    if test is None:
-        test = current()
+class Timer:
+    def __init__(self, timeout=None, message=None, started=None):
+        """Timer object that can be used as a context manager to either
+        implement a stopwatch or a timeout. If `started` time is not specified then
+        the current time is used by default.
 
-    if timeout is not None and time.time() - test.start_time >= timeout:
-        result(result_type, message, f"timeout {timeout}s", test=test)
+        If `timeout` is specified and is reached then TimeoutError exception is raised
+        with the provided `message`.
+        """
+        self.timeout = timeout
 
-    yield
+        if started is None:
+            started = time.time()
+
+        self.message = message
+        self.started = started
+        self._elapsed = None
+
+    @property
+    def elapsed(self):
+        if self._elapsed is None:
+            return time.time() - self.started
+        return self._elapsed
+
+    def __enter__(self):
+        self._elapsed = None
+        if self.timeout is not None and self.elapsed >= self.timeout:
+            raise TimeoutError(
+                f"timeout {self.timeout}s{(': ' + self.message) if self.message else ''}"
+            )
+
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self._elapsed = self.elapsed
+        return
+
+
+#: Timer alias
+timer = Timer

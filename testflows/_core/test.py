@@ -80,7 +80,7 @@ from .objects import (
     FailResults,
     NonFailResults,
 )
-from .objects import Argument, Attribute, Requirement, ArgumentParser
+from .objects import Argument, Attribute, Requirement, ArgumentParser, Timeout
 from .objects import ExamplesTable, Specification
 from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
@@ -403,6 +403,7 @@ class TestBase(object):
     attributes = []
     requirements = []
     specifications = []
+    timeouts = []
     examples = None
     name = None
     description = None
@@ -431,6 +432,7 @@ class TestBase(object):
         xfails=None,
         xflags=None,
         ffails=None,
+        xargs=None,
         only=None,
         skip=None,
         start=None,
@@ -456,6 +458,7 @@ class TestBase(object):
         limit=None,
         start_time=None,
         test_time=None,
+        timeouts=None,
     ):
         self.lock = threading.Lock()
 
@@ -525,6 +528,7 @@ class TestBase(object):
             a.name: a
             for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]
         }
+        self.timeouts = [Timeout(*t) for t in get(timeouts, list(self.timeouts))]
         self.args = {k: Argument(k, v) for k, v in get(args, {}).items()}
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))
@@ -540,6 +544,7 @@ class TestBase(object):
         self.xfails = get(xfails, None)
         self.xflags = get(xflags, None)
         self.ffails = get(ffails, None)
+        self.xargs = get(xargs, None)
         self.only = get(only, None)
         self.skip = get(skip, None)
         self.start = get(start, None)
@@ -770,6 +775,15 @@ class TestBase(object):
 
         if self.flags & SKIP:
             raise Skip("skip flag set", test=self.name)
+
+        for timeout in self.timeouts:
+            elapsed = time.time() - timeout.started
+            if elapsed >= timeout.timeout:
+                raise Fail(
+                    (f"{timeout.name}: " if timeout.name else "")
+                    + (timeout.message or "timeout reached"),
+                    reason=f"timeout {timeout.timeout}s elapsed {elapsed:.3}s",
+                )
 
         if self.setup is not None:
             r = self.setup()
@@ -1082,6 +1096,13 @@ class TestBase(object):
                                     f"xfail '{pattern}' has invalid result message regex expression: {exc}"
                                 ) from None
                         self.result = self.result.xout(reason)
+
+    @property
+    def current_time(self):
+        """Return current time since the start of the test."""
+        if self.test_time is None:
+            return time.time() - self.start_time
+        return self.test_time
 
     def bind(self, func):
         """Bind function to the current test.
@@ -2147,6 +2168,27 @@ class TestDefinition(object):
                 kwargs["args"],
                 format=format_name,
             )
+
+            if parent:
+                # propagate xargs
+                kwargs["xargs"] = (
+                    {
+                        k: v
+                        for k, v in parent.xargs.items()
+                        if match(name, k, prefix=True)
+                    }
+                    if parent.xargs
+                    else None or kwargs.get("xargs")
+                )
+
+            # anchor all xargs patterns
+            kwargs["xargs"] = {
+                absname(k, escape(name) if name else name_sep): v
+                for k, v in dict(kwargs.get("xargs") or {}).items()
+            } or None
+
+            self._apply_xargs(name, kwargs)
+
             kwargs["flags"] = Flags(kwargs.get("flags"))
             kwargs["cflags"] = Flags(kwargs.get("cflags"))
 
@@ -2356,6 +2398,13 @@ class TestDefinition(object):
 
             kwargs["cflags"] |= kwargs["flags"] & CFLAGS
 
+            if parent:
+                # propagate timeouts
+                kwargs["timeouts"] = (
+                    (parent.timeouts if not (kwargs["cflags"] & CLEANUP) else None)
+                    or []
+                ) + (kwargs.get("timeouts") or []) or None
+
             self.repeats = kwargs.pop("repeats", None)
             self.retries = kwargs.pop("retries", None)
             self.rerun_individually = kwargs.pop("rerun_individually", None)
@@ -2380,6 +2429,10 @@ class TestDefinition(object):
                 kwargs["ffails"] = {
                     transform_pattern(k): v
                     for k, v in (kwargs.pop("ffails", {}) or {}).items()
+                } or None
+                kwargs["xargs"] = {
+                    transform_pattern(k): v
+                    for k, v in (kwargs.pop("xargs", {}) or {}).items()
                 } or None
                 kwargs["repeats"] = {
                     transform_pattern(k): v
@@ -2566,6 +2619,19 @@ class TestDefinition(object):
                 kwargs["flags"] = (kwargs["flags"] & ~Flags(clear_flags)) | Flags(
                     set_flags
                 )
+
+    def _apply_xargs(self, name, kwargs):
+        xargs = kwargs.get("xargs")
+        if not xargs:
+            return
+
+        for pattern, item in xargs.items():
+            if match(name, pattern):
+                args = item[:1]
+                when = item[1] if len(item) > 1 else None
+                if when is not None and not when(self.parent):
+                    continue
+                kwargs.update(*args)
 
     def _parent_type_propagation(self, parent, kwargs):
         """Propagate parent test type.

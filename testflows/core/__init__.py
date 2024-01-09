@@ -85,6 +85,7 @@ from testflows._core.objects import (
 from testflows._core.objects import (
     XFails,
     XFlags,
+    XArgs,
     Repeats,
     Repeat,
     Retries,
@@ -108,6 +109,7 @@ from testflows._core.objects import (
     Specifications,
     Examples,
     ArgumentParser,
+    Timeouts,
 )
 from testflows._core.objects import (
     Node,
@@ -119,6 +121,7 @@ from testflows._core.objects import (
     Metric,
     Value,
     Ticket,
+    Timeout,
 )
 from testflows._core.objects import Secret, RSASecret
 from testflows._core.baseobject import Table
@@ -139,6 +142,7 @@ from testflows._core.funcs import (
     pause,
     getsattr,
     always,
+    Timer,
     timer,
 )
 from testflows._core.funcs import (

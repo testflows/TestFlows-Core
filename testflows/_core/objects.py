@@ -1137,6 +1137,24 @@ class Retry(NamedValue):
         )
 
 
+class XArgs(NamedValue):
+    """xargs container.
+
+    xargs = {
+        "pattern": ({"parameter_name":"parameter_value"}[, when]),
+        ...
+    }
+    """
+
+    name = "xargs"
+
+    def __init__(self, value):
+        super(XArgs, self).__init__(dict(value))
+
+    def items(self):
+        return self.value.items()
+
+
 class Args(dict):
     def __init__(self, **args):
         super(Args, self).__init__(**args)
@@ -1146,6 +1164,39 @@ class Args(dict):
             if not k.startswith("_"):
                 setattr(func, k, v)
         return func
+
+
+class Timeout(TestObject):
+    _fields = ("timeout", "message", "started", "name")
+    _defaults = (None,) * 3
+
+    def __init__(self, timeout, message=None, started=None, name=None):
+        from .funcs import current
+
+        try:
+            self.timeout = float(timeout)
+            assert self.timeout > 0
+        except:
+            raise ValueError("timeout must be > 0")
+        self.message = message
+        self.started = started
+        if self.started is None:
+            self.started = current().start_time
+        try:
+            self.started = float(self.started)
+            assert self.started >= 0
+        except:
+            raise ValueError("start time must be >= 0")
+        self.name = name
+
+        return super(Timeout, self).__init__()
+
+
+class Timeouts(NamedList):
+    name = "timeouts"
+
+    def __init__(self, *timeouts):
+        super(Timeouts, self).__init__(*[Timeout(*t) for t in timeouts])
 
 
 class Attributes(NamedList):
