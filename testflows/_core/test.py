@@ -16,6 +16,7 @@ import os
 import re
 import sys
 import time
+import copy
 import random
 import inspect
 import builtins
@@ -528,7 +529,14 @@ class TestBase(object):
             a.name: a
             for a in [Attribute(*a) for a in get(attributes, list(self.attributes))]
         }
+
         self.timeouts = [Timeout(*t) for t in get(timeouts, list(self.timeouts))]
+        # fully define timeouts
+        self.timeouts = copy.deepcopy(self.timeouts or [])
+        for timeout in self.timeouts:
+            if timeout.started is None:
+                timeout.started = self.start_time
+
         self.args = {k: Argument(k, v) for k, v in get(args, {}).items()}
         self.description = get(description, self.description)
         self.examples = get(examples, get(self.examples, ExamplesTable()))

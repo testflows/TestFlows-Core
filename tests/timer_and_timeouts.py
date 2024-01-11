@@ -100,6 +100,24 @@ def timers(self):
     Scenario(run=combinations)
 
 
+@TestScenario
+@Timeouts(Timeout(0.1, name="first timeout"), Timeout(0.2, name="second timeout"))
+@Flags(EFAIL)
+def test_with_timeouts(self):
+    for i in range(12):
+        with By(f"sleeping {i} time"):
+            time.sleep(0.01)
+
+
+@TestScenario
+@Timeout(0.1, message="custom message", name="first timeout")
+@Flags(EFAIL)
+def test_with_timeout(self):
+    for i in range(12):
+        with By(f"sleeping {i} time"):
+            time.sleep(0.01)
+
+
 @TestFeature
 def timeouts(self):
     """Check timeouts."""
@@ -112,7 +130,7 @@ def timeouts(self):
     with Scenario("inner timeout fail"):
         with Check("check with timeout", timeouts=[Timeout(3)], flags=EFAIL):
             for i in range(12):
-                with By(f"step {i}", timeouts=[Timeout(0.1)]):
+                with By(f"step {i}", timeouts=[Timeout(0.1, started=current().start_time)]):
                     time.sleep(0.01)
 
     with Scenario("outer timeout fail"):
@@ -137,7 +155,7 @@ def timeouts(self):
         with Check("third", timeouts=[Timeout(3)], flags=EFAIL):
             with By("doing something", timeouts=[Timeout(2)]):
                 for i in range(12):
-                    with By(f"step {i}", timeouts=[Timeout(0.1)]):
+                    with By(f"step {i}", timeouts=[Timeout(0.1, started=current().start_time)]):
                         time.sleep(0.1)
 
     with Scenario("with started time"):
@@ -217,6 +235,10 @@ def timeouts(self):
             for i in range(12):
                 with By(f"sleeping {i} time"):
                     time.sleep(0.01)
+
+    with Feature("decorated tests"):
+        Scenario(run=test_with_timeouts)
+        Scenario(run=test_with_timeout)
 
 
 @TestFeature

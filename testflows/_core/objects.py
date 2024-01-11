@@ -30,7 +30,7 @@ import testflows._core.contrib.rsa as rsa
 
 
 class Result(TestObject, ResultException):
-    _fields = ("message", "reason", "type", "test")
+    _fields = ("message", "reason", "type")
     _defaults = (None,) * 6
     metrics = []
     tickets = []
@@ -104,6 +104,7 @@ class Result(TestObject, ResultException):
         if result is None:
             result = getattr(self.__module__, str(self.type))
         obj = result.__class__(*[getattr(result, field) for field in result._fields])
+        obj.test = self.test
         obj.metrics = self.metrics
         obj.tickets = self.tickets
         obj.values = self.values
@@ -1166,13 +1167,10 @@ class Args(dict):
         return func
 
 
-class Timeout(TestObject):
-    _fields = ("timeout", "message", "started", "name")
-    _defaults = (None,) * 3
+class Timeout(NamedValue):
+    name = "timeouts"
 
     def __init__(self, timeout, message=None, started=None, name=None):
-        from .funcs import current
-
         try:
             self.timeout = float(timeout)
             assert self.timeout > 0
@@ -1180,16 +1178,30 @@ class Timeout(TestObject):
             raise ValueError("timeout must be > 0")
         self.message = message
         self.started = started
-        if self.started is None:
-            self.started = current().start_time
-        try:
-            self.started = float(self.started)
-            assert self.started >= 0
-        except:
-            raise ValueError("start time must be >= 0")
+        if self.started:
+            try:
+                self.started = float(self.started)
+                assert self.started >= 0
+            except:
+                raise ValueError("start time must be >= 0")
         self.name = name
 
-        return super(Timeout, self).__init__()
+        return super(Timeout, self).__init__([self])
+
+    def __iter__(self):
+        return iter((self.timeout, self.message, self.started, self.name))
+
+    def keys(self):
+        return [self.__class__.name]
+
+    def __getitem__(self, key):
+        if key == self.__class__.name:
+            return self.value
+        raise KeyError(key)
+
+    def __call__(self, func):
+        setattr(func, self.__class__.name, self.value)
+        return func
 
 
 class Timeouts(NamedList):
