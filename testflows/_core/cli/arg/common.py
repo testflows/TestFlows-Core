@@ -122,6 +122,6 @@ def description(description=None, prog=None, version=None):
 def epilog():
     """Return argument parser epilog"""
     return white(
-        f"TestFlows.com Open-Source Software Testing Framework. Copyright (c) {datetime.now().year} Katteli Inc.\nSee contrib folder in sources for lincenses of each third-party module.",
+        f"TestFlows.com Open-Source Software Testing Framework. Copyright (c) {datetime.now().year} Katteli Inc.\nSee contrib folder in sources for licenses of each third-party module.",
         attrs=["dim"],
     )
