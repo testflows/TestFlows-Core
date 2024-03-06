@@ -644,9 +644,10 @@ class TestBase(object):
                     return
                 self.terminating = True
 
-                self.result = self.result(
-                    result(message, reason=reason, test=self.name)
-                )
+                if result is not None:
+                    self.result = self.result(
+                        result(message, reason=reason, test=self.name)
+                    )
 
                 for subtest in self.subtests.values():
                     event_tracer.debug(f"terminating {subtest}")
@@ -698,6 +699,7 @@ class TestBase(object):
                 pass
             elif isinstance(test_result, Error) and ERROR_NOT_COUNTED not in flags:
                 self.result = self.result(result)
+            # the line below can't be hit as we convert Null into Error
             elif isinstance(test_result, Null) and NULL_NOT_COUNTED not in flags:
                 self.result = self.result(result)
             elif isinstance(self.result, Fail):
@@ -849,7 +851,7 @@ class TestBase(object):
 
             if exc_value is not None:
                 # terminate any unfinished subtests
-                self.terminate()
+                self.terminate(result=None)
 
             # join any left over parallel tests and save parallel exception
             if self.futures:
@@ -859,6 +861,9 @@ class TestBase(object):
                     )
                 except (Exception, KeyboardInterrupt) as exc:
                     parallel_exception = exc
+
+            # set result
+            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
 
             # context cleanups
             if not self.parent or self.context is not self.parent.context:
@@ -877,7 +882,7 @@ class TestBase(object):
                                     cleanup_exc_traceback
                                 )
                     except Exception:
-                        if not exc_value:
+                        if exc_value is None:
                             self._exit_process_exception(*sys.exc_info())
 
             # close parallel executor if any
@@ -893,8 +898,6 @@ class TestBase(object):
                 if settings.global_process_pool is not None:
                     settings.global_process_pool.__exit__(None, None, None)
 
-            # set result
-            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
         finally:
             self._exit_finally()
 
@@ -915,7 +918,7 @@ class TestBase(object):
 
             if exc_value is not None:
                 # terminate any unfinished subtests
-                self.terminate()
+                self.terminate(result=None)
             self.subtests = {}
 
             # join any left over parallel tests and save
@@ -925,6 +928,9 @@ class TestBase(object):
                 )
             except (Exception, KeyboardInterrupt) as exc:
                 parallel_exception = exc
+
+            # set result
+            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
 
             # context cleanups
             if not self.parent or self.context is not self.parent.context:
@@ -941,7 +947,7 @@ class TestBase(object):
                                     cleanup_exc_traceback
                                 )
                     except Exception:
-                        if not exc_value:
+                        if exc_value is None:
                             self._exit_process_exception(*sys.exc_info())
 
             # close parallel executor if any
@@ -957,8 +963,6 @@ class TestBase(object):
                 if settings.global_process_pool is not None:
                     settings.global_process_pool.__exit__(None, None, None)
 
-            # set result
-            self._exit_result(exc_type, exc_value, exc_traceback, parallel_exception)
         finally:
             self._exit_finally()
 

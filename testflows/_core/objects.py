@@ -183,18 +183,15 @@ class Null(Result):
     def xout(self, reason):
         return self(XNull(test=self.test, message=self.message, reason=reason))
 
-    def __bool__(self):
-        return False
-
 
 class XNull(XResult):
     type = Result.Type.XNull
 
 
 XoutResults = (XOK, XFail, XError, XNull)
-FailResults = (Fail, Error, Null)
+FailResults = (Fail, Error)
 PassResults = (OK,) + XoutResults
-NonFailResults = (Skip,) + PassResults
+NonFailResults = (Skip, Null) + PassResults
 
 
 class Node(TestObject):
