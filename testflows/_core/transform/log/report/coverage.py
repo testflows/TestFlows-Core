@@ -153,10 +153,12 @@ class Coverage:
                 if (
                     sum(
                         [
-                            0
-                            if test["result"] is not None
-                            and test["result"]["result_type"] == "OK"
-                            else 1
+                            (
+                                0
+                                if test["result"] is not None
+                                and test["result"]["result_type"] == "OK"
+                                else 1
+                            )
                             for test in tests
                         ]
                     )

@@ -75,6 +75,18 @@ def nested_retries(self):
 
 
 @TestScenario
+def getting_retry_number_and_last_retry(self):
+    """Check accessing retry_number and last_retry attributes."""
+    for i, attempt in enumerate(retries(count=10)):
+        with attempt:
+            note(f"attempt number: {attempt.retry_number}")
+            assert attempt.retry_number == i, error()
+            if not attempt.last_retry:
+                note(f"is last retry: {attempt.last_retry}")
+                assert False, "failing"
+
+
+@TestScenario
 @Repeat(4)
 @Retry(4, initial_delay=5)
 def nested_retries_with_initial_delay(self):

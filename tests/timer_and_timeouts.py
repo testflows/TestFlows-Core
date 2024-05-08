@@ -130,7 +130,9 @@ def timeouts(self):
     with Scenario("inner timeout fail"):
         with Check("check with timeout", timeouts=[Timeout(3)], flags=EFAIL):
             for i in range(12):
-                with By(f"step {i}", timeouts=[Timeout(0.1, started=current().start_time)]):
+                with By(
+                    f"step {i}", timeouts=[Timeout(0.1, started=current().start_time)]
+                ):
                     time.sleep(0.01)
 
     with Scenario("outer timeout fail"):
@@ -155,7 +157,10 @@ def timeouts(self):
         with Check("third", timeouts=[Timeout(3)], flags=EFAIL):
             with By("doing something", timeouts=[Timeout(2)]):
                 for i in range(12):
-                    with By(f"step {i}", timeouts=[Timeout(0.1, started=current().start_time)]):
+                    with By(
+                        f"step {i}",
+                        timeouts=[Timeout(0.1, started=current().start_time)],
+                    ):
                         time.sleep(0.1)
 
     with Scenario("with started time"):

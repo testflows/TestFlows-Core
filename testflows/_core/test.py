@@ -490,9 +490,11 @@ class TestBase(object):
         self.subtype = get(subtype, self.subtype)
         self.context = get(
             context,
-            current_test.context
-            if current_test and self.type < TestType.Test
-            else (Context(current_test.context if current_test else None)),
+            (
+                current_test.context
+                if current_test and self.type < TestType.Test
+                else (Context(current_test.context if current_test else None))
+            ),
         )
         self.behavior = get(
             behavior,
@@ -504,9 +506,11 @@ class TestBase(object):
         )
         self.random = get(
             random,
-            current_test.random
-            if current_test and self.type < TestType.Test
-            else False,
+            (
+                current_test.random
+                if current_test and self.type < TestType.Test
+                else False
+            ),
         )
         self.limit = limit
         if action is not None:
@@ -2157,9 +2161,11 @@ class TestDefinition(object):
                     self.kwargs,
                     cli_argparser(
                         self.kwargs,
-                        argparser
-                        if not isinstance(argparser, ArgumentParser)
-                        else argparser.value,
+                        (
+                            argparser
+                            if not isinstance(argparser, ArgumentParser)
+                            else argparser.value
+                        ),
                     ),
                 )
                 kwargs["args"].update(
@@ -2877,7 +2883,9 @@ class TestDefinition(object):
                         )
                     except StopIteration:
                         pass
-                    async with r if retry is not None else AsyncNullStep() as retry_iteration:
+                    async with (
+                        r if retry is not None else AsyncNullStep()
+                    ) as retry_iteration:
                         if retry_iteration is None:
                             retry_iteration = iteration
                         if isinstance(self.repeatable_func, TestOutline):
@@ -3859,6 +3867,10 @@ class retries(object):
             flags=flags,
             **kwargs,
         )
+
+        # provide retry number and is_last to the user
+        self.retry.retry_number = self.number
+        self.retry.last_retry = bool(flags & LAST_RETRY)
 
         return self.retry
 

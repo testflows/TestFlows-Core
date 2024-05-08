@@ -1,5 +1,6 @@
 """Code is based on Python3.6 posixpath.py.
 """
+
 import re
 import functools
 
