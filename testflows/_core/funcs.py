@@ -25,6 +25,7 @@ import textwrap
 import pkgutil
 import contextlib
 import importlib.machinery
+import importlib.util
 
 from .message import Message, dumps
 from .name import basename
@@ -65,10 +66,14 @@ def load_submodules(name, package=None):
     :param package: package if module name is relative (optional)
     """
     module = load_module(name, package=package)
-    return [
-        module_info[0].find_module(module_info[1]).load_module(module_info[1])
-        for module_info in pkgutil.iter_modules(module.__path__)
-    ]
+    submodules = []
+    for module_info in pkgutil.iter_modules(module.__path__):
+        spec = module_info.module_finder.find_spec(module_info.name)
+        if spec:
+            submodule = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(submodule)
+            submodules.append(submodule)
+    return submodules
 
 
 def load(name, test=None, package=None, frame=None):
