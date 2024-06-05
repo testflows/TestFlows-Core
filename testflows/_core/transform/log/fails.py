@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import textwrap
+import functools
 
 import testflows.settings as settings
 
@@ -159,7 +160,7 @@ formatters = {
 }
 
 
-def transform(brisk=False, nice=False, only_new=False, show_input=True):
+def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=True):
     """Transform parsed log line into a fails format.
 
     :param dump: dump messages of the failing test
@@ -173,6 +174,8 @@ def transform(brisk=False, nice=False, only_new=False, show_input=True):
         dump_transform = brisk_transform
     if nice:
         dump_transform = nice_transform
+    if pnice:
+        dump_transform = functools.partial(nice_transform, add_test_name_prefix=True)
 
     while True:
         if line is not None:

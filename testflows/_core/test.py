@@ -151,6 +151,8 @@ output_formats = [
     "brisk-fails",
     "nice-new-fails",
     "nice-fails",
+    "pnice-new-fails",
+    "pnice-fails",
     "classic",
     "slick",
     "nice",

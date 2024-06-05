@@ -29,6 +29,27 @@ from testflows._core.cli.arg.handlers.transform.classic import (
 )
 from testflows._core.cli.arg.handlers.transform.manual import Handler as manual_handler
 from testflows._core.cli.arg.handlers.transform.fails import Handler as fails_handler
+from testflows._core.cli.arg.handlers.transform.new_fails import (
+    Handler as new_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.brisk_fails import (
+    Handler as brisk_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.brisk_new_fails import (
+    Handler as brisk_new_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.nice_fails import (
+    Handler as nice_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.nice_new_fails import (
+    Handler as nice_new_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.pnice_fails import (
+    Handler as pnice_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.pnice_new_fails import (
+    Handler as pnice_new_fails_handler,
+)
 from testflows._core.cli.arg.handlers.transform.raw import Handler as raw_handler
 from testflows._core.cli.arg.handlers.transform.compress import (
     Handler as compress_handler,
@@ -69,6 +90,13 @@ class Handler(HandlerBase):
         classic_handler.add_command(transform_commands)
         manual_handler.add_command(transform_commands)
         fails_handler.add_command(transform_commands)
+        new_fails_handler.add_command(transform_commands)
+        brisk_fails_handler.add_command(transform_commands)
+        brisk_new_fails_handler.add_command(transform_commands)
+        nice_fails_handler.add_command(transform_commands)
+        nice_new_fails_handler.add_command(transform_commands)
+        pnice_fails_handler.add_command(transform_commands)
+        pnice_new_fails_handler.add_command(transform_commands)
         dots_handler.add_command(transform_commands)
         compact_handler.add_command(transform_commands)
         compress_handler.add_command(transform_commands)

@@ -308,6 +308,7 @@ class FailsLogPipeline(Pipeline):
         tail=False,
         brisk=False,
         nice=False,
+        pnice=False,
         only_new=False,
         show_input=True,
     ):
@@ -318,7 +319,11 @@ class FailsLogPipeline(Pipeline):
             parse_transform(),
             fanout(
                 fails_transform(
-                    brisk=brisk, nice=nice, only_new=only_new, show_input=show_input
+                    brisk=brisk,
+                    nice=nice,
+                    pnice=pnice,
+                    only_new=only_new,
+                    show_input=show_input,
                 ),
                 fails_report_transform(stop_event, only_new=only_new),
                 coverage_report_transform(stop_event),

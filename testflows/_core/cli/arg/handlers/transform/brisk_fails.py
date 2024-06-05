@@ -24,10 +24,10 @@ class Handler(HandlerBase):
     @classmethod
     def add_command(cls, commands):
         parser = commands.add_parser(
-            "fails",
-            help="fails transform",
+            "brisk-fails",
+            help="brisk fails transform",
             epilog=epilog(),
-            description="Transform log into a fails summary format.",
+            description="Transform log into a brisk fails summary format.",
             formatter_class=HelpFormatter,
         )
 
@@ -47,31 +47,6 @@ class Handler(HandlerBase):
             help="output file, default: stdout",
             default="-",
         )
-        parser.add_argument(
-            "-n",
-            "--new",
-            action="store_true",
-            help="show only new fails",
-            default=False,
-        )
-        parser.add_argument(
-            "--nice",
-            action="store_true",
-            help="show messages for new fails in a nice format",
-            default=False,
-        )
-        parser.add_argument(
-            "--pnice",
-            action="store_true",
-            help="show messages for new fails in a parallel nice format",
-            default=False,
-        )
-        parser.add_argument(
-            "--brisk",
-            action="store_true",
-            help="show messages for new fails in a brisk format",
-            default=False,
-        )
 
         parser.set_defaults(func=cls())
 
@@ -79,8 +54,6 @@ class Handler(HandlerBase):
         FailsLogPipeline(
             args.input,
             args.output,
-            brisk=args.brisk,
-            nice=args.nice,
-            pnice=args.pnice,
-            only_new=args.new,
+            brisk=True,
+            only_new=False,
         ).run()

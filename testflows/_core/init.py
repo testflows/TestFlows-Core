@@ -181,6 +181,26 @@ def stdout_nice_new_fails_handler():
         ).run()
 
 
+def stdout_pnice_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format with parallel nice dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True, pnice=True, show_input=False).run()
+
+
+def stdout_pnice_new_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format that shows only new fails with parallel nice dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(
+            log, sys.stdout, tail=True, pnice=True, only_new=True, show_input=False
+        ).run()
+
+
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
@@ -265,6 +285,8 @@ def start_output_handler():
         "brisk-new-fails": stdout_brisk_new_fails_handler,
         "nice-fails": stdout_nice_fails_handler,
         "nice-new-fails": stdout_nice_new_fails_handler,
+        "pnice-fails": stdout_pnice_fails_handler,
+        "pnice-new-fails": stdout_pnice_new_fails_handler,
         "nice": stdout_nice_handler,
         "pnice": stdout_pnice_handler,
         "brisk": stdout_brisk_handler,
