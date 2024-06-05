@@ -15,7 +15,7 @@
 # limitations under the License.
 try:
     import sys
-
+    import cProfile
     import testflows.settings as settings
 
     from testflows._core.exceptions import exception
@@ -24,6 +24,7 @@ try:
     from testflows._core.cli.arg.parser import parser
 except KeyboardInterrupt:
     import sys
+
     sys.exit(1)
 
 exitcode = 0
@@ -43,6 +44,7 @@ try:
     handle_unknown = False
     try:
         import testflows.texts.run
+
         if isinstance(args.func, testflows.texts.run.Handler):
             handle_unknown = True
     except ImportError:
@@ -60,11 +62,14 @@ try:
 
     settings.trim_results = args.trim_results
 
-    args.func(args)
+    if args.profile:
+        cProfile.run("args.func(args)", sort="cumulative")
+    else:
+        args.func(args)
 
 except (ExitException, KeyboardInterrupt, Exception) as exc:
     if settings.debug:
-        sys.stderr.write(warning(exception(), eol='\n'))
+        sys.stderr.write(warning(exception(), eol="\n"))
     if not isinstance(exc, (KeyboardInterrupt, BrokenPipeError)):
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:

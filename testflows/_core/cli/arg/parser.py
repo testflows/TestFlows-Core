@@ -103,6 +103,12 @@ parser.add_argument(
     help="show program's license and exit",
     version=f"{__license__}",
 )
+parser.add_argument(
+    "--profile",
+    action="store_true",
+    help="enable profiler",
+    default=False,
+)
 
 if enterprise_parser:
     enterprise_parser(parser)
