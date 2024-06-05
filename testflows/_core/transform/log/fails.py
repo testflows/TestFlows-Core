@@ -20,7 +20,7 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
-from testflows._core.name import split, parentname
+from testflows._core.name import split, parentname, sep
 from testflows._core.utils.timefuncs import strftimedelta
 from testflows._core.cli.colors import color
 from .brisk import transform as brisk_transform
@@ -185,7 +185,11 @@ def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=T
 
                 if get_type(line) > TestType.Step:
                     if not any(
-                        [name for name in buffer.keys() if name.startswith(test_id)]
+                        [
+                            name
+                            for name in buffer.keys()
+                            if name.startswith(test_id + sep)
+                        ]
                     ):
                         if not test_id in buffer:
                             buffer[test_id] = []
@@ -196,7 +200,7 @@ def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=T
                         buffer[test_id].append(line)
                 else:
                     for name in buffer.keys():
-                        if test_id.startswith(name):
+                        if test_id.startswith(name + sep):
                             buffer[name].append(line)
                             break
 
