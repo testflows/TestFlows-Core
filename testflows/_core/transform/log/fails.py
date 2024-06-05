@@ -19,9 +19,11 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
-from testflows._core.name import split
+from testflows._core.name import split, parentname
 from testflows._core.utils.timefuncs import strftimedelta
-from testflows._core.cli.colors import color, cursor_up
+from testflows._core.cli.colors import color
+from .brisk import transform as brisk_transform
+from .nice import transform as nice_transform
 
 indent = " " * 2
 
@@ -72,6 +74,10 @@ def color_result(result, icon=None):
     return color(icon, "cyan", attrs=["bold"])
 
 
+def get_type(msg):
+    return getattr(TestType, msg["test_type"])
+
+
 def format_prompt(msg, keyword):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
@@ -98,7 +104,7 @@ def format_multiline(text, indent):
     return out
 
 
-def format_result(msg, only_new):
+def format_result(msg, dump_transform, buffer, only_new):
     result = msg["result_type"]
 
     flags = Flags(msg["test_flags"])
@@ -124,6 +130,14 @@ def format_result(msg, only_new):
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
+        _test_msgs = buffer.pop(msg["test_id"], None)
+        if _test_msgs:
+            g = dump_transform(show_input=False)
+            g.send(None)
+            out += "\n"
+            for _test_msg in _test_msgs:
+                out += g.send(_test_msg)
+            out = out.rstrip()
         if _result_message:
             out += f"\n{indent}  {color(format_multiline(_result_message, indent).lstrip(), 'yellow', attrs=['bold'])}"
         out += "\n"
@@ -145,21 +159,52 @@ formatters = {
 }
 
 
-def transform(only_new=False, show_input=True):
+def transform(brisk=False, nice=False, only_new=False, show_input=True):
     """Transform parsed log line into a fails format.
 
+    :param dump: dump messages of the failing test
     :param only_new: output only new fails
     """
     line = None
+    buffer = {}
+
+    dump_transform = None
+    if brisk:
+        dump_transform = brisk_transform
+    if nice:
+        dump_transform = nice_transform
 
     while True:
         if line is not None:
+            if dump_transform is not None:
+                test_id = line["test_id"]
+                parent_id = parentname(test_id)
+
+                if get_type(line) > TestType.Step:
+                    if not any(
+                        [name for name in buffer.keys() if name.startswith(test_id)]
+                    ):
+                        if not test_id in buffer:
+                            buffer[test_id] = []
+
+                        buffer.pop(parent_id, None)
+
+                    if test_id in buffer:
+                        buffer[test_id].append(line)
+                else:
+                    for name in buffer.keys():
+                        if test_id.startswith(name):
+                            buffer[name].append(line)
+                            break
+
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
                 if formatter[0] is format_input and show_input is False:
                     line = None
                 else:
-                    line = formatter[0](line, *formatter[1:], only_new)
+                    line = formatter[0](
+                        line, *formatter[1:], dump_transform, buffer, only_new
+                    )
             else:
                 line = None
         line = yield line

@@ -147,6 +147,10 @@ except:
 output_formats = [
     "new-fails",
     "fails",
+    "brisk-new-fails",
+    "brisk-fails",
+    "nice-new-fails",
+    "nice-fails",
     "classic",
     "slick",
     "nice",

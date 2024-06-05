@@ -301,14 +301,25 @@ class ClassicLogPipeline(Pipeline):
 
 
 class FailsLogPipeline(Pipeline):
-    def __init__(self, input, output, tail=False, only_new=False, show_input=True):
+    def __init__(
+        self,
+        input,
+        output,
+        tail=False,
+        brisk=False,
+        nice=False,
+        only_new=False,
+        show_input=True,
+    ):
         stop_event = threading.Event()
 
         steps = [
             read_transform(input, tail=tail, stop=stop_event),
             parse_transform(),
             fanout(
-                fails_transform(only_new=only_new, show_input=show_input),
+                fails_transform(
+                    brisk=brisk, nice=nice, only_new=only_new, show_input=show_input
+                ),
                 fails_report_transform(stop_event, only_new=only_new),
                 coverage_report_transform(stop_event),
                 totals_report_transform(stop_event),

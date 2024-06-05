@@ -141,6 +141,46 @@ def stdout_new_fails_handler():
         ).run()
 
 
+def stdout_brisk_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format with brisk dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True, brisk=True, show_input=False).run()
+
+
+def stdout_brisk_new_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format that shows only new fails with brisk dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(
+            log, sys.stdout, tail=True, brisk=True, only_new=True, show_input=False
+        ).run()
+
+
+def stdout_nice_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format with nice dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True, nice=True, show_input=False).run()
+
+
+def stdout_nice_new_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format that shows only new fails with nice dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(
+            log, sys.stdout, tail=True, nice=True, only_new=True, show_input=False
+        ).run()
+
+
 def stdout_short_handler():
     """Handler to output messages to sys.stdout
     using "short" format.
@@ -221,6 +261,10 @@ def start_output_handler():
         "manual": stdout_manual_handler,
         "fails": stdout_fails_handler,
         "new-fails": stdout_new_fails_handler,
+        "brisk-fails": stdout_brisk_fails_handler,
+        "brisk-new-fails": stdout_brisk_new_fails_handler,
+        "nice-fails": stdout_nice_fails_handler,
+        "nice-new-fails": stdout_nice_new_fails_handler,
         "nice": stdout_nice_handler,
         "pnice": stdout_pnice_handler,
         "brisk": stdout_brisk_handler,
