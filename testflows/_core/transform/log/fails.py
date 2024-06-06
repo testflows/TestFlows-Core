@@ -20,13 +20,15 @@ import testflows.settings as settings
 from testflows._core.flags import Flags, SKIP
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
-from testflows._core.name import split, parentname, sep
+from testflows._core.name import split, sep, parentname
 from testflows._core.utils.timefuncs import strftimedelta
 from testflows._core.cli.colors import color
 from .brisk import transform as brisk_transform
 from .nice import transform as nice_transform
 
 indent = " " * 2
+
+skip_for_dump = set()
 
 
 def color_other(other):
@@ -105,6 +107,32 @@ def format_multiline(text, indent):
     return out
 
 
+def collect_dump_messages(buffer, test_id):
+    global skip_for_dump
+
+    msgs = []
+    if test_id not in buffer or test_id in skip_for_dump:
+        return msgs
+
+    msgs += buffer[test_id]
+    buffer[test_id] = []
+
+    # get all child messages
+    for name in buffer.keys():
+        if name.startswith(test_id + sep):
+            msgs += buffer[name]
+            buffer[name] = []
+
+    skip_test = test_id
+    while skip_test and skip_test != sep:
+        skip_for_dump = skip_for_dump.union({skip_test})
+        skip_test = parentname(skip_test)
+
+    msgs.sort(key=lambda x: x["message_time"])
+
+    return msgs
+
+
 def format_result(msg, dump_transform, buffer, only_new):
     result = msg["result_type"]
 
@@ -131,13 +159,15 @@ def format_result(msg, dump_transform, buffer, only_new):
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        _test_msgs = buffer.pop(msg["test_id"], None)
+        _test_msgs = collect_dump_messages(buffer, msg["test_id"])
         if _test_msgs:
             g = dump_transform(show_input=False)
             g.send(None)
             out += "\n"
             for _test_msg in _test_msgs:
-                out += g.send(_test_msg)
+                g_out = g.send(_test_msg)
+                if g_out is not None:
+                    out += g_out
             out = out.rstrip()
         if _result_message:
             out += f"\n{indent}  {color(format_multiline(_result_message, indent).lstrip(), 'yellow', attrs=['bold'])}"
@@ -181,28 +211,11 @@ def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=T
         if line is not None:
             if dump_transform is not None:
                 test_id = line["test_id"]
-                parent_id = parentname(test_id)
 
-                if get_type(line) > TestType.Step:
-                    if not any(
-                        [
-                            name
-                            for name in buffer.keys()
-                            if name.startswith(test_id + sep)
-                        ]
-                    ):
-                        if not test_id in buffer:
-                            buffer[test_id] = []
+                if not test_id in buffer:
+                    buffer[test_id] = []
 
-                        buffer.pop(parent_id, None)
-
-                    if test_id in buffer:
-                        buffer[test_id].append(line)
-                else:
-                    for name in buffer.keys():
-                        if test_id.startswith(name + sep):
-                            buffer[name].append(line)
-                            break
+                buffer[test_id].append(line)
 
             formatter = formatters.get(line["message_keyword"], None)
             if formatter:
