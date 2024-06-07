@@ -25,6 +25,7 @@ from testflows._core.utils.timefuncs import strftimedelta
 from testflows._core.cli.colors import color
 from .brisk import transform as brisk_transform
 from .nice import transform as nice_transform
+from .plain import transform as plain_transform
 
 indent = " " * 2
 
@@ -190,7 +191,9 @@ formatters = {
 }
 
 
-def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=True):
+def transform(
+    brisk=False, plain=False, nice=False, pnice=False, only_new=False, show_input=True
+):
     """Transform parsed log line into a fails format.
 
     :param dump: dump messages of the failing test
@@ -202,6 +205,8 @@ def transform(brisk=False, nice=False, pnice=False, only_new=False, show_input=T
     dump_transform = None
     if brisk:
         dump_transform = brisk_transform
+    if plain:
+        dump_transform = plain_transform
     if nice:
         dump_transform = nice_transform
     if pnice:

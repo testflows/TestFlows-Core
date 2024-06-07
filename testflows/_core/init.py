@@ -26,6 +26,7 @@ from .transform.log.pipeline import RawLogPipeline
 from .transform.log.pipeline import NiceLogPipeline
 from .transform.log.pipeline import ParallelNiceLogPipeline
 from .transform.log.pipeline import BriskLogPipeline
+from .transform.log.pipeline import PlainLogPipeline
 from .transform.log.pipeline import DotsLogPipeline
 from .transform.log.pipeline import ProgressLogPipeline
 from .transform.log.pipeline import ShortLogPipeline
@@ -161,6 +162,26 @@ def stdout_brisk_new_fails_handler():
         ).run()
 
 
+def stdout_plain_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format with plain dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(log, sys.stdout, tail=True, plain=True, show_input=False).run()
+
+
+def stdout_plain_new_fails_handler():
+    """Handler to output messages to sys.stdout
+    using "fails" format that shows only new fails with plain dump.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        FailsLogPipeline(
+            log, sys.stdout, tail=True, plain=True, only_new=True, show_input=False
+        ).run()
+
+
 def stdout_nice_fails_handler():
     """Handler to output messages to sys.stdout
     using "fails" format with nice dump.
@@ -237,6 +258,15 @@ def stdout_brisk_handler():
         BriskLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
 
 
+def stdout_plain_handler():
+    """Handler to output messages to sys.stdout
+    using "plain" format.
+    """
+    with CompressedFile(settings.read_logfile, tail=True) as log:
+        log.seek(0)
+        PlainLogPipeline(log, sys.stdout, tail=True, show_input=False).run()
+
+
 def stdout_manual_handler():
     """Handler to output messages to sys.stdout
     using "manual" format.
@@ -283,6 +313,8 @@ def start_output_handler():
         "new-fails": stdout_new_fails_handler,
         "brisk-fails": stdout_brisk_fails_handler,
         "brisk-new-fails": stdout_brisk_new_fails_handler,
+        "plain-fails": stdout_plain_fails_handler,
+        "plain-new-fails": stdout_plain_new_fails_handler,
         "nice-fails": stdout_nice_fails_handler,
         "nice-new-fails": stdout_nice_new_fails_handler,
         "pnice-fails": stdout_pnice_fails_handler,
@@ -290,6 +322,7 @@ def start_output_handler():
         "nice": stdout_nice_handler,
         "pnice": stdout_pnice_handler,
         "brisk": stdout_brisk_handler,
+        "plain": stdout_plain_handler,
         "quiet": stdout_quiet_handler,
         "short": stdout_short_handler,
         "dots": stdout_dots_handler,

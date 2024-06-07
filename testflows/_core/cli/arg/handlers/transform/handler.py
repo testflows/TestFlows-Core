@@ -18,6 +18,7 @@ from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
 from testflows._core.cli.arg.handlers.transform.nice import Handler as nice_handler
 from testflows._core.cli.arg.handlers.transform.pnice import Handler as pnice_handler
 from testflows._core.cli.arg.handlers.transform.brisk import Handler as brisk_handler
+from testflows._core.cli.arg.handlers.transform.plain import Handler as plain_handler
 from testflows._core.cli.arg.handlers.transform.short import Handler as short_handler
 from testflows._core.cli.arg.handlers.transform.dots import Handler as dots_handler
 from testflows._core.cli.arg.handlers.transform.compact import (
@@ -37,6 +38,12 @@ from testflows._core.cli.arg.handlers.transform.brisk_fails import (
 )
 from testflows._core.cli.arg.handlers.transform.brisk_new_fails import (
     Handler as brisk_new_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.plain_fails import (
+    Handler as plain_fails_handler,
+)
+from testflows._core.cli.arg.handlers.transform.plain_new_fails import (
+    Handler as plain_new_fails_handler,
 )
 from testflows._core.cli.arg.handlers.transform.nice_fails import (
     Handler as nice_fails_handler,
@@ -85,6 +92,7 @@ class Handler(HandlerBase):
         nice_handler.add_command(transform_commands)
         pnice_handler.add_command(transform_commands)
         brisk_handler.add_command(transform_commands)
+        plain_handler.add_command(transform_commands)
         short_handler.add_command(transform_commands)
         slick_handler.add_command(transform_commands)
         classic_handler.add_command(transform_commands)
@@ -93,6 +101,8 @@ class Handler(HandlerBase):
         new_fails_handler.add_command(transform_commands)
         brisk_fails_handler.add_command(transform_commands)
         brisk_new_fails_handler.add_command(transform_commands)
+        plain_fails_handler.add_command(transform_commands)
+        plain_new_fails_handler.add_command(transform_commands)
         nice_fails_handler.add_command(transform_commands)
         nice_new_fails_handler.add_command(transform_commands)
         pnice_fails_handler.add_command(transform_commands)

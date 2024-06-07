@@ -21,6 +21,7 @@ from .read_raw import transform as read_raw_transform
 from .parse import transform as parse_transform
 from .nice import transform as nice_transform
 from .brisk import transform as brisk_transform
+from .plain import transform as plain_transform
 from .dots import transform as dots_transform
 from .progress import transform as progress_transform
 from .write import transform as write_transform
@@ -231,6 +232,29 @@ class BriskLogPipeline(Pipeline):
         super(BriskLogPipeline, self).__init__(steps, stop=stop_event)
 
 
+class PlainLogPipeline(Pipeline):
+    def __init__(self, input, output, tail=False, show_input=True):
+        stop_event = threading.Event()
+
+        steps = [
+            read_transform(input, tail=tail, stop=stop_event),
+            parse_transform(),
+            fanout(
+                plain_transform(show_input=show_input),
+                passing_report_transform(stop_event),
+                fails_report_transform(stop_event),
+                unstable_report_transform(stop_event),
+                coverage_report_transform(stop_event),
+                totals_report_transform(stop_event),
+                version_report_transform(stop_event),
+            ),
+            fanin("".join),
+            write_transform(output),
+            stop_transform(stop_event),
+        ]
+        super(PlainLogPipeline, self).__init__(steps, stop=stop_event)
+
+
 class SlickLogPipeline(Pipeline):
     def __init__(self, input, output, tail=False, show_input=True):
         stop_event = threading.Event()
@@ -307,6 +331,7 @@ class FailsLogPipeline(Pipeline):
         output,
         tail=False,
         brisk=False,
+        plain=False,
         nice=False,
         pnice=False,
         only_new=False,
@@ -320,6 +345,7 @@ class FailsLogPipeline(Pipeline):
             fanout(
                 fails_transform(
                     brisk=brisk,
+                    plain=plain,
                     nice=nice,
                     pnice=pnice,
                     only_new=only_new,
