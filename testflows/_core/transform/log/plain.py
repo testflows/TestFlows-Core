@@ -111,8 +111,10 @@ def format_requirements(msg):
         return ""
     out = [f"{indent}{' ' * 2}{color_secondary_keyword('Requirements')}"]
     for req in msg.requirements:
-        out.append(color(f"{req.name}", "white", attrs=["dim"]))
-        out.append(color(f"version {req.version}", "white", attrs=["dim"]))
+        out.append(
+            color(f"{req.name} ", "white", attrs=["dim"])
+            + color(f"version {req.version}", "white", attrs=["dim"])
+        )
     return "\n".join(out) + "\n"
 
 
@@ -128,9 +130,9 @@ def format_attribute(msg):
     ):
         out = [f"{color_secondary_keyword('Attributes')}"]
 
-    out.append(color(f"{msg['attribute_name']}", "white", attrs=["dim"]))
     out.append(
-        color(
+        color(f"{msg['attribute_name']} ", "white", attrs=["dim"])
+        + color(
             f"{textwrap.indent(str(msg['attribute_value']), prefix='')}",
             "white",
             attrs=["dim"],
@@ -153,12 +155,10 @@ def format_specification(msg):
 
     out.append(color(f"{msg['specification_name']}", "white", attrs=["dim"]))
     if msg["specification_version"]:
-        out.append(
-            color(
-                f"version {msg['specification_version']}",
-                "white",
-                attrs=["dim"],
-            )
+        out[-1] += color(
+            f" version {msg['specification_version']}",
+            "white",
+            attrs=["dim"],
         )
     return "\n".join(out) + "\n"
 
@@ -175,9 +175,9 @@ def format_requirement(msg):
     ):
         out = [f"{color_secondary_keyword('Requirements')}"]
 
-    out.append(color(f"{msg['requirement_name']}", "white", attrs=["dim"]))
     out.append(
-        color(
+        color(f"{msg['requirement_name']} ", "white", attrs=["dim"])
+        + color(
             f"version {msg['requirement_version']}",
             "white",
             attrs=["dim"],
@@ -249,9 +249,9 @@ def format_argument(msg):
     ):
         out = [f"{color_secondary_keyword('Arguments')}"]
 
-    out.append(color(f"{msg['argument_name']}", "white", attrs=["dim"]))
     out.append(
-        color(
+        color(f"{msg['argument_name']} ", "white", attrs=["dim"])
+        + color(
             textwrap.indent(f"{msg['argument_value']}", prefix=""),
             "white",
             attrs=["dim"],
