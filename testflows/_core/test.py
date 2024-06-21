@@ -2260,12 +2260,14 @@ class TestDefinition(object):
                     else None or kwargs.get("ffails")
                 )
                 # propagate only, skip, start, and end
-                kwargs["only"] = parent.only or kwargs.get("only")
-                kwargs["skip"] = parent.skip or kwargs.get("skip")
-                kwargs["start"] = parent.start or kwargs.get("start")
-                kwargs["end"] = parent.end or kwargs.get("end")
-                kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
-                kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
+                if not kwargs.get("subtype") is TestSubType.Combination:
+                    kwargs["only"] = parent.only or kwargs.get("only")
+                    kwargs["skip"] = parent.skip or kwargs.get("skip")
+                    kwargs["start"] = parent.start or kwargs.get("start")
+                    kwargs["end"] = parent.end or kwargs.get("end")
+                    kwargs["only_tags"] = parent.only_tags or kwargs.get("only_tags")
+                    kwargs["skip_tags"] = parent.skip_tags or kwargs.get("skip_tags")
+
                 # handle parent test type propagation
                 if keep_type is None:
                     self._parent_type_propagation(parent, kwargs)
@@ -3578,7 +3580,14 @@ class TestDecorator(object):
                             process_func_result(self.func(current(), **args))
 
                         _pattern_type = Combination(
-                            **_kwargs, subtype=TestSubType.Combination
+                            **_kwargs,
+                            only=None,
+                            skip=None,
+                            start=None,
+                            end=None,
+                            only_tags=None,
+                            skip_tags=None,
+                            subtype=TestSubType.Combination,
                         )
                         _pattern_type.repeatable_func = execute_pattern
 

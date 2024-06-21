@@ -55,10 +55,10 @@ class CoveringArray:
     :param strength: (optional) strength, default: 2
     """
 
-    def __init__(self, parameters, strength=2):
+    def __init__(self, parameters, strength=2, array=None):
         self.parameters = parameters
         self.strength = strength
-        self.array = self.generate()
+        self.array = array if array is not None else self.generate()
 
     def __iter__(self):
         return iter(self.array)

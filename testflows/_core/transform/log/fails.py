@@ -17,7 +17,7 @@ import functools
 
 import testflows.settings as settings
 
-from testflows._core.flags import Flags, SKIP
+from testflows._core.flags import Flags, SKIP, RETRY, LAST_RETRY
 from testflows._core.testtype import TestType
 from testflows._core.message import Message
 from testflows._core.name import split, sep, parentname
@@ -28,8 +28,6 @@ from .nice import transform as nice_transform
 from .plain import transform as plain_transform
 
 indent = " " * 2
-
-skip_for_dump = set()
 
 
 def color_other(other):
@@ -82,7 +80,14 @@ def get_type(msg):
     return getattr(TestType, msg["test_type"])
 
 
-def format_prompt(msg, keyword):
+def format_prompt(
+    msg,
+    dump_transform=None,
+    buffer=None,
+    skip_for_dump=None,
+    skip_for_buffer=None,
+    only_new=None,
+):
     lines = (msg["message"] or "").splitlines()
     icon = "\u270d  "
     if msg["message"].startswith("Paused"):
@@ -93,8 +98,16 @@ def format_prompt(msg, keyword):
     return out
 
 
-def format_input(msg, keyword):
-    out = color(msg["message"], "white") + "\n"
+def format_input(
+    msg,
+    dump_transform=None,
+    buffer=None,
+    skip_for_dump=None,
+    skip_for_buffer=None,
+    only_new=None,
+):
+    print("input", msg["message"])
+    out = color(msg["message"], "white")
     return out
 
 
@@ -108,11 +121,11 @@ def format_multiline(text, indent):
     return out
 
 
-def collect_dump_messages(buffer, test_id):
-    global skip_for_dump
+def collect_dump_messages(buffer, skip_for_dump, test_id):
+    """Collect messages to dump for the failing test."""
 
     msgs = []
-    if test_id not in buffer or test_id in skip_for_dump:
+    if test_id not in buffer or test_id in skip_for_dump[0]:
         return msgs
 
     msgs += buffer[test_id]
@@ -121,12 +134,15 @@ def collect_dump_messages(buffer, test_id):
     # get all child messages
     for name in buffer.keys():
         if name.startswith(test_id + sep):
-            msgs += buffer[name]
+            _msgs = buffer[name]
+            if not _msgs:
+                continue
+            msgs += _msgs
             buffer[name] = []
 
     skip_test = test_id
     while skip_test and skip_test != sep:
-        skip_for_dump = skip_for_dump.union({skip_test})
+        skip_for_dump[0].add(skip_test)
         skip_test = parentname(skip_test)
 
     msgs.sort(key=lambda x: x["message_time"])
@@ -134,14 +150,32 @@ def collect_dump_messages(buffer, test_id):
     return msgs
 
 
-def format_result(msg, dump_transform, buffer, only_new):
+def format_test(msg, dump_transform, buffer, skip_for_dump, skip_for_buffer, only_new):
+    flags = Flags(msg["test_flags"])
+    test_id = msg["test_id"]
+
+    if flags & RETRY and not flags & LAST_RETRY:
+        skip_for_buffer[0].add(test_id)
+
+    return None
+
+
+def format_result(
+    msg, dump_transform, buffer, skip_for_dump, skip_for_buffer, only_new
+):
     result = msg["result_type"]
 
     flags = Flags(msg["test_flags"])
+    cflags = Flags(msg["test_cflags"])
+    test_id = msg["test_id"]
+
     if flags & SKIP and settings.show_skipped is False:
         return
 
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
+        return
+
+    if cflags & RETRY and not flags & LAST_RETRY:
         return
 
     _icon = color_result(result)
@@ -160,9 +194,9 @@ def format_result(msg, dump_transform, buffer, only_new):
 
     if result in ("Fail", "Error", "Null"):
         out += f" {_test}"
-        _test_msgs = collect_dump_messages(buffer, msg["test_id"])
+        _test_msgs = collect_dump_messages(buffer, skip_for_dump, test_id)
         if _test_msgs:
-            g = dump_transform(show_input=False)
+            g = dump_transform(show_input=True)
             g.send(None)
             out += "\n"
             for _test_msg in _test_msgs:
@@ -181,12 +215,14 @@ def format_result(msg, dump_transform, buffer, only_new):
     else:
         out = None
 
+    skip_for_buffer[0].discard(test_id)
     return out
 
 
 formatters = {
-    Message.INPUT.name: (format_input, f""),
-    Message.PROMPT.name: (format_prompt, f""),
+    Message.INPUT.name: (format_input,),
+    Message.PROMPT.name: (format_prompt,),
+    Message.TEST.name: (format_test,),
     Message.RESULT.name: (format_result,),
 }
 
@@ -201,6 +237,8 @@ def transform(
     """
     line = None
     buffer = {}
+    skip_for_dump = [set()]
+    skip_for_buffer = [set()]
 
     dump_transform = None
     if brisk:
@@ -213,6 +251,7 @@ def transform(
         dump_transform = functools.partial(nice_transform, add_test_name_prefix=True)
 
     while True:
+        skip = False
         if line is not None:
             if dump_transform is not None:
                 test_id = line["test_id"]
@@ -220,15 +259,28 @@ def transform(
                 if not test_id in buffer:
                     buffer[test_id] = []
 
-                buffer[test_id].append(line)
+                for _t in skip_for_buffer[0]:
+                    if test_id.startswith(_t + sep):
+                        skip = True
+                        break
+                if not skip:
+                    buffer[test_id].append(line)
 
             formatter = formatters.get(line["message_keyword"], None)
-            if formatter:
+            if skip:
+                line = None
+            elif formatter:
                 if formatter[0] is format_input and show_input is False:
                     line = None
                 else:
                     line = formatter[0](
-                        line, *formatter[1:], dump_transform, buffer, only_new
+                        line,
+                        *formatter[1:],
+                        dump_transform,
+                        buffer,
+                        skip_for_dump,
+                        skip_for_buffer,
+                        only_new,
                     )
             else:
                 line = None
