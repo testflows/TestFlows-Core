@@ -281,7 +281,8 @@ class Visitor(PTNodeVisitor):
             "children": repr(self.specification.children),
             "headings": f"(\n{'    ' * 2}{sep.join(f'{heading}' for heading in self.headings)}{sep})",
             "requirements": f"(\n{'    ' * 2}{sep.join(rq for rq in requirements)}{sep})",
-            "content": "'''\n%s\n'''" % self.source_data.replace("'''", "'''").rstrip(),
+            "content": "r'''\n%s\n'''"
+            % self.source_data.replace("'''", "'''").rstrip(),
         }
 
         return self.output.rstrip() + "\n"
