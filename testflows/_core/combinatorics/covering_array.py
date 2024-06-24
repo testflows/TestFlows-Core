@@ -82,7 +82,8 @@ class CoveringArray:
 
         for key in keys:
             v = self.parameters[key]
-            v = list(set(v))
+            # remove any duplicates from v while preserving consistent ordering
+            v = [x for i, x in enumerate(v) if x not in v[:i]]
             parameters_map[key] = v
             parameters_set.append(list(range(len(v))))
 
