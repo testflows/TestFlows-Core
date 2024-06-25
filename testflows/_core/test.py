@@ -627,17 +627,25 @@ class TestBase(object):
                 {
                     # '/' is not allowed just like in Unix file names
                     # so convert any '/' to U+2215 division slash
-                    name_sep: "\u2215",
-                    '"': "\uFF02",  # bash string quote
-                    "'": "\uFF07",  # bash string quotes
-                    "$": "\uFE69",  # bash special symbol
+                    name_sep: "\u2215",  # path
+                    '"': "\uFF02",  # bash
+                    "'": "\uFF07",  # bash
+                    "$": "\uFE69",  # bash
                     "\\": "\uFE68",  # bash special symbol
-                    "[": "\uFF3B",  # pattern special symbol
-                    "]": "\uFF3D",  # pattern special symbol
-                    "*": "\uFF0A",  # pattern special symbol
-                    "?": "\uFE16",  # pattern special symbol
-                    ":": "\uFE55",  # pattern special symbol
-                    "!": "\uFE15",  # bash special symbol
+                    "[": "\uFF3B",  # pattern / regex
+                    "]": "\uFF3D",  # pattern / regex
+                    "*": "\uFF0A",  # pattern / regex
+                    "?": "\uFE16",  # pattern / regex
+                    ":": "\uFE55",  # pattern
+                    "!": "\uFE15",  # bash
+                    ".": "\u2024",  # regex
+                    "^": "\u02C4",  # regex
+                    "+": "\uFF0B",  # regex
+                    "{": "\uFF5B",  # regex
+                    "}": "\uFF5D",  # regex
+                    "|": "\u2160",  # regex
+                    "(": "\uFF08",  # regex
+                    ")": "\uFF09",  # regex
                 }
             )
         )
