@@ -294,7 +294,7 @@ class MarkdownFormatter:
                     + strftimedelta(result["message_rtime"])
                     + "</td>"
                     + '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>'
-                    + str(result["result_message"]).replace("|", "\|")
+                    + str(result["result_message"]).replace("|", r"\|")
                     + "</pre></div></td>"
                 ) + "</tr>\n"
                 has_fails = True
@@ -323,10 +323,10 @@ class MarkdownFormatter:
                     + f'<td><span class="result result-{cls}">{result["result_type"]}</span> '
                     + strftimedelta(result["message_rtime"])
                     + "<br>"
-                    + str(result["result_reason"]).replace("|", "\|")
+                    + str(result["result_reason"]).replace("|", r"\|")
                     + "</td>"
                     + '<td><div style="max-width: 30vw; overflow-x: auto;"><pre>'
-                    + str(result["result_message"]).replace("|", "\|")
+                    + str(result["result_message"]).replace("|", r"\|")
                     + "</pre></div></td>"
                 ) + "</tr>\n"
                 has_xfails = True

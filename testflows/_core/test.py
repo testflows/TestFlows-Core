@@ -23,6 +23,7 @@ import builtins
 import functools
 import threading
 import importlib
+import cProfile
 
 from collections import namedtuple
 
@@ -1515,7 +1516,15 @@ def cli_argparser(kwargs, argparser=None):
         default=None,
         metavar=trace_level_type.metavar,
         help="enable low-level test program tracing for debugging "
-        "using Python's logging module at the specified level.",
+        "using Python's logging module at the specified level",
+    )
+
+    parser.add_argument(
+        "--profile",
+        dest="_profile",
+        help="enable test program profiling using CProfile module",
+        action="store_true",
+        default=False,
     )
 
     if database_module:
@@ -1561,6 +1570,7 @@ def parse_cli_args(kwargs, parser_schema):
             schema.Optional("pause-after"): [str],
             schema.Optional("random"): bool,
             schema.Optional("debug"): bool,
+            schema.Optional("profile"): bool,
             schema.Optional("no-colors"): bool,
             schema.Optional("trim-results"): bool,
             schema.Optional("colors"): bool,
@@ -1644,6 +1654,8 @@ def parse_cli_args(kwargs, parser_schema):
 
         settings.trace = get(args.pop("_trace", None), get(settings.trace, False))
         tracing.configure_tracing()
+
+        settings.profile = get(args.pop("_profile", None), get(settings.profile, False))
 
         settings.no_colors = get(
             args.pop("_no_colors", None), get(settings.no_colors, False)
@@ -2180,6 +2192,9 @@ class TestDefinition(object):
                 kwargs["args"].update(
                     {k: v for k, v in cli_args.items() if not k.startswith("_")}
                 )
+                if settings.profile:
+                    self.profiler = cProfile.Profile()
+                    self.profiler.enable()
 
             test = kwargs.pop("test", None)
             kwargs_test = test
@@ -3079,8 +3094,7 @@ class TestDefinition(object):
             raise
 
         finally:
-            if self.test:
-                self.test.terminated = True
+            self._exit_finally()
 
     async def __aexit__(self, exc_type, exc_value, exc_traceback):
         """Asynchronous test exit."""
@@ -3120,8 +3134,19 @@ class TestDefinition(object):
             raise
 
         finally:
-            if self.test:
-                self.test.terminated = True
+            self._exit_finally()
+
+    def _exit_finally(self):
+        """Finalize exit."""
+        if self.test:
+            self.test.terminated = True
+
+        if settings.profile:
+            # check if it's the top level test
+            if not self.parent:
+                if getattr(self, "profiler"):
+                    self.profiler.disable()
+                    self.profiler.dump_stats("testflows.prof")
 
 
 class Module(TestDefinition):

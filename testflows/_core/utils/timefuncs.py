@@ -100,12 +100,12 @@ def strptimedelta(timelapse):
     """
     parser = re.compile(
         r"("
-        "((?P<days>\d+)d|day|days)?"
-        "((?P<hours>\d+)hr?)?"
-        "((?P<min>\d+)m(?!s))?"
-        "((?P<sec>(\d+.\d+)|(\d+))s)?"
-        "((?P<ms>\d+)ms)?"
-        "((?P<us>\d+)us)?"
+        r"((?P<days>\d+)d|day|days)?"
+        r"((?P<hours>\d+)hr?)?"
+        r"((?P<min>\d+)m(?!s))?"
+        r"((?P<sec>(\d+.\d+)|(\d+))s)?"
+        r"((?P<ms>\d+)ms)?"
+        r"((?P<us>\d+)us)?"
         ")?$"
     )
 

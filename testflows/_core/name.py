@@ -17,7 +17,7 @@ def escape(name):
     # the closing square bracket ']' does not need to be escaped
     # as pattern is parsed from left to right
     return (
-        name.replace("[", f"[\[]")
+        name.replace("[", rf"[\[]")
         .replace("*", "[*]")
         .replace(":", "[:]")
         .replace("?", "[?]")
