@@ -622,9 +622,25 @@ class TestBase(object):
             raise NameError(f"can't format '{name}' using {args} {str(exc)}") from None
         if name is None:
             raise TypeError("name must be specified")
-        # '/' is not allowed just like in Unix file names
-        # so convert any '/' to U+2215 division slash
-        name = name.replace(name_sep, "\u2215")
+        name = name.translate(
+            str.maketrans(
+                {
+                    # '/' is not allowed just like in Unix file names
+                    # so convert any '/' to U+2215 division slash
+                    name_sep: "\u2215",
+                    '"': "\uFF02",  # bash string quote
+                    "'": "\uFF07",  # bash string quotes
+                    "$": "\uFE69",  # bash special symbol
+                    "\\": "\uFE68",  # bash special symbol
+                    "[": "\uFF3B",  # pattern special symbol
+                    "]": "\uFF3D",  # pattern special symbol
+                    "*": "\uFF0A",  # pattern special symbol
+                    "?": "\uFE16",  # pattern special symbol
+                    ":": "\uFE55",  # pattern special symbol
+                    "!": "\uFE15",  # bash special symbol
+                }
+            )
+        )
         return join(get(parent, name_sep), name)
 
     @classmethod
