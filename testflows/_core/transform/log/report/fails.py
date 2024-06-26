@@ -73,12 +73,13 @@ def generate(results, divider, only_new=False):
     retries = ""
     xfails = ""
     fails = ""
+    first_fails = []
 
     for entry in results:
         msg, result = results[entry]
         _color = color_result(result)
 
-        out = _color("\u2718") + f" [ {_color(result)} ] {msg['result_test']}"
+        out = _color("\u2718") + f" [ {_color(result)} ] \"{msg['result_test']}\""
         if msg["result_reason"]:
             out += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
         out += " " + color(
@@ -90,6 +91,8 @@ def generate(results, divider, only_new=False):
             if not only_new:
                 xfails += out
         else:
+            if len(first_fails) < 3:
+                first_fails.append(msg["result_test"])
             fails += out
 
     if retries:
@@ -104,6 +107,22 @@ def generate(results, divider, only_new=False):
         if not divider and (xfails or retries):
             divider = "\n"
         fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
+
+        fails += (
+            color(
+                "\nRe-run failing tests by executing your test program with the --only option.",
+                "white",
+                attrs=["dim"],
+            )
+            + "\n"
+        )
+        fails += color(
+            f"\nFirst fail{'s' if len(first_fails) > 1 else ''}\n\n",
+            "white",
+            attrs=["bold"],
+        )
+        for first_fail in first_fails:
+            fails += color(f'--only "{first_fail}/*"', "red", attrs=["bold"]) + "\n"
 
     report = f"{retries}{xfails}{fails}"
 
