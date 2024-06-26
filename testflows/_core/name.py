@@ -12,6 +12,38 @@ pardir = dotdot
 curdir = dot
 
 
+def clean(name):
+    """Clean name by converting all special pattern and regex
+    characters to their UTF-8 replacements to avoid conflicts."""
+    return name.translate(
+        str.maketrans(
+            {
+                # '/' is not allowed just like in Unix file names
+                # so convert any '/' to U+2215 division slash
+                sep: "\u2215",  # path
+                '"': "\uFF02",  # bash
+                "'": "\uFF07",  # bash
+                "$": "\uFE69",  # bash
+                "\\": "\uFE68",  # bash special symbol
+                "[": "\uFF3B",  # pattern / regex
+                "]": "\uFF3D",  # pattern / regex
+                "*": "\uFF0A",  # pattern / regex
+                "?": "\uFE16",  # pattern / regex
+                ":": "\uFE55",  # pattern
+                "!": "\uFE15",  # bash
+                ".": "\u2024",  # regex
+                "^": "\u02C4",  # regex
+                "+": "\uFF0B",  # regex
+                "{": "\uFF5B",  # regex
+                "}": "\uFF5D",  # regex
+                "|": "\u2160",  # regex
+                "(": "\uFF08",  # regex
+                ")": "\uFF09",  # regex
+            }
+        )
+    )
+
+
 def escape(name):
     """Escape special pattern characters in name."""
     # the closing square bracket ']' does not need to be escaped

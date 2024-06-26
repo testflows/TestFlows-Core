@@ -88,7 +88,7 @@ from .objects import NamedValue, OnlyTags, SkipTags
 from .objects import RSASecret, Secrets
 from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
-from .name import join, depth, match, escape, absname, isabs, basename
+from .name import join, depth, match, escape, absname, isabs, basename, clean
 from .funcs import exception, pause, result, value, input
 from .init import init
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
@@ -622,33 +622,8 @@ class TestBase(object):
             raise NameError(f"can't format '{name}' using {args} {str(exc)}") from None
         if name is None:
             raise TypeError("name must be specified")
-        name = name.translate(
-            str.maketrans(
-                {
-                    # '/' is not allowed just like in Unix file names
-                    # so convert any '/' to U+2215 division slash
-                    name_sep: "\u2215",  # path
-                    '"': "\uFF02",  # bash
-                    "'": "\uFF07",  # bash
-                    "$": "\uFE69",  # bash
-                    "\\": "\uFE68",  # bash special symbol
-                    "[": "\uFF3B",  # pattern / regex
-                    "]": "\uFF3D",  # pattern / regex
-                    "*": "\uFF0A",  # pattern / regex
-                    "?": "\uFE16",  # pattern / regex
-                    ":": "\uFE55",  # pattern
-                    "!": "\uFE15",  # bash
-                    ".": "\u2024",  # regex
-                    "^": "\u02C4",  # regex
-                    "+": "\uFF0B",  # regex
-                    "{": "\uFF5B",  # regex
-                    "}": "\uFF5D",  # regex
-                    "|": "\u2160",  # regex
-                    "(": "\uFF08",  # regex
-                    ")": "\uFF09",  # regex
-                }
-            )
-        )
+        # clean test name by converting pattern and regex special chars
+        name = clean(name)
         return join(get(parent, name_sep), name)
 
     @classmethod

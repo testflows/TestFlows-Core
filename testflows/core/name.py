@@ -23,5 +23,6 @@ from testflows._core.name import (
     relname,
     sep,
     escape,
+    clean,
 )
 from testflows._core.name import commonprefix, commonname, normcase
