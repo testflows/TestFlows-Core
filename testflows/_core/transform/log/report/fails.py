@@ -108,21 +108,40 @@ def generate(results, divider, only_new=False):
             divider = "\n"
         fails = color(f"{divider}Failing\n\n", "white", attrs=["bold"]) + fails
 
+        fails += color(
+            f"\nDebugging\n\n",
+            "white",
+            attrs=["bold"],
+        )
         fails += (
             color(
-                "\nRe-run failing tests by executing your test program with the --only option.",
+                "Rerun the first failing tests by executing your test program with the '--only' option.",
                 "white",
                 attrs=["dim"],
             )
             + "\n"
         )
-        fails += color(
-            f"\nFirst fail{'s' if len(first_fails) > 1 else ''}\n\n",
-            "white",
-            attrs=["bold"],
+        for first_fail in first_fails:
+            fails += (
+                color("--only ", "white")
+                + color(f'"{first_fail}/*"', "red", attrs=["bold"])
+                + "\n"
+            )
+
+        fails += (
+            color(
+                "\nSee first failed test messages using the 'tfs show messages' command.",
+                "white",
+                attrs=["dim"],
+            )
+            + "\n"
         )
         for first_fail in first_fails:
-            fails += color(f'--only "{first_fail}/*"', "red", attrs=["bold"]) + "\n"
+            fails += (
+                color("tfs show messages --log test.log ", "white")
+                + color(f'"{first_fail}"', "red", attrs=["bold"])
+                + "\n"
+            )
 
     report = f"{retries}{xfails}{fails}"
 
