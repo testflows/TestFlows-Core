@@ -631,7 +631,7 @@ class TestBase(object):
                     if name[i] != clean_name[i]:
                         invalid.append((name[i], i))
                 raise NameError(
-                    f"test name '{name}' contains restricted characters '{''.join([o[0] for o in invalid])}'"
+                    f"test name '{name}' has restricted characters '{''.join([o[0] for o in invalid])}'"
                 )
         name = clean_name
         return join(get(parent, name_sep), name)
