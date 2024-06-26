@@ -324,6 +324,7 @@ def transform(stop, divider="\n"):
     """
     counts = all_counts()
     line = None
+    msg = None
 
     while True:
         if line is not None:
@@ -333,7 +334,7 @@ def transform(stop, divider="\n"):
                 formatter[0](line, *formatter[1:], counts=counts)
             line = None
 
-        if stop.is_set():
+        if stop.is_set() and msg is not None:
             line = divider
             line_icon = ""  # "\u27a4 "
             if counts["module"]:
