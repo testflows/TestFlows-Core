@@ -74,7 +74,7 @@ def generate(results, divider):
     for entry in results:
         msg, result = results[entry]
         _color = color_result(result)
-        passing += _color("\u2714") + f" [ {_color(result)} ] {msg['result_test']}"
+        passing += _color("\u2714") + f" [ {_color(result)} ] '{msg['result_test']}'"
         if msg["result_reason"]:
             passing += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
         passing += " " + color(

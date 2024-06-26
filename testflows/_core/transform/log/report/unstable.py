@@ -98,7 +98,7 @@ def generate(results, divider):
 
     for entry in results.values():
         name = parentname(entry[0][0]["test_name"])
-        counts = UnstableCounts(name, *([0] * 11))
+        counts = UnstableCounts(f"'{name}'", *([0] * 11))
         for iteration in entry:
             msg, result = iteration
             counts.units += 1

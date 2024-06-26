@@ -79,7 +79,7 @@ def generate(results, divider, only_new=False):
         msg, result = results[entry]
         _color = color_result(result)
 
-        out = _color("\u2718") + f" [ {_color(result)} ] \"{msg['result_test']}\""
+        out = _color("\u2718") + f" [ {_color(result)} ] '{msg['result_test']}'"
         if msg["result_reason"]:
             out += color(f" \u1405 {msg['result_reason']}", "white", attrs=["dim"])
         out += " " + color(
@@ -91,7 +91,7 @@ def generate(results, divider, only_new=False):
             if not only_new:
                 xfails += out
         else:
-            if len(first_fails) < 3:
+            if len(first_fails) < 1:
                 first_fails.append(msg["result_test"])
             fails += out
 
@@ -115,7 +115,7 @@ def generate(results, divider, only_new=False):
         )
         fails += (
             color(
-                "Rerun the first failing tests by executing your test program with the '--only' option.",
+                "Rerun the first failing test by executing your test program with the '--only' option.",
                 "white",
                 attrs=["dim"],
             )
@@ -124,7 +124,7 @@ def generate(results, divider, only_new=False):
         for first_fail in first_fails:
             fails += (
                 color("--only ", "white")
-                + color(f'"{first_fail}/*"', "red", attrs=["bold"])
+                + color(f"'{first_fail}/*'", "red", attrs=["bold"])
                 + "\n"
             )
 
@@ -139,7 +139,7 @@ def generate(results, divider, only_new=False):
         for first_fail in first_fails:
             fails += (
                 color("tfs show messages --log test.log ", "white")
-                + color(f'"{first_fail}"', "red", attrs=["bold"])
+                + color(f"'{first_fail}'", "red", attrs=["bold"])
                 + "\n"
             )
 
