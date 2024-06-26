@@ -58,3 +58,5 @@ trace = False
 profile = False
 #: license key
 license_key = None
+#: strict names
+strict_names = False

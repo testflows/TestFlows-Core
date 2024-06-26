@@ -623,7 +623,17 @@ class TestBase(object):
         if name is None:
             raise TypeError("name must be specified")
         # clean test name by converting pattern and regex special chars
-        name = clean(name)
+        clean_name = clean(name)
+        if settings.strict_names:
+            if clean_name != name:
+                invalid = []
+                for i in range(len(name)):
+                    if name[i] != clean_name[i]:
+                        invalid.append((name[i], i))
+                raise NameError(
+                    f"test name '{name}' contains restricted characters '{''.join([o[0] for o in invalid])}'"
+                )
+        name = clean_name
         return join(get(parent, name_sep), name)
 
     @classmethod
@@ -1523,7 +1533,15 @@ def cli_argparser(kwargs, argparser=None):
         dest="_profile",
         help="enable test program profiling using CProfile module",
         action="store_true",
-        default=False,
+        default=None,
+    )
+
+    parser.add_argument(
+        "--strict-names",
+        dest="_strict_names",
+        help="enable strict test names where special pattern or regex characters are not allowed",
+        action="store_true",
+        default=None,
     )
 
     if database_module:
@@ -1570,6 +1588,7 @@ def parse_cli_args(kwargs, parser_schema):
             schema.Optional("random"): bool,
             schema.Optional("debug"): bool,
             schema.Optional("profile"): bool,
+            schema.Optional("strict-names"): bool,
             schema.Optional("no-colors"): bool,
             schema.Optional("trim-results"): bool,
             schema.Optional("colors"): bool,
@@ -1661,6 +1680,9 @@ def parse_cli_args(kwargs, parser_schema):
         )
         settings.trim_results = get(
             args.pop("_trim_results", None), get(settings.trim_results, True)
+        )
+        settings.strict_names = get(
+            args.pop("_strict_names", None), get(settings.strict_names, False)
         )
 
         if args.get("_name"):
