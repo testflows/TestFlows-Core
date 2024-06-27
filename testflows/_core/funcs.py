@@ -68,7 +68,9 @@ def load_submodules(name, package=None):
     module = load_module(name, package=package)
     submodules = []
     for module_info in pkgutil.iter_modules(module.__path__):
-        spec = module_info.module_finder.find_spec(module_info.name)
+        spec = module_info.module_finder.find_spec(
+            f"{module.__name__}.{module_info.name}"
+        )
         if spec:
             submodule = spec.loader.load_module(spec.name)
             submodules.append(submodule)
