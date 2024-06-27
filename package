@@ -35,6 +35,9 @@ setup_path = os.path.join(current_dir, "setup.py")
 
 
 def clean_url(url, rchop=None):
+    if "git@github.com:" in url:
+        url = f"https://github.com/{url.split('git@github.com:',1)[-1]}"
+        url = url.rsplit(".git", 1)[0]
     parsed = urlparse(url)
     cleaned_url = parsed._replace(netloc="{}".format(parsed.hostname)).geturl()
     if rchop and cleaned_url.endswith(rchop):
