@@ -44,6 +44,40 @@ def clean(name):
     )
 
 
+def unclean(name):
+    """Try to revert name cleaning by converting all converted special pattern and regex
+    characters from their UTF-8 replacements back to the original characters.
+
+    Warning: this function will not work if the name had a mix of restricted characters
+    and UTF-8 replacement characters as all UTF-8 replacement characters will be converted.
+    """
+    return name.translate(
+        str.maketrans(
+            {
+                "\u2215": sep,  # path
+                "\uFF02": '"',  # bash
+                "\uFF07": "'",  # bash
+                "\uFE69": "$",  # bash
+                "\uFE68": "\\",  # bash special symbol
+                "\uFF3B": "[",  # pattern / regex
+                "\uFF3D": "]",  # pattern / regex
+                "\uFF0A": "*",  # pattern / regex
+                "\uFE16": "?",  # pattern / regex
+                "\uFE55": ":",  # pattern
+                "\uFE15": "!",  # bash
+                "\u2024": ".",  # regex
+                "\u02C4": "^",  # regex
+                "\uFF0B": "+",  # regex
+                "\uFF5B": "{",  # regex
+                "\uFF5D": "}",  # regex
+                "\u2160": "|",  # regex
+                "\uFF08": "(",  # regex
+                "\uFF09": ")",  # regex
+            }
+        )
+    )
+
+
 def escape(name):
     """Escape special pattern characters in name."""
     # the closing square bracket ']' does not need to be escaped
