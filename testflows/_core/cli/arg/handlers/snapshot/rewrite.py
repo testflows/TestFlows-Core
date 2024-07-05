@@ -17,7 +17,7 @@ from testflows._core.cli.text import secondary
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows.asserts.helpers import rewrite_snapshot
+from testflows.snapshots.v1 import rewrite_snapshot
 
 
 class Handler(HandlerBase):
