@@ -3720,7 +3720,7 @@ class TestOutline(TestDecorator):
 
 
 class TestSketch(TestDecorator):
-    type = Test
+    type = Sketch
 
     def __init__(self, func_or_type=None, random=None, limit=None):
         self.func = None
