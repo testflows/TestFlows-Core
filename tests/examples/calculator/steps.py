@@ -169,7 +169,7 @@ def open_google(self):
     driver: WebDriver = self.context.webdriver
 
     with By("opening Google URL"):
-        driver.get("https://www.google.com/?q=")
+        driver.get("https://www.google.ca/?q=")
 
     with Then("checking title is present"):
         assert driver.title == "Google", error()
@@ -192,7 +192,11 @@ def search_for_calculator(self, delay=0.2):
         search_box.submit()
 
     with And("checking title calculator title is present"):
-        assert driver.title == "calculator - Google Search", error()
+        for retry in retries(timeout=60, delay=1):
+            with retry:
+                title = driver.title
+                assert title != "", "title is empty"
+        assert "calculator - Google Search" == title, error()
 
     with And("waiting for calculator to appear"):
         wait_for_elements_to_be_visible(

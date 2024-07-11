@@ -31,25 +31,25 @@ def check_basic_operations(self):
     try:
         with When("I enter either positive or negative 0,1,2"):
             if either(True, False):
-                By(test=press_minus)()
-            By(test=either(press_0, press_1, press_2))()
+                press_minus()
+            either(press_0, press_1, press_2)()
 
         with And("then I press either +, -, *, / operation"):
-            By(test=either(press_plus, press_minus, press_multiply, press_divide))()
+            either(press_plus, press_minus, press_multiply, press_divide)()
 
         with And("I enter second argument either positive or negative 0,1,2"):
             if either(True, False):
-                By(test=press_minus)()
-            By(test=either(press_0, press_1, press_2))()
+                press_minus()
+            either(press_0, press_1, press_2)()
 
         with And("I press equals to calculate the result"):
-            By(test=press_equal)()
+            press_equal()
 
         with Then("I check calculator state"):
-            By(test=check_state)()
+            check_state()
     finally:
         with Finally("I reset calculator back to 0"):
-            By(test=reset_calculator)()
+            reset_calculator()
 
 
 @TestModule
