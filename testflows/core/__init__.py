@@ -142,6 +142,8 @@ from testflows._core.funcs import (
     pause,
     getsattr,
     always,
+    never,
+    noop,
     Timer,
     timer,
 )

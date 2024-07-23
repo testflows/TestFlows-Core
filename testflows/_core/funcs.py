@@ -559,6 +559,11 @@ def always(*args, **kwargs):
     return True
 
 
+def never(*args, **kwargs):
+    """Always False condition that can be used with 'when' clauses."""
+    return False
+
+
 def noop(*args, **kwargs):
     """No operation function call."""
     return None
