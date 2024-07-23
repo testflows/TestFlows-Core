@@ -5,6 +5,7 @@ aiomsg.msgproto
 These are messaging protocols
 
 """
+
 import testflows._core.tracing as tracing
 
 from asyncio import StreamReader, StreamWriter
@@ -15,7 +16,7 @@ _PREFIX_SIZE = 4
 
 
 async def read_msg(reader: StreamReader) -> bytes:
-    """ Returns b'' if the connection is lost."""
+    """Returns b'' if the connection is lost."""
     try:
         size_bytes = await reader.readexactly(_PREFIX_SIZE)
         size = int.from_bytes(size_bytes, byteorder="big")

@@ -36,13 +36,17 @@ Run tests with watchmedo (available after ``pip install Watchdog`` ):
         -p '*.py'
 
 """
+
 import sys
 import math
 import uuid
 import json
 import time
+import hmac
 import socket
 import random
+import hashlib
+import secrets
 import asyncio
 import asyncio.streams
 import testflows._core.tracing as tracing
@@ -65,7 +69,7 @@ from typing import (
     Awaitable,
     Sequence,
 )
-import  testflows._core.contrib.cloudpickle as cloudpickle
+import testflows._core.contrib.cloudpickle as cloudpickle
 
 from . import header
 from . import msgproto
@@ -77,20 +81,29 @@ tracer = tracing.getLogger(__name__)
 SEND_MODES = ["round_robin", "publish"]
 JSONCompatible = Union[str, int, float, bool, List, Dict, None]
 
-async def asyncio_open_connection(host=None, port=None, *,
-                          limit=asyncio.streams._DEFAULT_LIMIT, loop=None, **kwds):
+
+async def asyncio_open_connection(
+    host=None, port=None, *, limit=asyncio.streams._DEFAULT_LIMIT, loop=None, **kwds
+):
     """asyncio.open_connection that takes loop."""
     if loop is None:
         loop = asyncio.get_running_loop()
     reader = asyncio.StreamReader(limit=limit, loop=loop)
     protocol = asyncio.StreamReaderProtocol(reader, loop=loop)
-    transport, _ = await loop.create_connection(
-        lambda: protocol, host, port, **kwds)
+    transport, _ = await loop.create_connection(lambda: protocol, host, port, **kwds)
     writer = asyncio.StreamWriter(transport, protocol, reader, loop)
     return reader, writer
 
-async def asyncio_start_server(client_connected_cb, host=None, port=None, *,
-                       loop=None, limit=asyncio.streams._DEFAULT_LIMIT, **kwds):
+
+async def asyncio_start_server(
+    client_connected_cb,
+    host=None,
+    port=None,
+    *,
+    loop=None,
+    limit=asyncio.streams._DEFAULT_LIMIT,
+    **kwds,
+):
     """asyncio.start_server that takes loop."""
     if loop is None:
         loop = asyncio.get_running_loop()
@@ -102,36 +115,51 @@ async def asyncio_start_server(client_connected_cb, host=None, port=None, *,
 
     return await loop.create_server(factory, host, port, **kwds)
 
+
 class LoopMixin:
     def __init__(self, *args, loop=None, **kwargs):
         self._loop_mixin = loop
-        if sys.version_info < (3,10,0):
+        if sys.version_info < (3, 10, 0):
             kwargs["loop"] = self._loop_mixin
         super(LoopMixin, self).__init__(*args, **kwargs)
 
     def _get_loop(self):
         if self._loop_mixin is not None:
             return self._loop_mixin
-        if sys.version_info >= (3,10,0):
+        if sys.version_info >= (3, 10, 0):
             return super(LoopMixin, self)._get_loop()
         return self._loop
+
 
 class asyncio_Event(LoopMixin, asyncio.Event):
     pass
 
+
 class asyncio_Queue(LoopMixin, asyncio.Queue):
     pass
+
 
 class NoConnectionsAvailableError(Exception):
     pass
 
+
 class DisconnectError(ConnectionError):
     """Disconnect message received from the connected host."""
+
     pass
+
 
 class IdentityError(ConnectionError):
     """Identity of the connected host did not match the expected."""
+
     pass
+
+
+class SecretTokenError(ConnectionError):
+    """Security token of the connected host did not match the expected."""
+
+    pass
+
 
 class SendMode(Enum):
     PUBLISH = auto()
@@ -181,9 +209,11 @@ class Søcket:
         receiver_channel: Optional[str] = None,
         identity: Optional[bytes] = None,
         loop=None,
-        reconnection_delay: Callable[[], float] = lambda count: (random.random() % 0.1) + 0.2,
-        pickler = cloudpickle,
-        recv_queue_maxsize=0
+        reconnection_delay: Callable[[], float] = lambda count: (random.random() % 0.1)
+        + 0.2,
+        pickler=cloudpickle,
+        recv_queue_maxsize=0,
+        secret_token: Optional[bytes] = b"",
     ):
         """
         :param reconnection_delay: In large microservices
@@ -209,6 +239,7 @@ class Søcket:
         self.identity = identity or uuid.uuid1().bytes
         self.loop = loop or asyncio.get_event_loop()
         self.pickler = pickler
+        self.secret_token = secret_token
 
         self._queue_recv = asyncio_Queue(maxsize=recv_queue_maxsize, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
@@ -294,7 +325,10 @@ class Søcket:
         self.check_socket_type()
 
         try:
-            with tracing.Event(self.tracer, name=f"bind(hostname={hostname},port={port},ssl_context={ssl_context},kwargs={kwargs})") as event_tracer:
+            with tracing.Event(
+                self.tracer,
+                name=f"bind(hostname={hostname},port={port},ssl_context={ssl_context},kwargs={kwargs})",
+            ) as event_tracer:
                 event_tracer.info(f"Binding socket to {hostname}:{port}")
                 self.server = await asyncio_start_server(
                     self._connection,
@@ -308,7 +342,12 @@ class Søcket:
                 return self
         finally:
             # re-initialize tracer to contain full bind address
-            self.tracer = tracing.EventAdapter(tracer, None, source=str(self), event_id=self.tracer.extra.get("event_id"))
+            self.tracer = tracing.EventAdapter(
+                tracer,
+                None,
+                source=str(self),
+                event_id=self.tracer.extra.get("event_id"),
+            )
 
     async def connect(
         self,
@@ -320,7 +359,7 @@ class Søcket:
         reconnection_delay=None,
         timeout=None,
         permanent=True,
-        expected_identity=None
+        expected_identity=None,
     ):
         retry_count = 0
         retry_start_time = 0
@@ -338,11 +377,15 @@ class Søcket:
             retry_start_time = time.time()
             writer = None
 
-            with tracing.Event(self.tracer,
-                    name=f"connect(hostname={hostname},port={port},"
-                    "ssl_context={ssl_context},connect_timeout={connect_timeout})@new_connection") as event_tracer:
+            with tracing.Event(
+                self.tracer,
+                name=f"connect(hostname={hostname},port={port},"
+                "ssl_context={ssl_context},connect_timeout={connect_timeout})@new_connection",
+            ) as event_tracer:
                 try:
-                    event_tracer.warning(f"Attempting to open connection {hostname}:{port}")
+                    event_tracer.warning(
+                        f"Attempting to open connection {hostname}:{port}"
+                    )
                     reader, writer = await asyncio.wait_for(
                         asyncio_open_connection(
                             hostname, port, loop=self.loop, ssl=ssl_context
@@ -353,7 +396,13 @@ class Søcket:
                     # reset retry count
                     retry_count = 0
                     retry_start_time = 0
-                    await self._connection(reader, writer, future=future, client_connection=False, expected_identity=expected_identity)
+                    await self._connection(
+                        reader,
+                        writer,
+                        future=future,
+                        client_connection=False,
+                        expected_identity=expected_identity,
+                    )
                 except asyncio.TimeoutError:
                     # Make timeouts look like socket connection errors
                     raise OSError
@@ -366,26 +415,39 @@ class Søcket:
             """This is a long-running task that is intended to run
             for the life of the Socket object. It will continually
             try to connect."""
+
             async def _reconnection_delay():
                 await asyncio.sleep(reconnection_delay(retry_count))
 
-            with tracing.Event(self.tracer,
-                    name=f"connect(hostname={hostname},port={port},"
-                    "ssl_context={ssl_context},connect_timeout={connect_timeout})@connect_with_retry") as event_tracer:
+            with tracing.Event(
+                self.tracer,
+                name=f"connect(hostname={hostname},port={port},"
+                "ssl_context={ssl_context},connect_timeout={connect_timeout})@connect_with_retry",
+            ) as event_tracer:
                 try:
                     while not self.closed:
                         try:
-                            if not permanent and timeout and (time.time() - retry_start_time >= timeout):
-                                event_tracer.info(f"Connection retries timeout after {timeout} sec, closing connection...")
+                            if (
+                                not permanent
+                                and timeout
+                                and (time.time() - retry_start_time >= timeout)
+                            ):
+                                event_tracer.info(
+                                    f"Connection retries timeout after {timeout} sec, closing connection..."
+                                )
                                 if future is not None:
-                                    future.set_exception(TimeoutError(f"Connection retries timeout after {timeout} sec"))
+                                    future.set_exception(
+                                        TimeoutError(
+                                            f"Connection retries timeout after {timeout} sec"
+                                        )
+                                    )
                                 break
                             await new_connection(future)
                             if self.closed:
                                 break
                         except CancelledError:
                             break
-                        except IdentityError as e:
+                        except (IdentityError, SecretTokenError) as e:
                             if future is not None:
                                 future.set_exception(e)
                             break
@@ -395,22 +457,32 @@ class Søcket:
                             else:
                                 if isinstance(e, DisconnectError):
                                     if not permanent:
-                                        event_tracer.info("Connection host sent disconnect message, closing connection...")
+                                        event_tracer.info(
+                                            "Connection host sent disconnect message, closing connection..."
+                                        )
                                         break
-                                event_tracer.warning(f"Connection error {e}, reconnecting...")
+                                event_tracer.warning(
+                                    f"Connection error {e}, reconnecting..."
+                                )
                                 try:
                                     await self.loop.create_task(_reconnection_delay())
                                 except CancelledError:
                                     break
                                 continue
                         except Exception as e:
-                            event_tracer.exception(f"Unexpected error {e}, reconnecting...")
+                            event_tracer.exception(
+                                f"Unexpected error {e}, reconnecting..."
+                            )
                 except Exception as e:
-                    event_tracer.exception(f"Unexpected error {e}, closing connection...")
+                    event_tracer.exception(
+                        f"Unexpected error {e}, closing connection..."
+                    )
                 finally:
                     event_tracer.info(f"Connection to {hostname}:{port}, closed")
 
-        self.connect_with_retry_tasks.append(self.loop.create_task(connect_with_retry(future)))
+        self.connect_with_retry_tasks.append(
+            self.loop.create_task(connect_with_retry(future))
+        )
 
         return self
 
@@ -456,7 +528,14 @@ class Søcket:
         while True:
             yield await self.recv_identity()
 
-    async def _connection(self, reader: StreamReader, writer: StreamWriter, future: Optional[asyncio.Future]=None, client_connection: bool=True, expected_identity: bytes=None):
+    async def _connection(
+        self,
+        reader: StreamReader,
+        writer: StreamWriter,
+        future: Optional[asyncio.Future] = None,
+        client_connection: bool = True,
+        expected_identity: bytes = None,
+    ):
         """Each new connection will create a task with this coroutine."""
         with tracing.Event(self.tracer, name=f"_connection()") as event_tracer:
             event_tracer.debug("Creating new connection")
@@ -471,7 +550,9 @@ class Søcket:
             event_tracer.debug(f"Received identity {identity.hex()}")
 
             if expected_identity and identity != expected_identity:
-                raise IdentityError(f"expected identity {expected_identity.hex()} did not match {identity.hex()}")
+                raise IdentityError(
+                    f"Expected identity {expected_identity.hex()} did not match {identity.hex()}"
+                )
 
             if identity in self._connections:
                 event_tracer.error(
@@ -480,10 +561,34 @@ class Søcket:
                 )
                 return
 
+            # Verify possession of the security token
+            hello = secrets.token_bytes(128)
+            hello_sig = hmac.new(self.secret_token, hello, hashlib.sha256).digest()
+
+            event_tracer.debug(f"Sending hello challenge {hello.hex()}")
+
+            await msgproto.send_msg(writer, hello)
+            hello_back = await msgproto.read_msg(reader)
+
+            await msgproto.send_msg(
+                writer,
+                hmac.new(self.secret_token, hello_back, hashlib.sha256).digest(),
+            )
+            reply_sig = await msgproto.read_msg(reader)
+
+            if reply_sig != hello_sig:
+                raise SecretTokenError(
+                    f"Reply signature {reply_sig.hex()} from {identity.hex()} did not match {hello_sig.hex()}"
+                )
+
             # Create the connection object. These objects are kept in a
             # collection that is used for message distribution.
             connection = Connection(
-                identity=identity, reader=reader, writer=writer, recv_event=self.raw_recv, client_connection=client_connection
+                identity=identity,
+                reader=reader,
+                writer=writer,
+                recv_event=self.raw_recv,
+                client_connection=client_connection,
             )
             if len(self._connections) == 0:
                 event_tracer.warning("First connection made")
@@ -519,7 +624,9 @@ class Søcket:
                         writer.close()
                         await writer.wait_closed()
                 except BaseException:
-                    event_tracer.exception(f"Exception while trying to close writer stream")
+                    event_tracer.exception(
+                        f"Exception while trying to close writer stream"
+                    )
 
                 if not self._connections:
                     event_tracer.warning("No connections!")
@@ -538,16 +645,22 @@ class Søcket:
                 try:
                     await c.send_wait(c.disconnect_message)
                 except Exception as e:
-                    event_tracer.exception(f"Exception while sending disconnect message to {identity.hex()}: {e}")
+                    event_tracer.exception(
+                        f"Exception while sending disconnect message to {identity.hex()}: {e}"
+                    )
 
             if self.connect_with_retry_tasks:
                 for connect_with_retry_task in self.connect_with_retry_tasks:
                     connect_with_retry_task.cancel()
-                await asyncio.gather(*self.connect_with_retry_tasks, return_exceptions=True)
+                await asyncio.gather(
+                    *self.connect_with_retry_tasks, return_exceptions=True
+                )
 
             # REP dict, close all events waiting to fire
             for msg_id, handle in self.waiting_for_acks.items():
-                event_tracer.debug(f"Cancelling pending resend event for msg_id {msg_id}")
+                event_tracer.debug(
+                    f"Cancelling pending resend event for msg_id {msg_id}"
+                )
                 handle.cancel()
 
             if self.server:
@@ -569,7 +682,9 @@ class Søcket:
             event_tracer.info(f"Closed {self.idstr()}")
 
     async def close(self, timeout=10):
-        with tracing.Event(self.tracer, name=f"close(timeout={timeout})") as event_tracer:
+        with tracing.Event(
+            self.tracer, name=f"close(timeout={timeout})"
+        ) as event_tracer:
             try:
                 await asyncio.wait_for(self._close(), timeout)
                 assert self.sender_task.done()
@@ -578,7 +693,9 @@ class Søcket:
 
     def raw_recv(self, identity: bytes, message: bytes):
         """Called when *any* active connection receives a message."""
-        with tracing.Event(self.tracer, name=f"raw_recv(identity={identity.hex()},message={message})") as event_tracer:
+        with tracing.Event(
+            self.tracer, name=f"raw_recv(identity={identity.hex()},message={message})"
+        ) as event_tracer:
             parts = header.parse_header(message)
             event_tracer.debug(f"{parts}")
             if not parts.has_header:
@@ -605,14 +722,18 @@ class Søcket:
                 )
 
                 # Make the received data available to the application.
-                event_tracer.debug(f"Writing payload for msg_id: {parts.msg_id} to app: {parts.payload}")
+                event_tracer.debug(
+                    f"Writing payload for msg_id: {parts.msg_id} to app: {parts.payload}"
+                )
                 self._queue_recv.put_nowait((identity, parts.payload))
                 event_tracer.debug(f"after self._queue_recv for msg_id: {parts.msg_id}")
 
                 # Send acknowledgement of receipt back to the sender
 
                 def notify_rep():
-                    event_tracer.debug(f"Got an REQ, sending back an REP msg_id: {parts.msg_id}")
+                    event_tracer.debug(
+                        f"Got an REQ, sending back an REP msg_id: {parts.msg_id}"
+                    )
                     self._user_send_queue.put_nowait(
                         # BECAUSE the identity is specified here, we are sure to
                         # send the reply to the specific connection we got the REQ
@@ -633,10 +754,14 @@ class Søcket:
             # a REPLY to a previously sent message. A good thing! All we do is
             # a little bookkeeping to remove the message id from the "waiting for
             # acks" dict, and as before, give the received data to the application.
-            event_tracer.debug(f"Got an REP for msg_id: {parts.msg_id} with parts: {parts}")
+            event_tracer.debug(
+                f"Got an REP for msg_id: {parts.msg_id} with parts: {parts}"
+            )
             assert parts.msg_type == "REP"  # Nothing else should be possible.
             handle: asyncio.Handle = self.waiting_for_acks.pop(parts.msg_id, None)
-            event_tracer.debug(f"Looked up call_later handle for msg_id: {parts.msg_id} handle: {handle}")
+            event_tracer.debug(
+                f"Looked up call_later handle for msg_id: {parts.msg_id} handle: {handle}"
+            )
             if handle:
                 event_tracer.debug(f"Cancelling handle...for msg_id: {parts.msg_id}")
                 handle.cancel()
@@ -698,32 +823,45 @@ class Søcket:
         The ``kwargs`` are passed to the ``json.loads()`` method.
         By default uses cloudpickle as the default ``pickler`` module.
         """
-        with tracing.Event(self.tracer, name=f"recv_pickle(pickler={pickler},kwargs={kwargs})"):
+        with tracing.Event(
+            self.tracer, name=f"recv_pickle(pickler={pickler},kwargs={kwargs})"
+        ):
             if pickler is None:
                 pickler = self.pickler
 
             data = await self.recv()
             return pickler.loads(data, **kwargs)
 
-    async def send(self, data: bytes, identity: Optional[bytes] = None, retries=None, rid=None, msg_id=None):
+    async def send(
+        self,
+        data: bytes,
+        identity: Optional[bytes] = None,
+        retries=None,
+        rid=None,
+        msg_id=None,
+    ):
         if msg_id is None:
-            msg_id=uuid.uuid4()
+            msg_id = uuid.uuid4()
 
-        with tracing.Event(self.tracer, name=f"send(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})") as event_tracer:
+        with tracing.Event(
+            self.tracer,
+            name=f"send(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})",
+        ) as event_tracer:
             original_data = data
             if (
                 identity or self.send_mode is SendMode.ROUNDROBIN
             ) and self.delivery_guarantee is DeliveryGuarantee.AT_LEAST_ONCE:
                 # Enable receipt acknowledgement
-                parts = header.MessageParts(
-                    msg_id=msg_id, msg_type="REQ", payload=data
-                )
+                parts = header.MessageParts(msg_id=msg_id, msg_type="REQ", payload=data)
                 rich_data = header.make_message(parts)
                 # TODO: Might want to add a retry counter here somewhere, to keep
                 #  track of repeated failures to send a specific message.
 
                 def resend(retries):
-                    with tracing.Event(self.tracer, name=f"resend(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})") as event_tracer:
+                    with tracing.Event(
+                        self.tracer,
+                        name=f"resend(identity={identity.hex()},rid={rid},msg_id={msg_id},data={data})",
+                    ) as event_tracer:
                         if retries == 0:
                             event_tracer.error(
                                 f"No more retries to send. Dropping [{original_data}]"
@@ -735,7 +873,11 @@ class Søcket:
                                 f"Scheduling the resend to identity:{identity.hex()} for data {original_data}"
                             )
                         self._tasks.add(
-                            self.loop.create_task(self.send(original_data, identity, rid=rid, msg_id=msg_id))
+                            self.loop.create_task(
+                                self.send(
+                                    original_data, identity, rid=rid, msg_id=msg_id
+                                )
+                            )
                         )
                         # After deleting this here, a new one will be created when
                         # we re-enter ``async def send()``
@@ -758,8 +900,11 @@ class Søcket:
     async def send_string(self, data: str, identity: Optional[bytes] = None, **kwargs):
         """Automatically convert the string to bytes when sending.
 
-        The ``kwargs`` are passed to the internal ``data.encode()`` method. """
-        with tracing.Event(self.tracer, name=f"send_string(identity={identity.hex()},data={data},kwargs={kwargs})"):
+        The ``kwargs`` are passed to the internal ``data.encode()`` method."""
+        with tracing.Event(
+            self.tracer,
+            name=f"send_string(identity={identity.hex()},data={data},kwargs={kwargs})",
+        ):
             await self.send(data.encode(**kwargs), identity)
 
     async def send_json(
@@ -794,11 +939,19 @@ class Søcket:
         how to use the ``object_hook`` parameter in the ``json.loads()``
         method.
         """
-        with tracing.Event(self.tracer, name=f"send_json(identity={identity.hex()},obj={obj},kwargs={kwargs})"):
+        with tracing.Event(
+            self.tracer,
+            name=f"send_json(identity={identity.hex()},obj={obj},kwargs={kwargs})",
+        ):
             await self.send_string(json.dumps(obj, **kwargs), identity)
 
     async def send_pickle(
-        self, obj: Any, identity: Optional[bytes] = None, pickler=None, rid=None, **kwargs
+        self,
+        obj: Any,
+        identity: Optional[bytes] = None,
+        pickler=None,
+        rid=None,
+        **kwargs,
     ):
         """Automatically serialize the given ``obj`` to Pickle representation.
 
@@ -807,11 +960,16 @@ class Søcket:
         """
         if pickler is None:
             pickler = self.pickler
-        with tracing.Event(self.tracer, name=f"send_pickle(identity={identity.hex()},rid={rid},obj={obj},pickler={pickler},kwargs={kwargs})"):
+        with tracing.Event(
+            self.tracer,
+            name=f"send_pickle(identity={identity.hex()},rid={rid},obj={obj},pickler={pickler},kwargs={kwargs})",
+        ):
             await self.send(pickler.dumps(obj, **kwargs), identity, rid=rid)
 
     def _sender_publish(self, message: bytes):
-        with tracing.Event(self.tracer, name=f"_send_publish(message={message})") as event_tracer:
+        with tracing.Event(
+            self.tracer, name=f"_send_publish(message={message})"
+        ) as event_tracer:
             event_tracer.debug(f"Sending message via publish")
             # TODO: implement grouping by named channels
             if not self._connections:
@@ -834,7 +992,9 @@ class Søcket:
         - NoConnectionsAvailableError
 
         """
-        with tracing.Event(self.tracer, name=f"_send_robin(message={message})") as event_tracer:
+        with tracing.Event(
+            self.tracer, name=f"_send_robin(message={message})"
+        ) as event_tracer:
             event_tracer.debug(f"Sending message via round_robin")
             queues_full = set()
             while True:
@@ -857,7 +1017,10 @@ class Søcket:
 
     def _sender_identity(self, message: bytes, identity: bytes):
         """Send directly to a peer with a distinct identity"""
-        with tracing.Event(self.tracer, name=f"_sender_identity(identity={identity.hex()},message={message})") as event_tracer:
+        with tracing.Event(
+            self.tracer,
+            name=f"_sender_identity(identity={identity.hex()},message={message})",
+        ) as event_tracer:
             event_tracer.debug(
                 f"Sending message, identity: {identity.hex()} message: {message}"
             )
@@ -870,26 +1033,36 @@ class Søcket:
 
             try:
                 c.writer_queue.put_nowait(message)
-                event_tracer.debug(f"Placed message on connection {identity.hex()} writer queue")
+                event_tracer.debug(
+                    f"Placed message on connection {identity.hex()} writer queue"
+                )
             except asyncio.QueueFull:
-                event_tracer.error(f"Dropped message on connection {identity.hex()}, its write queue is full")
+                event_tracer.error(
+                    f"Dropped message on connection {identity.hex()}, its write queue is full"
+                )
 
     async def _sender_main(self):
         with tracing.Event(self.tracer, name=f"_sender_main()") as event_tracer:
             while True:
-                q_task: asyncio.Task = self.loop.create_task(self._user_send_queue.get())
+                q_task: asyncio.Task = self.loop.create_task(
+                    self._user_send_queue.get()
+                )
                 w_task: asyncio.Task = self.loop.create_task(
                     self.at_least_one_connection.wait()
                 )
                 try:
-                    await asyncio.wait([w_task, q_task], return_when=asyncio.ALL_COMPLETED)
+                    await asyncio.wait(
+                        [w_task, q_task], return_when=asyncio.ALL_COMPLETED
+                    )
                 except asyncio.CancelledError:
                     q_task.cancel()
                     w_task.cancel()
                     return
 
                 identity, data = q_task.result()
-                event_tracer.debug(f"Got data to send, identity: {identity.hex()} data: {data}")
+                event_tracer.debug(
+                    f"Got data to send, identity: {identity.hex()} data: {data}"
+                )
                 try:
                     if identity is not None:
                         self._sender_identity(data, identity)
@@ -910,7 +1083,9 @@ class Søcket:
                                     "Dropping data!"
                                 )
                 except Exception as e:
-                    event_tracer.exception(f"Unexpected error when sending a message: {e}")
+                    event_tracer.exception(
+                        f"Unexpected error when sending a message: {e}"
+                    )
 
     def check_socket_type(self):
         assert (
@@ -933,7 +1108,7 @@ class Connection:
         recv_event: Callable[[bytes, bytes], None],
         client_connection,
         loop=None,
-        writer_queue_maxsize=0
+        writer_queue_maxsize=0,
     ):
         self.loop = loop or asyncio.get_event_loop()
         self.identity = identity
@@ -971,7 +1146,9 @@ class Connection:
             # Kill the reader task
             self.reader_task.cancel()
             self.writer_task.cancel()
-            await asyncio.gather(self.reader_task, self.writer_task, return_exceptions=True)
+            await asyncio.gather(
+                self.reader_task, self.writer_task, return_exceptions=True
+            )
             self.reader_task = None
             self.writer_task = None
             # Close connection
@@ -1040,7 +1217,10 @@ class Connection:
         heartbeat_message: bytes,
         reader_task: asyncio.Task,
     ):
-        with tracing.Event(tracer, name=f"_send(identity={identity.hex()},heartbeat_interval={heartbeat_interval})") as event_tracer:
+        with tracing.Event(
+            tracer,
+            name=f"_send(identity={identity.hex()},heartbeat_interval={heartbeat_interval})",
+        ) as event_tracer:
             while True:
                 try:
                     try:
@@ -1098,7 +1278,8 @@ class Connection:
 
             try:
                 done, pending = await asyncio.wait(
-                    [self.reader_task, self.writer_task], return_when=asyncio.FIRST_EXCEPTION
+                    [self.reader_task, self.writer_task],
+                    return_when=asyncio.FIRST_EXCEPTION,
                 )
                 for task in pending:
                     task.cancel()
@@ -1109,12 +1290,15 @@ class Connection:
             except asyncio.CancelledError:
                 self.reader_task.cancel()
                 self.writer_task.cancel()
-                await asyncio.gather(self.reader_task, self.writer_task, return_exceptions=True)
+                await asyncio.gather(
+                    self.reader_task, self.writer_task, return_exceptions=True
+                )
                 self.warn_dropping_data()
             except DisconnectError:
                 raise
             finally:
                 event_tracer.info(f"Connection {self.identity.hex()} no longer active")
+
 
 # provide alternative socket class name
 Socket = Søcket
