@@ -94,8 +94,8 @@ class Service:
         """Initialize process service."""
         self.name = name
         self.loop = loop or asyncio.get_running_loop()
-        self.in_socket = Socket(loop=self.loop)
-        self.out_socket = Socket(loop=self.loop)
+        self.in_socket = Socket(loop=self.loop, secret_key=settings.secret_key)
+        self.out_socket = Socket(loop=self.loop, secret_key=settings.secret_key)
         self.address = (
             address
             if address is not None
