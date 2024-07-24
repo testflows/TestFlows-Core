@@ -95,7 +95,7 @@ class WorkerSettings:
 
     def __init__(self):
         self.debug = settings.debug
-        self.time_resolution = settings.debug
+        self.time_resolution = settings.time_resolution
         self.hash_length = settings.hash_length
         self.hash_func = settings.hash_func
         self.no_colors = settings.no_colors
@@ -105,9 +105,9 @@ class WorkerSettings:
         self.read_logfile = self._set_service_object(current().io.io.io.reader.fd)
         self.database = settings.database
         self.show_skipped = settings.show_skipped
+        self.show_retries = settings.show_retries
         self.trim_results = settings.trim_results
         self.random_order = settings.random_order
-        self.service_timeout = settings.service_timeout
         self.global_thread_pool = (
             (
                 settings.global_thread_pool.__class__,
@@ -124,8 +124,11 @@ class WorkerSettings:
         self.global_process_pool = self._set_service_object(
             settings.global_process_pool
         )
+        self.service_timeout = settings.service_timeout
         self.secrets_registry = settings.secrets_registry
         self.trace = settings.trace
+        self.profile = settings.profile
+        self.license_key = settings.license_key
 
     def _set_service_object(self, obj):
         if obj is None:
@@ -402,6 +405,8 @@ class ProcessPoolExecutor(RemotePoolExecutor):
                 str(self._work_queue.address.hostname),
                 "--port",
                 str(self._work_queue.address.port),
+                "--secret-key",
+                str(settings.secret_key.hex()),
             ]
 
             if settings.debug:

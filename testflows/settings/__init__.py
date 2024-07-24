@@ -60,3 +60,5 @@ profile = False
 license_key = None
 #: strict names
 strict_names = False
+#: secret key
+secret_key = None

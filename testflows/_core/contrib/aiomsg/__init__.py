@@ -213,7 +213,7 @@ class Søcket:
         + 0.2,
         pickler=cloudpickle,
         recv_queue_maxsize=0,
-        secret_token: Optional[bytes] = b"",
+        secret_key: Optional[bytes] = b"",
     ):
         """
         :param reconnection_delay: In large microservices
@@ -239,7 +239,7 @@ class Søcket:
         self.identity = identity or uuid.uuid1().bytes
         self.loop = loop or asyncio.get_event_loop()
         self.pickler = pickler
-        self.secret_token = secret_token
+        self.secret_key = secret_key
 
         self._queue_recv = asyncio_Queue(maxsize=recv_queue_maxsize, loop=self.loop)
         self._connections: MutableMapping[bytes, Connection] = ConnectionsDict()
@@ -562,8 +562,8 @@ class Søcket:
                 return
 
             # Verify possession of the security token
-            hello = secrets.token_bytes(128)
-            hello_sig = hmac.new(self.secret_token, hello, hashlib.sha256).digest()
+            hello = secrets.token_bytes(32)
+            hello_sig = hmac.new(self.secret_key, hello, hashlib.sha256).digest()
 
             event_tracer.debug(f"Sending hello challenge {hello.hex()}")
 
@@ -572,7 +572,7 @@ class Søcket:
 
             await msgproto.send_msg(
                 writer,
-                hmac.new(self.secret_token, hello_back, hashlib.sha256).digest(),
+                hmac.new(self.secret_key, hello_back, hashlib.sha256).digest(),
             )
             reply_sig = await msgproto.read_msg(reader)
 

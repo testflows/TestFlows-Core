@@ -18,6 +18,7 @@ import sys
 import time
 import copy
 import random
+import secrets
 import inspect
 import builtins
 import functools
@@ -1710,6 +1711,8 @@ def parse_cli_args(kwargs, parser_schema):
 
         settings.show_skipped = args.pop("_show_skipped", None) or False
         settings.random_order = args.pop("_random", None) or False
+
+        settings.secret_key = secrets.token_bytes(32)
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})

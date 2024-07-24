@@ -29,26 +29,32 @@ from testflows._core.parallel.executor.process import WORKER_READY
 from testflows._core.parallel.service import Address
 
 try:
-    from testflows.enterprise._core.cli.parser import argument_parser as enterprise_parser
+    from testflows.enterprise._core.cli.parser import (
+        argument_parser as enterprise_parser,
+    )
 except:
     enterprise_parser = None
 
 tracer = tracing.getLogger(__name__)
 
+
 def worker_ready():
-    """Signal that worker is ready.
-    """
+    """Signal that worker is ready."""
     sys.stdout.write(WORKER_READY)
     sys.stdout.flush()
 
+
 def worker(args):
-    """TestFlows process worker.
-    """
+    """TestFlows process worker."""
     worker_ready()
     process_service()
 
-    work_queue = WorkQueue(oid=int(args.oid), identity=bytes.fromhex(args.identity), address=Address(args.hostname, int(args.port)))
-    
+    work_queue = WorkQueue(
+        oid=int(args.oid),
+        identity=bytes.fromhex(args.identity),
+        address=Address(args.hostname, int(args.port)),
+    )
+
     tracer.info(f"starting worker loop {os.getpid()}")
     while True:
         with tracing.Event(tracer, "waiting for work item") as event_tracer:
@@ -69,25 +75,65 @@ def worker(args):
                 work_queue.task_done()
     tracer.info(f"exited worker loop {os.getpid()}")
 
-parser = ArgumentParser(prog="tfs-worker", description="""Worker process that executes remote tests.""")
 
-parser.add_argument("--debug", dest="debug", action="store_true",
-                    help="enable debugging mode", default=False)
-parser.add_argument("--no-colors", dest="no_colors", action="store_true",
-                    help="disable terminal color highlighting", default=False)
-parser.add_argument("--identity", type=str, metavar="identity", required=True,
-                    help="identity of the remote service that provides work queue")
-parser.add_argument("--hostname", type=str, metavar="hostname", required=True,
-                    help="hostname of the remote service that provides work queue")
-parser.add_argument("--port", type=int, metavar="port", required=True,
-                    help="port of the remote service that provide work queue")
-parser.add_argument("--oid", type=str, metavar="id", required=True,
-                    help="object id of the work queue on the remote service")
-parser.add_argument("--trace", dest="trace", 
-                    type=trace_level_type, default=None,
-                    metavar=trace_level_type.metavar,
-                    help="enable low-level test program tracing for debugging "
-                        "using Python's logging module at the specified level.")
+parser = ArgumentParser(
+    prog="tfs-worker", description="""Worker process that executes remote tests."""
+)
+
+parser.add_argument(
+    "--debug",
+    dest="debug",
+    action="store_true",
+    help="enable debugging mode",
+    default=False,
+)
+parser.add_argument(
+    "--no-colors",
+    dest="no_colors",
+    action="store_true",
+    help="disable terminal color highlighting",
+    default=False,
+)
+parser.add_argument(
+    "--identity",
+    type=str,
+    metavar="identity",
+    required=True,
+    help="identity of the remote service that provides work queue",
+)
+parser.add_argument(
+    "--hostname",
+    type=str,
+    metavar="hostname",
+    required=True,
+    help="hostname of the remote service that provides work queue",
+)
+parser.add_argument(
+    "--port",
+    type=int,
+    metavar="port",
+    required=True,
+    help="port of the remote service that provide work queue",
+)
+parser.add_argument(
+    "--oid",
+    type=str,
+    metavar="id",
+    required=True,
+    help="object id of the work queue on the remote service",
+)
+parser.add_argument(
+    "--secret-key", type=str, metavar="key", required=True, help="secret key"
+)
+parser.add_argument(
+    "--trace",
+    dest="trace",
+    type=trace_level_type,
+    default=None,
+    metavar=trace_level_type.metavar,
+    help="enable low-level test program tracing for debugging "
+    "using Python's logging module at the specified level.",
+)
 
 if enterprise_parser:
     enterprise_parser(parser)
@@ -109,6 +155,9 @@ try:
     if args.no_colors:
         settings.no_colors = True
 
+    if args.secret_key:
+        settings.secret_key = bytes.fromhex(args.secret_key)
+
     if unknown:
         raise ExitWithError(f"unknown argument {unknown}")
 
@@ -121,7 +170,7 @@ try:
 
 except (ExitException, KeyboardInterrupt, Exception) as exc:
     if settings.debug:
-        sys.stderr.write(warning(exception(), eol='\n'))
+        sys.stderr.write(warning(exception(), eol="\n"))
     if not isinstance(exc, (KeyboardInterrupt, BrokenPipeError)):
         sys.stderr.write(danger("error: " + str(exc).strip()))
     else:
