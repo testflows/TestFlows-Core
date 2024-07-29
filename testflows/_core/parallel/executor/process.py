@@ -407,6 +407,8 @@ class ProcessPoolExecutor(RemotePoolExecutor):
                 str(self._work_queue.address.port),
                 "--secret-key",
                 str(settings.secret_key.hex()),
+                "--ssl-dir",
+                str(settings.ssl_dir),
             ]
 
             if settings.debug:

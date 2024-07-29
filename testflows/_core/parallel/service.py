@@ -40,6 +40,8 @@ from .asyncio import (
 )
 from .asyncio import TimeoutError as AsyncTimeoutError
 from .executor.thread import SharedThreadPoolExecutor
+from .ssl import new_client_context as new_client_ssl_context
+from .ssl import new_server_context as new_server_ssl_context
 
 Address = namedtuple("address", "hostname port", defaults=(None,))
 
@@ -345,6 +347,7 @@ class Service:
                     await self.out_socket.connect(
                         address.hostname,
                         address.port,
+                        ssl_context=new_client_ssl_context(),
                         future=future,
                         expected_identity=identity,
                         reconnection_delay=Socket.exponential_backoff(
@@ -397,7 +400,9 @@ class Service:
                 event_tracer.debug("got lock")
                 self.executor.__enter__()
                 await self.in_socket.bind(
-                    hostname=self.address.hostname, port=self.address.port
+                    hostname=self.address.hostname,
+                    port=self.address.port,
+                    ssl_context=new_server_ssl_context(),
                 )
                 self.address = Address(*self.in_socket.bind_address)
                 self.tracer = tracing.EventAdapter(tracer, None, source=str(self))

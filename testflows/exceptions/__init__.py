@@ -106,3 +106,9 @@ class ExecutorWorkerError(ExecutorError):
     """Executor worker error."""
 
     pass
+
+
+class SSLConfigError(TestFlowsError):
+    """SSL configuration error."""
+
+    pass

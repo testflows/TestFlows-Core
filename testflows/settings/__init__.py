@@ -62,3 +62,5 @@ license_key = None
 strict_names = False
 #: secret key
 secret_key = None
+#: ssl configuration dir
+ssl_dir = None

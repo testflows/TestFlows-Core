@@ -27,6 +27,7 @@ from testflows._core.cli.arg.parser import ArgumentParser
 from testflows._core.cli.arg.type import trace_level as trace_level_type
 from testflows._core.parallel.executor.process import WORKER_READY
 from testflows._core.parallel.service import Address
+from testflows._core.parallel.ssl import default_ssl_dir
 
 try:
     from testflows.enterprise._core.cli.parser import (
@@ -123,6 +124,13 @@ parser.add_argument(
     help="object id of the work queue on the remote service",
 )
 parser.add_argument(
+    "--ssl-dir",
+    type=str,
+    metavar="dir",
+    help="directory with CA and host SSL certificates",
+    required=True,
+)
+parser.add_argument(
     "--secret-key", type=str, metavar="key", required=True, help="secret key"
 )
 parser.add_argument(
@@ -157,6 +165,11 @@ try:
 
     if args.secret_key:
         settings.secret_key = bytes.fromhex(args.secret_key)
+
+    if args.ssl_dir:
+        settings.ssl_dir = args.ssl_dir
+    else:
+        settings.ssl_dir = default_ssl_dir()
 
     if unknown:
         raise ExitWithError(f"unknown argument {unknown}")

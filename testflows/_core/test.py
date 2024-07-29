@@ -137,6 +137,7 @@ from .parallel.asyncio import (
     wrap_future,
     OptionalFuture,
 )
+from .parallel.ssl import default_ssl_dir
 from .jupyter_notebook import is_jupyter_notebook
 
 tracer = tracing.getLogger(__name__)
@@ -1713,6 +1714,7 @@ def parse_cli_args(kwargs, parser_schema):
         settings.random_order = args.pop("_random", None) or False
 
         settings.secret_key = secrets.token_bytes(32)
+        settings.ssl_dir = default_ssl_dir()
 
         if args.get("_pause_before"):
             xflags = kwargs.get("xflags", {})

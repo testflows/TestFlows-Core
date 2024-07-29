@@ -82,6 +82,7 @@ setup(
         "testflows._core.cli.arg.handlers.requirement",
         "testflows._core.cli.arg.handlers.snapshot",
         "testflows._core.cli.arg.handlers.show",
+        "testflows._core.cli.arg.handlers.ssl",
         "testflows._core.combinatorics",
     ],
     package_data={
