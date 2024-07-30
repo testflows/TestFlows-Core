@@ -2301,7 +2301,10 @@ class TestDefinition(object):
                     else None or kwargs.get("ffails")
                 )
                 # propagate only, skip, start, and end
-                if not kwargs.get("subtype") is TestSubType.Combination:
+                if not (
+                    kwargs.get("subtype") is TestSubType.Combination
+                    and kwargs.get("pattern") is not None
+                ):
                     kwargs["only"] = parent.only or kwargs.get("only")
                     kwargs["skip"] = parent.skip or kwargs.get("skip")
                     kwargs["start"] = parent.start or kwargs.get("start")
