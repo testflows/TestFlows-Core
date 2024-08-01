@@ -1619,8 +1619,10 @@ def parse_cli_args(kwargs, parser_schema):
     )
 
     try:
-        args, unknown = parser.parse_known_args()
-        args = vars(args)
+        args, unknown = {}, None
+        if not is_jupyter_notebook():
+            args, unknown = parser.parse_known_args()
+            args = vars(args)
         exc = None
         default_config = os.path.join(os.path.expanduser("~"), ".testflows.yml")
         configs = []
@@ -1631,11 +1633,11 @@ def parse_cli_args(kwargs, parser_schema):
         if args.get("_config"):
             configs += args.pop("_config")
 
-        if args["_no_colors"] is None:
+        if args.get("_no_colors") is None:
             args["_no_colors"] = True
-        elif args["_no_colors"] == NoneValue:
+        elif args.get("_no_colors") == NoneValue:
             args["_no_colors"] = None
-        if args["_trim_results"] == NoneValue:
+        if args.get("_trim_results") == NoneValue:
             args["_trim_results"] = None
 
         try:
@@ -1669,7 +1671,7 @@ def parse_cli_args(kwargs, parser_schema):
         if exc is not None:
             raise exc from None
 
-        if unknown and not is_jupyter_notebook():
+        if unknown:
             raise ExitWithError(f"unknown argument {unknown}")
 
         settings.trace = get(args.pop("_trace", None), get(settings.trace, False))
