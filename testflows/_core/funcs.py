@@ -554,6 +554,18 @@ def chunks(iterator, n):
             yield chunk
 
 
+def partial(func, *args, **keywords):
+    """Create a partial function with the specified arguments preset to
+    the given arguments and keywords."""
+
+    @functools.wraps(func)
+    def newfunc(*fargs, **fkeywords):
+        newkeywords = {**keywords, **fkeywords}
+        return func(*args, *fargs, **newkeywords)
+
+    return newfunc
+
+
 def always(*args, **kwargs):
     """Always True condition that can be used with 'when' clauses."""
     return True

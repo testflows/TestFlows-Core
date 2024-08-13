@@ -17,6 +17,7 @@ import re
 import sys
 import time
 import copy
+import uuid
 import random
 import secrets
 import inspect
@@ -91,7 +92,7 @@ from .constants import name_sep, id_sep
 from .io import TestIO, LogWriter
 from .name import join, depth, match, escape, absname, isabs, basename, clean
 from .funcs import exception, pause, result, value, input
-from .init import init
+from .init import init, _at_exit
 from .cli.arg.parser import ArgumentParser as ArgumentParserClass
 from .cli.arg.common import epilog as common_epilog
 from .cli.arg.exit import ExitWithError, ExitException
@@ -1633,7 +1634,7 @@ def parse_cli_args(kwargs, parser_schema):
         if args.get("_config"):
             configs += args.pop("_config")
 
-        if args.get("_no_colors") is None:
+        if args.get("_no_colors", NoneValue) is None:
             args["_no_colors"] = True
         elif args.get("_no_colors") == NoneValue:
             args["_no_colors"] = None
@@ -1678,7 +1679,6 @@ def parse_cli_args(kwargs, parser_schema):
         tracing.configure_tracing()
 
         settings.profile = get(args.pop("_profile", None), get(settings.profile, False))
-
         settings.no_colors = get(
             args.pop("_no_colors", None), get(settings.no_colors, False)
         )
@@ -1692,28 +1692,35 @@ def parse_cli_args(kwargs, parser_schema):
         if args.get("_name"):
             kwargs["name"] = args.pop("_name")
 
-        if args.get("_id"):
-            settings.test_id = args.get("_id")
-            args.pop("_id")
+        settings.test_id = get(
+            args.pop("_id", None), get(settings.test_id, str(uuid.uuid1()))
+        )
 
         if args.get("_log"):
             logfile = os.path.abspath(args.get("_log"))
             settings.write_logfile = logfile
             args.pop("_log")
         else:
-            settings.write_logfile = temp_filename(extension="log")
+            settings.write_logfile = get(
+                settings.write_logfile, temp_filename(extension="log")
+            )
 
         settings.read_logfile = settings.write_logfile
         if os.path.exists(settings.write_logfile):
             os.remove(settings.write_logfile)
 
-        settings.output_format = args.pop("_output", None) or "nice"
-
-        if args.get("_database"):
-            settings.database = args.pop("_database")
-
-        settings.show_skipped = args.pop("_show_skipped", None) or False
-        settings.random_order = args.pop("_random", None) or False
+        settings.output_format = get(
+            args.pop("_output", None), get(settings.output_format, "nice")
+        )
+        settings.database = get(
+            args.pop("_database", None), get(settings.database, None)
+        )
+        settings.show_skipped = get(
+            args.pop("_show_skipped", None), get(settings.show_skipped, False)
+        )
+        settings.random_order = get(
+            args.pop("_random", None), get(settings.random_order, False)
+        )
 
         settings.secret_key = secrets.token_bytes(32)
         settings.ssl_dir = default_ssl_dir()
@@ -3053,6 +3060,7 @@ class TestDefinition(object):
                 sys.exit(1)
 
             if is_jupyter_notebook():
+                _at_exit()
                 reset_parallel_context()
                 importlib.reload(settings)
                 LogWriter.instance = None

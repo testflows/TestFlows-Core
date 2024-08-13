@@ -141,6 +141,7 @@ from testflows._core.funcs import (
     xnull,
     pause,
     getsattr,
+    partial,
     always,
     never,
     noop,

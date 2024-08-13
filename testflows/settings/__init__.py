@@ -12,7 +12,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import uuid
 import hashlib
 
 #: debug mode
@@ -26,7 +25,7 @@ hash_func = hashlib.sha1
 #: disable cli colors
 no_colors = False
 #: test id
-test_id = str(uuid.uuid1())
+test_id = None
 #: output handler format
 output_format = None
 #: log file
