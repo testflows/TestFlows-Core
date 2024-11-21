@@ -18,7 +18,12 @@ from testflows._core.cli.text import primary, secondary
 from testflows._core.cli.arg.common import epilog
 from testflows._core.cli.arg.common import HelpFormatter
 from testflows._core.cli.arg.handlers.handler import Handler as HandlerBase
-from testflows._core.parallel.ssl import show_key, show_cert
+from testflows._core.parallel.ssl import (
+    show_key,
+    show_cert,
+    show_ssh_key,
+    show_ssh_pubkey,
+)
 
 
 class Handler(HandlerBase):
@@ -77,6 +82,27 @@ class Handler(HandlerBase):
             default=False,
         )
 
+        parser.add_argument(
+            "--ssh",
+            action="store_true",
+            help="show SSH key pair",
+            default=False,
+        )
+
+        parser.add_argument(
+            "--ssh-key",
+            action="store_true",
+            help="show SSH private key",
+            default=False,
+        )
+
+        parser.add_argument(
+            "--ssh-pubkey",
+            action="store_true",
+            help="show SSH public key",
+            default=False,
+        )
+
         parser.set_defaults(func=cls())
 
     def handle(self, args):
@@ -90,9 +116,13 @@ class Handler(HandlerBase):
             and not args.host
             and not args.host_key
             and not args.host_cert
+            and not args.ssh
+            and not args.ssh_key
+            and not args.ssh_pubkey
         ):
             args.ca = True
             args.host = True
+            args.ssh = True
 
         if args.ca:
             args.ca_key = True
@@ -128,4 +158,24 @@ class Handler(HandlerBase):
             host_crt_output = show_cert(dir=ssl_dir, cert="host.crt")
             print(
                 secondary(textwrap.indent(host_crt_output.strip(), prefix="  "), eol="")
+            )
+
+        if args.ssh:
+            args.ssh_key = True
+            args.ssh_pubkey = True
+
+        if args.ssh_key:
+            print(primary("SSH private key", eol=""))
+            ssh_key_output = show_ssh_key(dir=ssl_dir, key="host.ssh.key")
+            print(
+                secondary(textwrap.indent(ssh_key_output.strip(), prefix="  "), eol="")
+            )
+
+        if args.ssh_pubkey:
+            print(primary("SSH public key", eol=""))
+            ssh_pubkey_output = show_ssh_pubkey(dir=ssl_dir, key="host.ssh.key.pub")
+            print(
+                secondary(
+                    textwrap.indent(ssh_pubkey_output.strip(), prefix="  "), eol=""
+                )
             )

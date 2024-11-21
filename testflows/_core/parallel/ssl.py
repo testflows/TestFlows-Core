@@ -28,6 +28,14 @@ class Certificate:
         self.cert = cert
 
 
+class SSHIdentity:
+    """SSH identity file."""
+
+    def __init__(self, key, pubkey) -> None:
+        self.key = key
+        self.pubkey = pubkey
+
+
 def default_ssl_dir():
     """Return default SSL directory."""
     return os.path.join(os.path.expanduser("~"), ".testflows", "ssl")
@@ -38,9 +46,16 @@ def get_ca_cert(dir=None):
     if dir is None:
         dir = default_ssl_dir()
 
-    return Certificate(
+    ca_cert = Certificate(
         key=os.path.join(dir, "ca.key"), cert=os.path.join(dir, "ca.crt")
     )
+
+    if not os.path.exists(ca_cert.cert):
+        raise SSLConfigError(
+            f"certificate authority SSL certificate '{ca_cert.cert}' not found"
+        )
+
+    return ca_cert
 
 
 def get_host_cert(dir=None):
@@ -48,9 +63,38 @@ def get_host_cert(dir=None):
     if dir is None:
         dir = default_ssl_dir()
 
-    return Certificate(
+    host_cert = Certificate(
         key=os.path.join(dir, "host.key"), cert=os.path.join(dir, "host.crt")
     )
+
+    if not os.path.exists(host_cert.cert):
+        raise SSLConfigError(f"host SSL certificate '{host_cert.cert}' not found")
+    if not os.path.exists(host_cert.key):
+        raise SSLConfigError(f"host SSL private key '{host_cert.key}' not found")
+
+    return host_cert
+
+
+def get_host_ssh_identity(dir=None):
+    """Return host SSH identity."""
+    if dir is None:
+        dir = default_ssl_dir()
+
+    host_ssh_identity = SSHIdentity(
+        key=os.path.join(dir, "host.ssh.key"),
+        pubkey=os.path.join(dir, "host.ssh.key.pub"),
+    )
+
+    if not os.path.exists(host_ssh_identity.key):
+        raise SSLConfigError(
+            f"host SSH private key '{host_ssh_identity.key}' not found"
+        )
+    if not os.path.exists(host_ssh_identity.pubkey):
+        raise SSLConfigError(
+            f"host SSH public key '{host_ssh_identity.pubkey}' not found"
+        )
+
+    return host_ssh_identity
 
 
 def new_context(purpose, dir=None):
@@ -61,17 +105,8 @@ def new_context(purpose, dir=None):
     if not os.path.exists(ssl_dir):
         raise SSLConfigError(f"SSL directory '{ssl_dir}' not found")
 
-    ca_cert = get_ca_cert()
-    host_cert = get_host_cert()
-
-    if not os.path.exists(ca_cert.cert):
-        raise SSLConfigError(
-            f"certificate authority SSL certificate '{ca_cert.cert}' not found"
-        )
-    if not os.path.exists(host_cert.cert):
-        raise SSLConfigError(f"host SSL certificate '{host_cert.cert}' not found")
-    if not os.path.exists(host_cert.key):
-        raise SSLConfigError(f"host SSL private key '{host_cert.key}' not found")
+    ca_cert = get_ca_cert(dir=ssl_dir)
+    host_cert = get_host_cert(dir=ssl_dir)
 
     ssl_context = ssl.create_default_context(purpose=purpose, cafile=ca_cert.cert)
 
@@ -171,6 +206,20 @@ def new_host_cert(
     return Certificate(key=host_key, cert=host_crt)
 
 
+def new_host_ssh_identity(dir, length=2048, verbose=False):
+    """Generate host SSH private key and public key in the given directory."""
+
+    host_ssh_key = os.path.join(dir, "host.ssh.key")
+    host_ssh_pubkey = os.path.join(dir, "host.ssh.pub")
+
+    command = f"yes | ssh-keygen -t rsa -b {length} -f '{host_ssh_key}' -N ''"
+    if verbose:
+        print(secondary(command, eol=""))
+    subprocess.check_call(command, stdout=subprocess.PIPE, shell=True)
+
+    return SSHIdentity(key=host_ssh_key, pubkey=host_ssh_pubkey)
+
+
 def show_cert(cert, dir=None):
     """Show certificate."""
     if dir is None:
@@ -188,6 +237,28 @@ def show_key(key, dir=None):
         dir = default_ssl_dir()
     return subprocess.check_output(
         f"openssl rsa -noout -text -in '{os.path.join(dir, key)}'",
+        shell=True,
+        text=True,
+    )
+
+
+def show_ssh_key(key, dir=None):
+    """Show SSH private key."""
+    if dir is None:
+        dir = default_ssl_dir()
+    return subprocess.check_output(
+        f"cat '{os.path.join(dir, key)}'",
+        shell=True,
+        text=True,
+    )
+
+
+def show_ssh_pubkey(key, dir=None):
+    """Show SSH public key."""
+    if dir is None:
+        dir = default_ssl_dir()
+    return subprocess.check_output(
+        f"cat '{os.path.join(dir, key)}'",
         shell=True,
         text=True,
     )
