@@ -1,4 +1,4 @@
-# Copyright 2019 Katteli Inc.
+# Copyright 2019-2024 Katteli Inc.
 # TestFlows.com Open-Source Software Testing Framework (http://testflows.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -86,6 +86,8 @@ CLEANUP = 1 << 41
 RETRY = 1 << 42
 # nested retry
 NESTED_RETRY = 1 << 43
+# artificial intelligence test
+AI = 1 << 44
 # expected result
 ERESULT = EOK | EFAIL | ESKIP | EERROR
 # expected any result
@@ -150,6 +152,7 @@ class Flags(object):
         CLEANUP,
         RETRY,
         NESTED_RETRY,
+        AI,
     ]
     all_str = [
         "TE",
@@ -188,6 +191,7 @@ class Flags(object):
         "CLEANUP",
         "RETRY",
         "NESTED_RETRY",
+        "AI",
     ]
 
     def __init__(self, flags=0):

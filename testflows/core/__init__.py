@@ -166,6 +166,7 @@ from testflows._core.flags import (
     DOCUMENT,
     MANUAL,
     AUTO,
+    AI,
 )
 from testflows._core.flags import MANDATORY, CLEAR, NOT_REPEATABLE
 from testflows._core.flags import EANY, ERESULT, XRESULT

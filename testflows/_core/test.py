@@ -1991,12 +1991,14 @@ class TestDefinition(object):
                 )
             elif (
                 isinstance(run, TestBase)
-                or inspect.isclass(run)
-                and issubclass(run, (TestBase, TestDefinition))
+                or (
+                    inspect.isclass(run) and issubclass(run, (TestBase, TestDefinition))
+                )
+                or hasattr(run, "__call__")
             ):
                 kwargs["test"] = run
             else:
-                raise TypeError(f"'{run}' is not a valid test type")
+                raise TypeError(f"'{run}' is not a valid test or callable type")
 
         elif test:
             if isinstance(test, TestDecorator):
@@ -2009,12 +2011,15 @@ class TestDefinition(object):
                 )
             elif (
                 isinstance(test, TestBase)
-                or inspect.isclass(test)
-                and issubclass(test, (TestBase, TestDefinition))
+                or (
+                    inspect.isclass(test)
+                    and issubclass(test, (TestBase, TestDefinition))
+                )
+                or hasattr(test, "__call__")
             ):
                 kwargs["test"] = test
             else:
-                raise TypeError(f"'{test}' is not a valid test type")
+                raise TypeError(f"'{test}' is not a valid test or callable type")
 
         self = cls.__create__(**kwargs)
         self.no_arguments = no_arguments
@@ -2059,7 +2064,7 @@ class TestDefinition(object):
             if is_running_in_event_loop():
                 raise RuntimeError("should not be running inside the async event loop")
 
-            if test and isinstance(test, TestDecorator):
+            if test is not None:
                 self.repeatable_func = test
 
                 def _test_wrapper():
@@ -2078,21 +2083,31 @@ class TestDefinition(object):
                             value("return", value=r)
                     return _test.result
 
-                if asyncio.iscoroutinefunction(test.func):
+                test_func = test
+                if isinstance(test, TestDecorator):
+                    test_func = test.func
+
+                if asyncio.iscoroutinefunction(test_func):
                     with AsyncPoolExecutor(join_on_shutdown=False) as executor:
                         return executor.submit(_async_test_wrapper).result()
                 else:
                     return _test_wrapper()
+
             else:
                 with self as _test:
                     pass
                 return _test.result
 
         async def async_callable():
-            if test and isinstance(test, TestDecorator):
+            if test is not None:
                 self.repeatable_func = test
+
                 async with self as _test:
-                    if not asyncio.iscoroutinefunction(test.func):
+                    test_func = test
+                    if isinstance(test, TestDecorator):
+                        test_func = test.func
+
+                    if not asyncio.iscoroutinefunction(test_func):
                         with ThreadPoolExecutor(join_on_shutdown=False) as executor:
 
                             def _wrapper(test):
@@ -2233,11 +2248,12 @@ class TestDefinition(object):
 
             test = kwargs.pop("test", None)
             kwargs_test = test
+
             if test and isinstance(test, TestDecorator):
                 test = test.func.kwargs.get("test", None)
-            test = test if test is not None else TestBase
-            if not issubclass(test, TestBase):
-                raise TypeError(f"{test} must be subclass of TestBase")
+
+            if not (inspect.isclass(test) and issubclass(test, TestBase)):
+                test = TestBase
 
             name = test.make_name(
                 kwargs.pop("name", None),
