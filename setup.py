@@ -41,6 +41,7 @@ setup(
         "testflows.combinatorics",
         "testflows._core",
         "testflows._core.contrib",
+        "testflows._core.contrib.lzma",
         "testflows._core.contrib.arpeggio",
         "testflows._core.contrib.markdown2",
         "testflows._core.contrib.pygments",
