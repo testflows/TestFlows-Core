@@ -58,7 +58,7 @@ def screenshot(_cache={"count": 0}):
     driver: WebDriver = current().context.webdriver
 
     try:
-        driver.save_screenshot(f"screenshot_{_cache['count']}.png")
+        driver.save_screenshot(f"screenshots/screenshot_{_cache['count']}.png")
         screenshot_base64 = driver.get_screenshot_as_base64()
         _cache["count"] += 1
     except Exception as e:
@@ -411,6 +411,20 @@ def double_click(coordinate: tuple = (0, 0)) -> bool:
         raise ValueError(f"An error occurred while performing a double click: {e}")
 
 
+@tool
+def coordinates(coordinates: dict[str, tuple]) -> bool:
+    """Store a list of coordinates for elements
+
+    Args:
+        coordinates (dict[str, tuple]): A dictionary of element names and their coordinates.
+
+    Returns:
+        bool: True if the coordinates are stored successfully.
+    """
+    debug(f"Coordinates: {coordinates}")
+    return True
+
+
 tools = {
     "take_screenshot": take_screenshot,
     "press_key": press_key,
@@ -423,6 +437,7 @@ tools = {
     "page_goto": page_goto,
     "expect_tobe": expect_toBe,
     "expect_nottobe": expect_notToBe,
+    "coordinates": coordinates,
     # "result_assertion": result_Assertion,
     # "result_query": result_Query,
     "result_action": result_Action,
@@ -493,6 +508,9 @@ For example: you can use chain_tool_calls in the following way:
 
 The result_action and result_error MUST ALWAYS be called at the end.
 Use result_error if the task cannot be completed or you've found an error.
+
+You MUST keep your output to the MINIMUM.
+You MUST only call the tools. Never provide any text. 
 """
 )
 

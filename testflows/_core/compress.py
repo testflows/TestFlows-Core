@@ -16,11 +16,11 @@ import io
 import os
 import sys
 import time
-import lzma
+import testflows._core.contrib.lzma as lzma
 import builtins
 import _compression
 
-from lzma import compress, decompress
+from testflows._core.contrib.lzma import compress, decompress
 
 Compressor = lzma.LZMACompressor
 Decompressor = lzma.LZMADecompressor
