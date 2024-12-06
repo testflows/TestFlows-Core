@@ -62,7 +62,7 @@ def color_result(result, icon=None):
 
     if icon is None:
         icon = result_icon(result)
-    if result.startswith("X"):
+    if result[0] == "X":
         return color(icon, "blue", attrs=["bold"])
     elif result == "OK":
         return color(icon, "green", attrs=["bold"])
@@ -207,7 +207,7 @@ def format_result(
         if _result_message:
             out += f"\n{indent}  {color(format_multiline(_result_message, indent).lstrip(), 'yellow', attrs=['bold'])}"
         out += "\n"
-    elif not only_new and result.startswith("X"):
+    elif not only_new and result[0] == "X":
         out += f" {_test}"
         if msg["result_reason"]:
             out += f"\n{indent}  {color(msg['result_reason'], 'blue', attrs=['bold'])}"

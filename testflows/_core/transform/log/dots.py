@@ -24,7 +24,7 @@ count = 0
 
 
 def color_result(result):
-    if result.startswith("X"):
+    if result[0] == "X":
         return color(".", "blue", attrs=["bold"])
     elif result == "OK":
         return color(".", "green", attrs=["bold"])

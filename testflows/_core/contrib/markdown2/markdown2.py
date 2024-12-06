@@ -1359,7 +1359,7 @@ class Markdown(object):
             link_text = text[start_idx+1:p]
 
             # Possibly a footnote ref?
-            if "footnotes" in self.extras and link_text.startswith("^"):
+            if "footnotes" in self.extras and link_text[0] == "^":
                 normed_id = re.sub(r'\W', '-', link_text[1:])
                 if normed_id in self.footnotes:
                     self.footnote_ids.append(normed_id)
@@ -2671,7 +2671,7 @@ def main(argv=None):
         try:
             for i, line in enumerate(f.readlines()):
                 if not line.strip(): continue
-                if line.lstrip().startswith("#"): continue
+                if line.lstrip()[0] == "#": continue
                 try:
                     pat, href = line.rstrip().rsplit(None, 1)
                 except ValueError:
