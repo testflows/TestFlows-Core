@@ -1018,7 +1018,7 @@ def auto_expose(obj):
     properties = []
 
     for name, value in inspect.getmembers(obj):
-        if name.startswith("_"):
+        if name[0] == "_":
             continue
 
         if type(value) in [

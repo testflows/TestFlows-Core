@@ -52,7 +52,7 @@ def color_other(other):
 def color_result(result, attrs=None, retry=False):
     if attrs is None:
         attrs = ["bold"]
-    if result.startswith("X"):
+    if result[0] == "X":
         return functools.partial(color, color="blue", attrs=attrs)
     elif result == "OK":
         return functools.partial(color, color="green", attrs=attrs)

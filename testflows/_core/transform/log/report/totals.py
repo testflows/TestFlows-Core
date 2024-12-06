@@ -26,7 +26,7 @@ def color_line(line):
 
 
 def color_result(result, text):
-    if result.startswith("X"):
+    if result[0] == "X":
         return color(text, "blue", attrs=["bold"])
     elif result == "OK":
         return color(text, "green", attrs=["bold"])

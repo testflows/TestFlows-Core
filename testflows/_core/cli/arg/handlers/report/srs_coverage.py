@@ -34,7 +34,7 @@ def color_primary():
 
 
 def result_priority(result):
-    if result.startswith("X"):
+    if result[0] == "X":
         return 2
     elif result == "OK":
         return 1
@@ -45,7 +45,7 @@ def result_priority(result):
 
 
 def color_result(result):
-    if result.startswith("X"):
+    if result[0] == "X":
         return functools.partial(color, color="blue", attrs=["bold"])
     elif result == "OK":
         return functools.partial(color, color="green", attrs=["bold"])

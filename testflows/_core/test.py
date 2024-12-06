@@ -349,7 +349,7 @@ class Context(object):
 
     def __getattr__(self, name):
         try:
-            if name.startswith("_"):
+            if name[0] == "_":
                 return self.__dict__[name]
         except KeyError:
             raise AttributeError(name) from None
@@ -365,7 +365,7 @@ class Context(object):
                 raise AttributeError(name) from None
 
     def __setattr__(self, name, value):
-        if name.startswith("_"):
+        if name[0] == "_":
             self.__dict__[name] = value
         else:
             self._state[name] = value
@@ -377,7 +377,7 @@ class Context(object):
             raise AttributeError(name) from None
 
     def __contains__(self, name):
-        if name.startswith("_"):
+        if name[0] == "_":
             return name in self.__dict__
 
         curr = self
@@ -2240,7 +2240,7 @@ class TestDefinition(object):
                     ),
                 )
                 kwargs["args"].update(
-                    {k: v for k, v in cli_args.items() if not k.startswith("_")}
+                    {k: v for k, v in cli_args.items() if k[0] != "_"}
                 )
                 if settings.profile:
                     self.profiler = cProfile.Profile()

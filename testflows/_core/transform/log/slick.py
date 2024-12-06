@@ -56,7 +56,7 @@ def color_result(result):
             return "\u2718"
 
     icon = result_icon(result)
-    if result.startswith("X"):
+    if result[0] == "X":
         return color(icon, "blue", attrs=["bold"])
     elif result == "OK":
         return color(icon, "green", attrs=["bold"])
@@ -200,7 +200,7 @@ def format_result(msg, last_test_id):
         if _result_message:
             out += color_test_name(",")
             out += f" {color(format_multiline(_result_message, _indent).lstrip(), 'yellow', attrs=['bold'])}"
-    elif result.startswith("X"):
+    elif result[0] == "X":
         out += f" {_test}"
         if msg["result_reason"]:
             out += color_test_name(",")
