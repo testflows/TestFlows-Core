@@ -1159,7 +1159,7 @@ class Args(dict):
 
     def __call__(self, func):
         for k, v in self.items():
-            if not k.startswith("_"):
+            if not k[0] == "_":
                 setattr(func, k, v)
         return func
 

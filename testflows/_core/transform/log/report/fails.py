@@ -27,7 +27,7 @@ indent = " " * 2
 def color_result(result, attrs=None):
     if attrs is None:
         attrs = ["bold"]
-    if result.startswith("X"):
+    if result[0] == "X":
         return functools.partial(color, color="blue", attrs=attrs)
     elif result == "OK":
         return functools.partial(color, color="green", attrs=attrs)
@@ -49,7 +49,7 @@ def add_result(msg, results):
     result = msg["result_type"]
 
     if getattr(TestType, msg["test_type"]) < TestType.Iteration:
-        if not result.startswith("X"):
+        if not result[0] == "X":
             return
     if flags & SKIP and settings.show_skipped is False:
         return
@@ -87,7 +87,7 @@ def generate(results, divider, only_new=False):
         )
         out += "\n"
 
-        if result.startswith("X"):
+        if result[0] == "X":
             if not only_new:
                 xfails += out
         else:

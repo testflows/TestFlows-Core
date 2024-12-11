@@ -57,7 +57,7 @@ def color_test_name(name, no_colors=False, use_full_testname=False):
 def color_result(result, attrs=None, no_colors=False, retry=False):
     if attrs is None:
         attrs = ["bold"]
-    if result.startswith("X"):
+    if result[0] == "X":
         return functools.partial(color, color="blue", attrs=attrs, no_colors=no_colors)
     elif result == "OK":
         return functools.partial(color, color="green", attrs=attrs, no_colors=no_colors)
@@ -463,7 +463,7 @@ def format_result(msg, no_colors=False, use_indent=False, use_full_testname=Fals
         if _result_message:
             out += color_test_name(",", no_colors=no_colors)
             out += f" {_color(format_multiline(_result_message, _indent).lstrip(), no_colors=no_colors)}"
-    elif result.startswith("X"):
+    elif result[0] == "X":
         out += f" {_test}"
         if msg["result_reason"]:
             out += color_test_name(",", no_colors=no_colors)
