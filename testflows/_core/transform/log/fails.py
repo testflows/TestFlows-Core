@@ -14,7 +14,6 @@
 # limitations under the License.
 import textwrap
 import functools
-import re
 
 import testflows.settings as settings
 
@@ -227,7 +226,6 @@ formatters = {
     Message.RESULT.name: (format_result,),
 }
 
-
 def transform(
     brisk=False, plain=False, nice=False, pnice=False, only_new=False, show_input=True
 ):
@@ -260,11 +258,10 @@ def transform(
                 if not test_id in buffer:
                     buffer[test_id] = []
 
-                pattern = re.compile(
-                    r"|".join(re.escape(_t + sep) for _t in skip_for_buffer[0])
-                )
-                if pattern.match(test_id):
-                    skip = True
+                for _t in skip_for_buffer[0]:
+                    if test_id.startswith(_t + sep):
+                        skip = True
+                        break
 
                 if not skip:
                     buffer[test_id].append(line)
