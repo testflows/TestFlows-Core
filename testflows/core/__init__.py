@@ -162,6 +162,8 @@ from testflows._core.flags import (
     PAUSE,
     PAUSE_BEFORE,
     PAUSE_AFTER,
+    PAUSE_ON_FAIL,
+    PAUSE_ON_PASS,
     REPORT,
     DOCUMENT,
     MANUAL,
