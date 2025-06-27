@@ -265,9 +265,9 @@ class Handler(HandlerBase):
             "input",
             metavar="input",
             type=argtype.logfile("r", bufsize=1, encoding="utf-8"),
-            nargs="?",
-            help="input log, default: stdin",
-            default="-",
+            nargs="*",  # Change from "+" to "*" to accept zero or more files
+            help="input log files, default: stdin if no files provided",
+            default=None,  # Don't set a default here
         )
         parser.add_argument(
             "output",
@@ -508,8 +508,34 @@ class Handler(HandlerBase):
         output.write(formatter.format(self.data(args.requirements, results, args)))
         output.write("\n")
 
+    def merge(self, results, new_results):
+        if not results.get("tests"):
+            results.update(new_results)
+            return
+
+        # Merge tests with deduplication
+        for test_name, test_data in new_results["tests"].items():
+            unique_name = test_name
+            counter = 1
+            while unique_name in results["tests"]:
+                unique_name = f"{test_name} ~{counter}"
+                counter += 1
+            results["tests"][unique_name] = test_data
+
+        results["tests_by_id"].update(new_results["tests_by_id"])
+        results["tests_by_parent"].update(new_results["tests_by_parent"])
+
     def handle(self, args):
         results = {}
         formatter = Formatter()
-        ResultsLogPipeline(args.input, results).run()
+
+        if not args.input:  # If no input files are provided, read from stdin
+            args.input = [argtype.logfile("r", bufsize=1, encoding="utf-8")("-")]
+
+        for input_file in args.input:
+            new_results = {}
+            ResultsLogPipeline(input_file, new_results).run()
+            self.merge(results, new_results)
+
         self.generate(formatter, results, args)
+
