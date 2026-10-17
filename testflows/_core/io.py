@@ -534,10 +534,14 @@ class LogWriter(object):
         if sleep:
             time.sleep(sleep)
 
-        if self.cancel:
-            return
-
+        # Check cancel under the lock, and never let it stop the final flush.
+        # Checked before the lock, a final flush that met a timed flush midway
+        # returned without writing, and close() then closed the file under the
+        # timed flush: the buffer, the STOP message with it, was never written,
+        # and the output handler tailing the log waited for STOP forever.
         with self.lock:
+            if self.cancel and not final:
+                return
             self.cancel = True
             if self.buffer:
                 self.fd.write(compress(b"".join(self.buffer)))
