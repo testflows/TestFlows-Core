@@ -140,7 +140,7 @@ def matchcase(name, pat, prefix=False):
     return match(name) is not None
 
 
-@functools.lru_cache(maxsize=256, typed=True)
+@functools.lru_cache(maxsize=None, typed=True)
 def _compile_pattern(pat, prefix=False):
     res = translate(pat, prefix=prefix)
     return re.compile(res)
