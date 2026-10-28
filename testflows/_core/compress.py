@@ -161,7 +161,8 @@ class CompressedFile(lzma.LZMAFile):
         else:
             raise ValueError("Invalid mode: {!r}".format(mode))
 
-        if filename is sys.stdin.buffer:
+        stdin_buffer = getattr(sys.stdin, "buffer", None)
+        if stdin_buffer is not None and filename is stdin_buffer:
             self._fp = filename
             self._closefp = False
             self._mode = mode_code

@@ -25,6 +25,7 @@
 import testflows.settings as settings
 
 from testflows._core.contrib.x256 import x256
+from testflows._core.cli.theme import terminal_theme
 
 __ALL__ = ["colored", "cprint"]
 
@@ -139,6 +140,9 @@ def color(text, color=None, on_color=None, attrs=None, no_colors=False):
         pass
     else:
         fmt_str = "\033[%dm%s"
+        if color == "white" and terminal_theme() == "light":
+            # white text is not readable on a light background
+            color = None
         if color is not None:
             if type(color) in (tuple, list):
                 # convert RGB to closest x256

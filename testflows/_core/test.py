@@ -139,7 +139,7 @@ from .parallel.asyncio import (
     OptionalFuture,
 )
 from .parallel.ssl import default_ssl_dir
-from .jupyter_notebook import is_jupyter_notebook
+from .interactive_notebook import is_interactive_notebook
 
 tracer = tracing.getLogger(__name__)
 
@@ -1621,7 +1621,7 @@ def parse_cli_args(kwargs, parser_schema):
 
     try:
         args, unknown = {}, None
-        if not is_jupyter_notebook():
+        if not is_interactive_notebook():
             args, unknown = parser.parse_known_args()
             args = vars(args)
         exc = None
@@ -2212,7 +2212,7 @@ class TestDefinition(object):
         if _check_async and is_running_in_event_loop():
             raise RuntimeError("Use `async with` for asynchronous tests.")
 
-        if current() is None and is_jupyter_notebook():
+        if current() is None and is_interactive_notebook():
             reset_parallel_context()
         _check_parallel_context()
 
@@ -3075,7 +3075,7 @@ class TestDefinition(object):
                 sys.stderr.write(danger("error: " + str(exc_value).strip()))
                 sys.exit(1)
 
-            if is_jupyter_notebook():
+            if is_interactive_notebook():
                 _at_exit()
                 reset_parallel_context()
                 importlib.reload(settings)
@@ -3552,7 +3552,7 @@ class TestDecorator(object):
     def __run__(self, **args):
         _run_as_func = args.pop("__run_as_func__", False)
 
-        if current() is None and is_jupyter_notebook():
+        if current() is None and is_interactive_notebook():
             reset_parallel_context()
         _check_parallel_context()
 

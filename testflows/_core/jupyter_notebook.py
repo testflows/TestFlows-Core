@@ -12,11 +12,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-def is_jupyter_notebook():
-    try:
-        shell = get_ipython().__class__.__name__
-        if shell == "TerminalInteractiveShell":
-            return False
-        return True
-    except NameError:
-        return False
+# Kept for backward compatibility, use testflows._core.interactive_notebook.
+from .interactive_notebook import (
+    is_interactive_notebook,
+    is_marimo_notebook,
+    marimo_theme,
+)
+from .interactive_notebook import is_interactive_notebook as is_jupyter_notebook
