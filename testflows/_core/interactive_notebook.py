@@ -29,6 +29,7 @@ def is_marimo_notebook():
 def marimo_theme():
     """Return Marimo display theme ("light" or "dark") or None if not in Marimo.
 
+    Marimo context is thread local so this must be called from the cell thread.
     Note that Marimo reports "light" when its theme is set to "system".
     """
     if not is_marimo_notebook():

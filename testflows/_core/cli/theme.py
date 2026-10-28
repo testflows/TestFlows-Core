@@ -14,9 +14,9 @@
 # limitations under the License.
 import os
 import sys
-import functools
 import subprocess
 
+import testflows.settings as settings
 from testflows._core.interactive_notebook import marimo_theme
 
 
@@ -47,17 +47,34 @@ def gsettings_theme():
     return None
 
 
-@functools.lru_cache(maxsize=None)
-def _environment_theme():
-    theme = colorfgbg_theme()
+_theme = None
+_detected = False
+
+
+def settings_theme():
+    """Return theme from settings.theme or None if it is not set or not valid."""
+    theme = str(settings.theme or "").strip().lower()
+    return theme if theme in ("light", "dark") else None
+
+
+def detect_terminal_theme():
+    """Detect and remember the output theme, "light" or "dark" or None if unknown.
+
+    Checked in order: settings.theme, Marimo display theme, COLORFGBG, GNOME color-scheme.
+
+    Must be called from the thread that runs the test (for example, in init())
+    as Marimo context is thread local and is not available in other threads.
+    """
+    global _theme, _detected
+    theme = settings_theme() or marimo_theme() or colorfgbg_theme()
     if theme is None and sys.platform.startswith("linux") and sys.stdout.isatty():
         theme = gsettings_theme()
-    return theme
+    _theme, _detected = theme, True
+    return _theme
 
 
 def terminal_theme():
-    """Return the output theme, "light" or "dark", or None if it is unknown.
-
-    Checked in order: Marimo display theme, COLORFGBG, GNOME color-scheme.
-    """
-    return marimo_theme() or _environment_theme()
+    """Return the output theme detected by detect_terminal_theme()."""
+    if not _detected:
+        detect_terminal_theme()
+    return _theme

@@ -24,6 +24,8 @@ hash_length = 8
 hash_func = hashlib.sha1
 #: disable cli colors
 no_colors = False
+#: output theme, "light" or "dark", None to auto-detect
+theme = None
 #: test id
 test_id = None
 #: output handler format

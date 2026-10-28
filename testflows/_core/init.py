@@ -39,6 +39,7 @@ from .temp import glob as temp_glob, parser as temp_parser, dirname as temp_dirn
 from .parallel import top
 from .objects import Error
 from .interactive_notebook import is_interactive_notebook
+from .cli.theme import detect_terminal_theme
 
 _handlers = []
 
@@ -354,6 +355,7 @@ def init():
             raise RuntimeError("top level test was not started in main thread")
         signal.signal(signal.SIGINT, sigint_handler)
     cleanup()
+    detect_terminal_theme()
     start_output_handler()
     start_database_handler()
     return True
